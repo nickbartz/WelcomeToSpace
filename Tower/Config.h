@@ -209,7 +209,8 @@ enum TILE_TYPES_AND_ITEM_TYPES
 	ITEM_TYPE_MINING_LASER,
 	ITEM_TYPE_WEAPON,
 	TILE_TYPE_CONSTRUCTION_TUBING_WALL,
-	TILE_TYPE_CONSTRUCTION_TUBING_FLOOR
+	TILE_TYPE_CONSTRUCTION_TUBING_FLOOR,
+	TILE_TYPE_CONSTRUCTION_TUBING_DOOR
 };
 
 enum TILE_RENDER_LAYERS
@@ -557,8 +558,6 @@ void Load_Tiles()
 	tile_vector.push_back({ TILE_FRENZEL_1, TILESHEET,{ 5,6,1,1,1,1 },TILE_TYPE_FRENZEL,0,0,1,0,0,0,0,0,34,34,0,Inventory_Frenzel_1,0,0, cannot_build,100,ITEM_JOB_GROW_FRENZEL,RENDER_UNDER_PLAYER_ITEMS });
 	tile_vector.push_back({ TILE_FRENZEL_2, ITEM_SPRITES,{ 0,10,1,1,1,1 },ITEM_TYPE_FRENZEL,1,1,1,0,0,0,0,0,34,34,0,Inventory_Frenzel_2,8,0, cannot_build,100,0,RENDER_TILES });
 
-
-
 	tile_vector.push_back({ TILE_VACUUM, TILESHEET,{ 5,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,Inventory_Empty_Slot,0,0, cannot_build,100,0,RENDER_TILES });
 	tile_vector.push_back({ TILE_VACUUM_2, TILESHEET,{ 4,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,Inventory_Empty_Slot,0,0, cannot_build,100,0,RENDER_TILES });
 
@@ -588,9 +587,9 @@ void Load_Tiles()
 	tile_vector.push_back({ TILE_LASER_PISTOL_1, TILESHEET,{ 3,11,1,1,1,1 },ITEM_TYPE_WEAPON,1,1,0,0,0,0,0,0,34,34,0,Inventory_Laser_Pistol_1,0,0, cannot_build,100,0,RENDER_ITEMS });
 
 	tile_vector.push_back({ TILE_CONSTRUCTION_TUBE_FLOOR_1, TILESHEET,{ 5,13,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_FLOOR,0,0,1,0,0,0,0,0,34,34,0,Inventory_Construction_Tubing_Floor_1,0,1, no_requirements,100 });
-	tile_vector.push_back({ TILE_CONSTRUCTION_TUBE_WALL_1, TILESHEET,{ 0,13,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,1,0,0,0,0,0,34,34,0,Inventory_Construction_Tubing_Wall_1,0,1, no_requirements,100 });
-	tile_vector.push_back({ TILE_DOOR_1,ITEM_SPRITES,{ 0,1,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,0,0,0,0,2,0,34,34,0,Inventory_Door_1,7,0, Wall_and_Floor_Specs,100,ITEM_JOB_DOOR,RENDER_UNDER_PLAYER_ITEMS });
-	tile_vector.push_back({ TILE_DOOR_2,ITEM_SPRITES,{ 0,6,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,0,0,0,0,2,0,34,34,0,Inventory_Door_2,7,0, Wall_and_Floor_Specs,100,ITEM_JOB_DOOR,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_CONSTRUCTION_TUBE_WALL_1, TILESHEET,{ 0,15,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,1,0,0,0,0,0,34,34,0,Inventory_Construction_Tubing_Wall_1,0,1, no_requirements,100 });
+	tile_vector.push_back({ TILE_DOOR_1,ITEM_SPRITES,{ 0,1,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,0,0,0,0,2,0,34,34,0,Inventory_Door_1,7,1, Wall_and_Floor_Specs,100,ITEM_JOB_DOOR,RENDER_TILES });
+	tile_vector.push_back({ TILE_DOOR_2,ITEM_SPRITES,{ 0,6,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,0,0,0,0,2,0,34,34,0,Inventory_Door_2,7,1, Wall_and_Floor_Specs,100,ITEM_JOB_DOOR,RENDER_TILES });
 }
 
 Multi_Tile_Type Return_Tile_By_Name(int tile_identifier)

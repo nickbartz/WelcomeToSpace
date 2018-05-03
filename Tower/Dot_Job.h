@@ -117,9 +117,6 @@ void Dot_Job::Run_Job(Dot* dot)
 	case ITEM_JOB_OXYGENATE:
 		Routine_Oxygenate(dot);
 		break;
-	case ITEM_JOB_TILE_STREAMLINE:
-		Routine_Tile_Streamline(dot);
-		break;
 	case ITEM_JOB_DOOR:
 		Routine_Tile_Door(dot);
 		break;
@@ -210,11 +207,6 @@ void Dot_Job::Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from,
 void Dot_Job::Routine_Oxygenate(Dot* dot)
 {
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_OXYGENATE_AIR,0,0,0,0,null_tile,0,false,NULL });
-}
-
-void Dot_Job::Routine_Tile_Streamline(Dot* dot)
-{
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_TILE_STREAMLINE,0,0,0,0,null_tile,0,false,NULL });
 }
 
 void Dot_Job::Routine_Tile_Door(Dot* dot)

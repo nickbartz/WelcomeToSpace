@@ -808,7 +808,7 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		goal_complete = true;
 		break;
 	case ACTION_TILE_STREAMLINE:
-		world->Streamline_Tile(dot);
+		//world->Streamline_Tile(dot);
 		goal_complete = true;
 		break;
 	case ACTION_GROW_FRENZEL:
@@ -2037,6 +2037,10 @@ void Intelligence::Update_World_Ai()
 			}
 			if (world->world_tiles[i][p] != NULL && world->world_tiles[i][p]->multi_tile_config.tile_type != VACUUM)
 			{
+				world->world_tiles[i][p]->item_job.Run_Job(world->world_tiles[i][p]);
+				Process_Most_Recent_Dot_Goal(world->world_tiles[i][p]);
+				Check_If_Tile_Has_Needs(world->world_tiles[i][p]);
+				
 				if (world->world_tiles[i][p]->multi_tile_config.current_health <= 0)
 				{
 					Dot_Drop_Inventory(world->world_tiles[i][p], world->world_tiles[i][p]->getPosX(), world->world_tiles[i][p]->getPosY());

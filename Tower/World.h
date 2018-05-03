@@ -69,7 +69,6 @@ public:
 
 	// Fix Orientation
 	void fix_wall_tile_orientation(int i, int p, int tile_type, bool tile_or_item);
-	void fix_door_orientation(int i, int p);
 	void Update_Surrounding_Tiles(Tile* tile);
 	void Fix_Smooth_Tile(Tile* tile);
 
@@ -78,7 +77,6 @@ public:
 	void Update_Tile_Texture_Clip(int x_tile, int y_tile, int tile_clip_x, int tile_clip_y, bool tile_or_item);
 
 	// Tile Specific Commands
-	void Streamline_Tile(Dot* dot);
 	void Remove_Tile(int i, int p);
 	void Grow_Frenzel(int i, int p, int current_frenzel_amount);
 
@@ -137,7 +135,7 @@ void World::Create_Test_Room(int x_start, int y_start)
 		 FFFFFFFFFFF;\
 		 FFFFFFFFFFF;\
 		 FFFFFFFFFFF;\
-		 FFFFFFFFFFFDFFFD;\
+		 FFFFFFFFFFFDFFF;\
 		 FFFFFFFFFFF;\
 		 FF(O)FFFFF(P)FFFF;\
 		 FFFFFFF(Q)FFFF;";
@@ -259,7 +257,7 @@ void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile)
 			for (int i = 0; i < 9; i++)
 			{
 				Tile* neighbor_tile = Return_Tile_Neighbor(x_tile, y_tile, i, false);
-				if (neighbor_tile != NULL && neighbor_tile->multi_tile_config.is_smooth == 1 && neighbor_tile->multi_tile_config.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+				if (neighbor_tile != NULL && neighbor_tile->multi_tile_config.is_smooth == 1 && (neighbor_tile->multi_tile_config.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_WALL || neighbor_tile->multi_tile_config.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_DOOR))
 				{
 					Fix_Smooth_Tile(neighbor_tile);
 					for (int p = 0; p < 9; p++)
@@ -530,18 +528,6 @@ void World::fix_wall_tile_orientation(int i, int p, int tile_type, bool tile_or_
 	Update_Tile_Texture_Clip(i, p, clip_coords.clip_x, clip_coords.clip_y, tile_or_item);
 }
 
-void World::fix_door_orientation(int i, int p)
-{
-	//if (Return_Tile_Neighbor(i, p, 8, true)->multi_tile_config.tile_type == WALL_TILE || Return_Tile_Neighbor(i, p, 4, true)->multi_tile_config.tile_type == WALL_TILE)
-	//{
-	//	item_tiles[i][p]->multi_tile_config.orientation = 0;
-	//}
-	//else if (Return_Tile_Neighbor(i, p, 2, true)->multi_tile_config.tile_type == WALL_TILE || Return_Tile_Neighbor(i, p, 6, true)->multi_tile_config.tile_type == WALL_TILE)
-	//{
-	//	item_tiles[i][p]->multi_tile_config.orientation = 1;
-	//}
-}
-
 World::tile_clip_coords World::Return_Tile_Clip_Offset(int tile_orientation)
 {
 	tile_clip_coords clips;
@@ -644,12 +630,6 @@ void World::Remove_Tile(int i, int p)
 		}
 		else Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
 	}
-}
-
-void World::Streamline_Tile(Dot* dot)
-{
-	if (dot->multi_tile_config.tile_type == DOOR_TILE) fix_door_orientation(dot->getTileX(), dot->getTileY());
-	else if (dot->multi_tile_config.tile_type == WALL_TILE) fix_wall_tile_orientation(dot->getTileX(), dot->getTileY(), dot->multi_tile_config.tile_type, dot->multi_tile_config.tile_or_item);
 }
 
 void World::Grow_Frenzel(int i, int p, int current_frenzel_amount)
