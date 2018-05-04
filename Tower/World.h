@@ -233,7 +233,7 @@ Tile* World::Find_Accessible_Adjacent_Tile(Dot* tile)
 
 void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile)
 {
-	if (tile.tile_name == TILE_CONSTRUCTION_TUBE_FLOOR_1)
+	if (tile.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || tile.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
 	{
 		if (world_tiles[x_tile][y_tile] != NULL && world_tiles[x_tile][y_tile]->multi_tile_config.tile_type != tile.tile_type)
 		{
