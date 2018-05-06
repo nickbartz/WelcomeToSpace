@@ -198,10 +198,12 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 	Add_Item_To_Dot_Inventory(player_dot, Inventory_Mining_Laser_1, 1);
 	Add_Item_To_Dot_Inventory(player_dot, Inventory_Iron_Ore, 99);
 	Add_Item_To_Dot_Inventory(player_dot, Inventory_Laser_Pistol_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Frenzel_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Frenzel_2, 1);
+	Add_Item_To_Dot_Inventory(player_dot, Inventory_Frenzel_1, 99);
+	Add_Item_To_Dot_Inventory(player_dot, Inventory_Frenzel_2, 99);
 	Add_Item_To_Dot_Inventory(player_dot, Inventory_Emitter_1, 1);
 	Add_Item_To_Dot_Inventory(player_dot, Inventory_Construction_Tubing_Floor_1,99);
+	Add_Item_To_Dot_Inventory(player_dot, Inventory_Construction_Tubing_Wall_1, 99);
+	Add_Item_To_Dot_Inventory(player_dot, Inventory_Oxygen_Machine, 99);
 	player_dot->npc_dot_config.dot_equipment_config.Spacesuit = { Inventory_Spacesuit_1,1 };
 	player_dot->npc_dot_config.dot_equipment_config.Weapon = { Inventory_Laser_Pistol_1,1 };
 	player_dot->npc_dot_config.dot_equipment_config.Mining_Laser = { Inventory_Mining_Laser_1,1 };
@@ -804,7 +806,8 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		goal_complete = true;
 		break;
 	case ACTION_OXYGENATE_AIR:
-		if (world->Test_All_Tile_Neighbors_For_Leaks(dot->getTileX(), dot->getTileY(), false) == false) world->Toggle_Room_Tiles_Oxygenated(dot->getTileX(), dot->getTileY(), true);
+		dot->multi_tile_config.is_oxygenated = 500;
+		world->Oxygenate_Tiles(dot);
 		goal_complete = true;
 		break;
 	case ACTION_TILE_STREAMLINE:
@@ -814,12 +817,21 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 	case ACTION_GROW_FRENZEL:
 		if (world->Find_tile_within_radius_of_dot(dot, ITEM_TYPE_EMITTER, 5, true))
 		{
-			dot->npc_dot_config.frenzel_rhomb = dot->npc_dot_config.frenzel_rhomb + 10;
+			dot->npc_dot_config.frenzel_rhomb = dot->npc_dot_config.frenzel_rhomb + 1;
 		}
-		if (dot->npc_dot_config.frenzel_rhomb >= 255)
+		if (dot->npc_dot_config.frenzel_rhomb >= 500)
 		{
 			world->Grow_Frenzel(dot->getTileX(), dot->getTileY(), current_frenzel_amount);
 			dot->npc_dot_config.frenzel_rhomb = 0;
+			bool frenzel_already_on_spot = false;
+			for (int i = 0; i < container_array.size(); i++)
+			{
+				if (container_array[i]->getTileX() == dot->getTileX() && container_array[i]->getTileY() == dot->getTileY()) frenzel_already_on_spot = true;
+			}
+			if (frenzel_already_on_spot == false)
+			{
+				Dot_Drop_Inventory(dot, dot->getPosX(), dot->getPosY());
+			}
 		}
 		goal_complete = true;
 		break;
@@ -860,13 +872,11 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		goal_complete = true;
 		break;
 
-
 		// FUNCTIONS THAT DO REQUIRE A SPECIFIC POINTER
 	case ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT:
 		if (!check_dot_pointer(dot, current_dot_goal_pointer)) break;
 		if (dot->npc_dot_config.current_goal_list.back().tile_built == false)
 		{
-			cout << "tile built is false" << endl;
 			Tile* nearest_accessible = world->world_tiles[dot->getTileX()][dot->getTileY()];
 			if (current_dot_goal_pointer != NULL) nearest_accessible = world->Find_Accessible_Adjacent_Tile(current_dot_goal_pointer);
 			if (nearest_accessible != NULL)
@@ -2086,13 +2096,6 @@ void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
 	if (tile->multi_tile_config.built_percent < 100 && tile->npc_dot_config.tile_parts_list.size() == 0)
 	{
 		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_BUILD_SCAFFOLD, 1 , tile, NULL, null_tile, 1,100, &tile->multi_tile_config.built_percent });
-	}
-
-
-	// IF THE TILE IS FRENZEL, SEND OUT A HARVESTING REQUEST
-	if (tile->multi_tile_config.tile_type == TILE_TYPE_FRENZEL)
-	{
-		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_HARVEST_FRENZEL, 1 , tile, NULL, null_tile,-1,0, &tile->multi_tile_config.current_health });
 	}
 }
 

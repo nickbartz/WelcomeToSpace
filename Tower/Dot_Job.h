@@ -36,7 +36,6 @@ public:
 
 	// ITEM ROUTINES
 	void Routine_Oxygenate(Dot* dot);
-	void Routine_Tile_Streamline(Dot* dot);
 	void Routine_Tile_Door(Dot* dot);
 	void Routine_Grow_Frenzel(Dot* dot);
 	void Routine_Create_Soylent(Dot* dot);
@@ -106,9 +105,6 @@ void Dot_Job::Run_Job(Dot* dot)
 		Routine_Run_Project(dot, second_dot, first_quantity_pointer, first_quantity, second_quantity, false);
 		break;
 	case SPECIFIC_DOT_JOB_COMPILE_PROJECT:
-		Routine_Run_Project(dot, second_dot, first_quantity_pointer, first_quantity, second_quantity, false);
-		break;
-	case SPECIFIC_DOT_JOB_HARVEST_FRENZEL:
 		Routine_Run_Project(dot, second_dot, first_quantity_pointer, first_quantity, second_quantity, false);
 		break;
 	case SPECIFIC_DOT_JOB_TAKE_ITEM_FROM_DOT:
@@ -187,11 +183,11 @@ void Dot_Job::Routine_Take_Items_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_wit
 void Dot_Job::Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project)
 {
 	dot->npc_dot_config.current_dot_focus = project_dot;
-	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_OUT_OF_ANOTHER_DOT,0,0,0,0,null_tile,increment,false,dot->npc_dot_config.current_dot_focus });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHANGE_DOT_QUANTITY,0,0,0,0,null_tile,increment,false,dot->npc_dot_config.current_dot_focus, dot_quantity_pointer, finished_quantity });
-	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_INSIDE_ANOTHER_DOT,0,0,0,0,null_tile,increment,false,dot->npc_dot_config.current_dot_focus });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,dot->npc_dot_config.current_dot_focus });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,0,0,0,0,null_tile,0,false,dot->npc_dot_config.current_dot_focus });
+	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_OUT_OF_ANOTHER_DOT,0,0,0,0,null_tile,increment,true,dot->npc_dot_config.current_dot_focus });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHANGE_DOT_QUANTITY,0,0,0,0,null_tile,increment,true,dot->npc_dot_config.current_dot_focus, dot_quantity_pointer, finished_quantity });
+	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_INSIDE_ANOTHER_DOT,0,0,0,0,null_tile,increment,true,dot->npc_dot_config.current_dot_focus });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,true,dot->npc_dot_config.current_dot_focus });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,0,0,0,0,null_tile,0,true,dot->npc_dot_config.current_dot_focus });
 }
 
 void Dot_Job::Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab)
@@ -225,7 +221,6 @@ void Dot_Job::Routine_Tile_Door(Dot* dot)
 void Dot_Job::Routine_Grow_Frenzel(Dot* dot)
 {
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_GROW_FRENZEL,0,0,0,0,null_tile,0,false,NULL });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_TILE_STREAMLINE,0,0,0,0,null_tile,0,false,NULL });
 	if (dot->Check_Inventory_For_Item(Inventory_Frenzel_1) <= 0)
 	{
 		dot->npc_dot_config.current_goal_list.push_back({ ACTION_ADD_ITEM_TO_DOT_INVENTORY,0,0,0,0,Return_Tile_By_Inventory_Item(Inventory_Frenzel_1),1,false,dot });

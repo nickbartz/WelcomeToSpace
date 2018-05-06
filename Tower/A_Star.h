@@ -226,11 +226,11 @@ bool Path_Field::check_if_tile_is_inaccessible(int xdx, int ydy, int finish_x, i
 	{
 		if (world_pointer->world_tiles[xdx][ydy]->multi_tile_config.is_collidable == 1)
 		{
-			if (world_pointer->world_tiles[xdx][ydy]->multi_tile_config.built_percent >= 100) inaccessible = true;
+			if (world_pointer->world_tiles[xdx][ydy]->multi_tile_config.built_percent >= 100 && world_pointer->world_tiles[xdx][ydy]->multi_tile_config.door_state == 0) inaccessible = true;
 		}
 		if (world_pointer->item_tiles[xdx][ydy] != NULL && world_pointer->item_tiles[xdx][ydy]->multi_tile_config.is_collidable == 1)
 		{
-			if (world_pointer->item_tiles[xdx][ydy]->multi_tile_config.built_percent >= 100 && world_pointer->item_tiles[xdx][ydy]->multi_tile_config.door_state == 0) inaccessible = true;
+			if (world_pointer->item_tiles[xdx][ydy]->multi_tile_config.built_percent >= 100) inaccessible = true;
 		}
 	}
 	return inaccessible;
