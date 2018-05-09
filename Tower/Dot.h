@@ -4,7 +4,7 @@
 class Carried_Multi_Tile
 {
 public:
-	Carried_Multi_Tile(SDL_Renderer* gRenderer = NULL, LTexture* inventory_spritesheet = NULL, int* linked_x_coordinate = NULL, int* linked_y_coordinate = NULL, Inventory_Item inventory_item = Inventory_Empty_Slot);
+	Carried_Multi_Tile(SDL_Renderer* gRenderer = NULL, LTexture* inventory_spritesheet = NULL, int* linked_x_coordinate = NULL, int* linked_y_coordinate = NULL, int inventory_item = INVENTORY_EMPTY_SLOT);
 
 	LTexture* spritesheet;
 	Inventory_Item carried_item;
@@ -20,14 +20,14 @@ public:
 	int sprite_clip_y; 
 };
 
-Carried_Multi_Tile::Carried_Multi_Tile(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int* linked_x_coordinate, int* linked_y_coordinate, Inventory_Item inventory_item)
+Carried_Multi_Tile::Carried_Multi_Tile(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int* linked_x_coordinate, int* linked_y_coordinate, int inventory_item)
 {
+	carried_item = Fetch_Inventory(inventory_item);
 	spritesheet = inventory_spritesheet;
-	carried_item = inventory_item;
 	linked_x_coord = linked_x_coordinate;
 	linked_y_coord = linked_y_coordinate;
-	sprite_clip_x = inventory_item.clip_rect_x;
-	sprite_clip_y = inventory_item.clip_rect_y;
+	sprite_clip_x = carried_item.clip_rect_x;
+	sprite_clip_y = carried_item.clip_rect_y;
 	item_clip = {  sprite_clip_x*SPRITESHEET_W, sprite_clip_y * SPRITESHEET_H, TILE_WIDTH, TILE_HEIGHT };
 }
 
@@ -70,7 +70,6 @@ public:
 	int Dot::getCamera_y();
 	string Dot::print_coords();
 	void Dot::respond_to_collision();
-	bool Dot::is_on_y_tile(int y_tile);
 
 	// DOT BASIC PLACEMENT AND MOVEMENT
 	SDL_Rect dot_rect;
@@ -139,10 +138,10 @@ public:
 
 	struct NPC_Dot_Equipment_Struct
 	{
-		Dot_Inventory_Slot Spacesuit = { Inventory_Empty_Slot,0 };
-		Dot_Inventory_Slot Weapon = { Inventory_Empty_Slot,0 };
-		Dot_Inventory_Slot Oxygen_Tank = { Inventory_Empty_Slot,0 };
-		Dot_Inventory_Slot Mining_Laser = { Inventory_Empty_Slot,0 };
+		Dot_Inventory_Slot Spacesuit = { INVENTORY_EMPTY_SLOT,0 };
+		Dot_Inventory_Slot Weapon = { INVENTORY_EMPTY_SLOT,0 };
+		Dot_Inventory_Slot Oxygen_Tank = { INVENTORY_EMPTY_SLOT,0 };
+		Dot_Inventory_Slot Mining_Laser = { INVENTORY_EMPTY_SLOT,0 };
 	};
 
 	struct NPC_Dot_Config_Struct
@@ -199,8 +198,8 @@ public:
 	// High Level Dot Functions
 	string Create_Name();
 	string Create_Dot_Name();
-	void Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, Inventory_Item carried_item_type);
-	int Check_Inventory_For_Item(Inventory_Item item);
+	void Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int carried_item_type);
+	int Check_Inventory_For_Item(int inventory_item_code);
 	Inventory_Item Check_Inventory_For_Item_Type(int item_type);
 	void Create_Default_Dot_Priorities();
 	void Check_Craftable_Items();
@@ -241,6 +240,8 @@ Dot::Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_po
 	//Initialize the offsets
 	dot_rect.x = x_pos;
 	dot_rect.y = y_pos;
+	dot_rect.w = TILE_WIDTH;
+	dot_rect.h = TILE_WIDTH;
 	rect_offset_x = -3;
 	rect_offset_y = -15;
 
@@ -268,7 +269,7 @@ Dot::Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_po
 
 	for (int i = 0; i < MAX_DOT_INVENTORY; ++i)
 	{
-		npc_dot_config.inventory_slots[i].item_type = Inventory_Empty_Slot;
+		npc_dot_config.inventory_slots[i].inventory_item_code = INVENTORY_EMPTY_SLOT;
 		npc_dot_config.inventory_slots[i].item_number = 0;
 	}
 }
@@ -290,14 +291,14 @@ void Dot::free()
 }
 
 void Dot::render(SDL_Renderer* gRenderer, Camera* camera, double angle, SDL_Point* center, SDL_RendererFlip flip)
-{
+{	
 	if (is_onscreen(camera))
 	{
 		SDL_Rect* currentClip = &current_animation[frame / 4];
 
 		SDL_Rect renderClip = *currentClip;
 
-		if (npc_dot_config.dot_equipment_config.Spacesuit.item_type.item_code == INVENTORY_SPACESUIT_1) renderClip.y = renderClip.y- 32;
+		if (Fetch_Inventory(npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code).item_type == INVENTORY_TYPE_SPACESUIT) renderClip.y = renderClip.y- 32;
 
 		SDL_Rect renderQuad = { dot_rect.x - camera->camera_box.x + rect_offset_x, dot_rect.y - camera->camera_box.y + rect_offset_y, renderClip.w, renderClip.h };
 
@@ -566,14 +567,6 @@ void Dot::respond_to_collision()
 	else if (multi_tile_config.door_state == 1) multi_tile_config.door_open_length = 0;
 }
 
-bool Dot::is_on_y_tile(int y_tile)
-{
-	if ((dot_rect.y + dot_rect.h / 2) / TILE_HEIGHT == y_tile)
-	{
-		return true;
-	}
-	else return false;
-}
 
 // HIGH-LEVEL DOT COMMANDS
 
@@ -636,13 +629,14 @@ string Dot::Create_Dot_Name()
 	return last_name;
 }
 
-void Dot::Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, Inventory_Item carried_item_type)
+void Dot::Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int carried_item_type)
 {
 	npc_dot_config.dot_carried_item = Carried_Multi_Tile(gRenderer, inventory_spritesheet, &dot_rect.x, &dot_rect.y, carried_item_type);
 }
 
 void Dot::Create_Default_Dot_Priorities()
 {
+	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_WEAPON_COOLDOWN, { DOT_PRIORITY_WEAPON_COOLDOWN,0,0,0,1,0,20 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_OXYGEN_NEED, { DOT_PRIORITY_OXYGEN_NEED, 0,0,50,100,0,1 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SLEEP_NEED, { DOT_PRIORITY_SLEEP_NEED, 0,0,50,100,0,300 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HUNGER_NEED, { DOT_PRIORITY_HUNGER_NEED, 0,0,50,100,0,200 }));
@@ -668,12 +662,12 @@ void Dot::Check_Craftable_Items()
 
 // INVENTORY_COMMANDS
 
-int Dot::Check_Inventory_For_Item(Inventory_Item inventory_item)
+int Dot::Check_Inventory_For_Item(int inventory_item_code)
 {
 	int inventory_count = 0;
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++)
 	{
-		if (npc_dot_config.inventory_slots[i].item_type.item_code == inventory_item.item_code)
+		if (npc_dot_config.inventory_slots[i].inventory_item_code == inventory_item_code)
 		{
 			inventory_count = inventory_count + npc_dot_config.inventory_slots[i].item_number;
 		}
@@ -685,45 +679,46 @@ Inventory_Item Dot::Check_Inventory_For_Item_Type(int item_type)
 {
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++)
 	{
-		if (Return_Tile_By_Inventory_Item(npc_dot_config.inventory_slots[i].item_type).tile_type == item_type)
+		if (npc_dot_config.inventory_slots[i].inventory_item_code == item_type)
 		{
-			return npc_dot_config.inventory_slots[i].item_type;
+			return Fetch_Inventory(npc_dot_config.inventory_slots[i].inventory_item_code);
 		}
 	}
-	return null_tile.inventory_pointer;
+	return Fetch_Inventory(INVENTORY_NULL_ITEM);
 }
 
 void Dot::Return_Parts_List(Multi_Tile_Type tile_type)
 {
-	if (tile_type.building_specs.Requirement_1_Quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_1, tile_type.building_specs.Requirement_1_Quantity });
-	if (tile_type.building_specs.Requirement_2_Quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_2, tile_type.building_specs.Requirement_2_Quantity });
-	if (tile_type.building_specs.Requirement_3_Quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_3, tile_type.building_specs.Requirement_3_Quantity });
-	if (tile_type.building_specs.Requirement_4_Quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_4, tile_type.building_specs.Requirement_4_Quantity });
-	if (tile_type.building_specs.Requirement_5_Quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_5, tile_type.building_specs.Requirement_5_Quantity });
-	if (tile_type.building_specs.Requirement_6_Quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_6, tile_type.building_specs.Requirement_6_Quantity });
+	if (tile_type.building_specs.Requirement_1.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_1.inventory_requirement, tile_type.building_specs.Requirement_1.requirement_quantity});
+	if (tile_type.building_specs.Requirement_2.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_2.inventory_requirement, tile_type.building_specs.Requirement_2.requirement_quantity});
+	if (tile_type.building_specs.Requirement_3.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_3.inventory_requirement, tile_type.building_specs.Requirement_3.requirement_quantity});
+	if (tile_type.building_specs.Requirement_4.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_4.inventory_requirement, tile_type.building_specs.Requirement_3.requirement_quantity});
+	if (tile_type.building_specs.Requirement_5.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_5.inventory_requirement, tile_type.building_specs.Requirement_4.requirement_quantity});
+	if (tile_type.building_specs.Requirement_6.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_6.inventory_requirement, tile_type.building_specs.Requirement_5.requirement_quantity});
 }
 
 bool Dot::Check_If_Tile_Needs_Parts(Multi_Tile_Type tile_type)
 {
+	
 	bool needs_parts = false;
-	if (tile_type.building_specs.Requirement_1.item_code != Inventory_Empty_Slot.item_code && Check_Inventory_For_Item(tile_type.building_specs.Requirement_1) < tile_type.building_specs.Requirement_1_Quantity) needs_parts = true;
-	else if (tile_type.building_specs.Requirement_2.item_code != Inventory_Empty_Slot.item_code && Check_Inventory_For_Item(tile_type.building_specs.Requirement_2) < tile_type.building_specs.Requirement_2_Quantity) needs_parts = true;
-	else if (tile_type.building_specs.Requirement_3.item_code != Inventory_Empty_Slot.item_code && Check_Inventory_For_Item(tile_type.building_specs.Requirement_3) < tile_type.building_specs.Requirement_3_Quantity) needs_parts = true;
-	else if (tile_type.building_specs.Requirement_4.item_code != Inventory_Empty_Slot.item_code && Check_Inventory_For_Item(tile_type.building_specs.Requirement_4) < tile_type.building_specs.Requirement_4_Quantity) needs_parts = true;
-	else if (tile_type.building_specs.Requirement_5.item_code != Inventory_Empty_Slot.item_code && Check_Inventory_For_Item(tile_type.building_specs.Requirement_5) < tile_type.building_specs.Requirement_5_Quantity) needs_parts = true;
-	else if (tile_type.building_specs.Requirement_6.item_code != Inventory_Empty_Slot.item_code && Check_Inventory_For_Item(tile_type.building_specs.Requirement_6) < tile_type.building_specs.Requirement_6_Quantity) needs_parts = true;
+	if (tile_type.building_specs.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_1.inventory_requirement) < tile_type.building_specs.Requirement_1.requirement_quantity) needs_parts = true;
+	else if (tile_type.building_specs.Requirement_2.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_2.inventory_requirement) < tile_type.building_specs.Requirement_2.requirement_quantity) needs_parts = true;
+	else if (tile_type.building_specs.Requirement_3.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_3.inventory_requirement) < tile_type.building_specs.Requirement_3.requirement_quantity) needs_parts = true;
+	else if (tile_type.building_specs.Requirement_4.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_4.inventory_requirement) < tile_type.building_specs.Requirement_4.requirement_quantity) needs_parts = true;
+	else if (tile_type.building_specs.Requirement_5.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_5.inventory_requirement) < tile_type.building_specs.Requirement_5.requirement_quantity) needs_parts = true;
+	else if (tile_type.building_specs.Requirement_6.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_6.inventory_requirement) < tile_type.building_specs.Requirement_6.requirement_quantity) needs_parts = true;
 	return needs_parts;
 }
 
 bool Dot::Check_if_Dot_Has_All_Needed_Scaffold_Parts(Dot* dot, Multi_Tile_Type tile_type)
 {
 	bool has_parts = true;
-	if (tile_type.building_specs.Requirement_1.item_code != Inventory_Empty_Slot.item_code && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_1) < tile_type.building_specs.Requirement_1_Quantity) has_parts = false;
-	else if (tile_type.building_specs.Requirement_2.item_code != Inventory_Empty_Slot.item_code && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_2) < tile_type.building_specs.Requirement_2_Quantity) has_parts = false;
-	else if (tile_type.building_specs.Requirement_3.item_code != Inventory_Empty_Slot.item_code && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_3) < tile_type.building_specs.Requirement_3_Quantity) has_parts = false;
-	else if (tile_type.building_specs.Requirement_4.item_code != Inventory_Empty_Slot.item_code && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_4) < tile_type.building_specs.Requirement_4_Quantity) has_parts = false;
-	else if (tile_type.building_specs.Requirement_5.item_code != Inventory_Empty_Slot.item_code && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_5) < tile_type.building_specs.Requirement_5_Quantity) has_parts = false;
-	else if (tile_type.building_specs.Requirement_6.item_code != Inventory_Empty_Slot.item_code && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_6) < tile_type.building_specs.Requirement_6_Quantity) has_parts = false;
+	if (tile_type.building_specs.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_1.inventory_requirement) < tile_type.building_specs.Requirement_1.requirement_quantity) has_parts = false;
+	else if (tile_type.building_specs.Requirement_2.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_2.inventory_requirement) < tile_type.building_specs.Requirement_2.requirement_quantity) has_parts = false;
+	else if (tile_type.building_specs.Requirement_3.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_3.inventory_requirement) < tile_type.building_specs.Requirement_3.requirement_quantity) has_parts = false;
+	else if (tile_type.building_specs.Requirement_4.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_4.inventory_requirement) < tile_type.building_specs.Requirement_4.requirement_quantity) has_parts = false;
+	else if (tile_type.building_specs.Requirement_5.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_5.inventory_requirement) < tile_type.building_specs.Requirement_5.requirement_quantity) has_parts = false;
+	else if (tile_type.building_specs.Requirement_6.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_6.inventory_requirement) < tile_type.building_specs.Requirement_6.requirement_quantity) has_parts = false;
 	return has_parts;
 }
 
@@ -731,12 +726,12 @@ int Dot::Check_How_Much_Dot_Can_Craft_Of_Item(Multi_Tile_Type tile_type)
 {
 	vector<int> craftable_quantity;
 	
-	if (tile_type.building_specs.Requirement_1.item_code != Inventory_Empty_Slot.item_code) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_1) / tile_type.building_specs.Requirement_1_Quantity);
-	if (tile_type.building_specs.Requirement_2.item_code != Inventory_Empty_Slot.item_code) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_2) / tile_type.building_specs.Requirement_2_Quantity);
-	if (tile_type.building_specs.Requirement_3.item_code != Inventory_Empty_Slot.item_code) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_3) / tile_type.building_specs.Requirement_3_Quantity);
-	if (tile_type.building_specs.Requirement_4.item_code != Inventory_Empty_Slot.item_code) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_4) / tile_type.building_specs.Requirement_4_Quantity);
-	if (tile_type.building_specs.Requirement_5.item_code != Inventory_Empty_Slot.item_code) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_5) / tile_type.building_specs.Requirement_5_Quantity);
-	if (tile_type.building_specs.Requirement_6.item_code != Inventory_Empty_Slot.item_code) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_6) / tile_type.building_specs.Requirement_6_Quantity);
+	if (tile_type.building_specs.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_1.inventory_requirement) / tile_type.building_specs.Requirement_1.requirement_quantity);
+	if (tile_type.building_specs.Requirement_2.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_2.inventory_requirement) / tile_type.building_specs.Requirement_2.requirement_quantity);
+	if (tile_type.building_specs.Requirement_3.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_3.inventory_requirement) / tile_type.building_specs.Requirement_3.requirement_quantity);
+	if (tile_type.building_specs.Requirement_4.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_4.inventory_requirement) / tile_type.building_specs.Requirement_4.requirement_quantity);
+	if (tile_type.building_specs.Requirement_5.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_5.inventory_requirement) / tile_type.building_specs.Requirement_5.requirement_quantity);
+	if (tile_type.building_specs.Requirement_6.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_6.inventory_requirement) / tile_type.building_specs.Requirement_6.requirement_quantity);
 
 	int lowest_craftable_quantity = 99;
 
@@ -754,7 +749,7 @@ void Dot::Check_if_Dot_Can_Pop_Tile_List_Items()
 {
 	for (int i = 0; i < npc_dot_config.tile_parts_list.size(); i++)
 	{
-		if (Check_Inventory_For_Item(npc_dot_config.tile_parts_list[i].item_type) >= npc_dot_config.tile_parts_list[i].item_number)
+		if (Check_Inventory_For_Item(npc_dot_config.tile_parts_list[i].inventory_item_code) >= npc_dot_config.tile_parts_list[i].item_number)
 		{
 			cout << "erasing item on list" << endl;
 			npc_dot_config.tile_parts_list.erase(npc_dot_config.tile_parts_list.begin() + i);
@@ -767,7 +762,7 @@ vector<Dot_Inventory_Slot> Dot::return_inventory_as_vector()
 	vector<Dot_Inventory_Slot> temp_vector;
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++) if (npc_dot_config.inventory_slots[i].item_number > 0)
 	{
-		temp_vector.push_back({ npc_dot_config.inventory_slots[i].item_type, npc_dot_config.inventory_slots[i].item_number });
+		temp_vector.push_back({ npc_dot_config.inventory_slots[i].inventory_item_code, npc_dot_config.inventory_slots[i].item_number });
 	}
 	return temp_vector;
 }
@@ -955,14 +950,17 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 
 	//Render to screen
 
-	//if (multi_tile_config.built_percent < 100)
-	//{
-	//	mTexture->setAlpha(50);
-	//	mTexture->setColor(0, 255, 200);
-	//	render_status_bar(gRenderer, camera, multi_tile_config.built_percent);
-	//}
+	if (multi_tile_config.built_percent < 100)
+	{
+		mTexture->setAlpha(50);
+		mTexture->setColor(0, 255, 200);
+		render_status_bar(gRenderer, camera, multi_tile_config.built_percent);
+	}
+	else
+	{
+		mTexture->setColor(255 - multi_tile_config.is_oxygenated * 10, 255 - multi_tile_config.is_oxygenated * 10, 255);
+	}
 
-	mTexture->setColor(255 - multi_tile_config.is_oxygenated*5,255 - multi_tile_config.is_oxygenated*5, 255);
 
 	SDL_Rect render_clip = { current_clip.x, current_clip.y + tile_orientation * SPRITESHEET_H, current_clip.w, current_clip.h };
 	if (multi_tile_config.tile_type == ITEM_TYPE_EMITTER) render_circle(gRenderer, camera, getTileX(), getTileY(), 5, 255, 0, 0, 50);
@@ -1001,6 +999,8 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 
 	mTexture->setAlpha(255);
 	mTexture->setColor(255, 255, 255);
+	multi_tile_config.leak_check = 0;
+	multi_tile_config.oxygenation_check = 0;
 	multi_tile_config.is_oxygenated = 0;
 }
 
@@ -1364,6 +1364,62 @@ public:
 
 };
 
+class Multi_Dot :public Dot
+{
+public: 
+	Multi_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos, int row_num):Dot(gRenderer, dot_spritesheet, x_pos, y_pos, row_num)
+	{
+		spritesheet = dot_spritesheet;
+	}
+
+	int animation_row = 3;
+	int max_frames = 4;
+	int current_frame = 0;
+	SDL_Rect sprite_specs = { 0,0,32,32 };
+	float sprite_scale_x = 1;
+	float sprite_scale_y = 1;
+
+	void render(SDL_Renderer* gRenderer, Camera* camera);
+	void increment_animation();
+
+	struct animation_delay
+	{
+		int current_delay = 0;
+		int max_delay = 10;
+	};
+
+	animation_delay feet_delay;
+
+private:
+	LTexture* spritesheet;
+};
+
+void Multi_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
+{
+	increment_animation();
+	
+	SDL_Rect clip_rect = { sprite_specs.x + current_frame * sprite_specs.w, sprite_specs.y + animation_row*sprite_specs.h, sprite_specs.w, sprite_specs.h };
+	SDL_Rect render_rect = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, sprite_specs.w * sprite_scale_x, sprite_specs.h * sprite_scale_y};
+	
+
+	spritesheet->render(gRenderer, &render_rect, &clip_rect);
+}
+
+void Multi_Dot::increment_animation()
+{
+	feet_delay.current_delay++;
+	{
+		if (feet_delay.current_delay >= feet_delay.max_delay)
+		{
+			current_frame++;
+			if (current_frame >= max_frames) current_frame = 0;
+
+			feet_delay.current_delay = 0;
+		}
+	}
+
+}
+
 // CONTAINER DOTS
 
 class Container : public Dot
@@ -1439,7 +1495,7 @@ public:
 			random_clip_row = 2;
 		};
 
-		npc_dot_config.inventory_slots[0].item_type = multi_tile_config.inventory_pointer;
+		npc_dot_config.inventory_slots[0].inventory_item_code = multi_tile_config.inventory_pointer;
 		npc_dot_config.inventory_slots[0].item_number = 1;
 	}
 
@@ -1656,7 +1712,7 @@ public:
 
 	int mVelX, mVelY;
 
-	int bolt_radius = 40;
+	int bolt_radius = 32;
 	int bolt_damage = 10;
 	int bolt_range = 0;
 	int bolt_max_range = 50;

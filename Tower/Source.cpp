@@ -16,7 +16,7 @@
 #include <queue>
 #include <string>
 #include <ctime>
-
+#include <unordered_map>
 #include <iostream>
 using namespace std;
 
@@ -43,6 +43,7 @@ void load_save_from_disk(char* path, Save_File* save);
 void save_data_to_disk(char* path, Save_File* save);
 void load_textures();
 void unload_textures();
+
 
 //Frees media and shuts down SDL
 void close();
@@ -73,6 +74,11 @@ TTF_Font* gFont = NULL;
 bool new_game;
 bool debug = false;
 bool pause = false;
+
+void print(string print_string)
+{
+	cout << print_string << endl;
+}
 
 bool init()
 {
@@ -204,6 +210,7 @@ void load_textures()
 	texture_array[TILESHEET].loadFromFile(gRenderer, "Sprites/Tilesheets/tilesheet_1.png");
 	texture_array[CONSOLE_BACKGROUND].loadFromFile(gRenderer, "Sprites/Console/console_1.png");
 	texture_array[DOT_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Player/player_spritesheet.png");
+	texture_array[MULTI_DOT_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Player/multi_dot_spritesheet.png");
 	texture_array[ASTEROID_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Animated_Items/asteroid_spritesheet_1.png");
 	texture_array[INVENTORY_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Inventory_Items/Inventory_Spritesheet_1.png");
 	texture_array[ENEMY_SHIP_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Enemies/Enemy_Ships_1.png");
@@ -300,7 +307,7 @@ void handle_event(SDL_Event* e, Camera* camera, Cursor* cursor, Intelligence* in
 void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* intelligence, Console* console)
 {
 	cursor->Set_Coords(current_mouse_pos_x, current_mouse_pos_y, camera);
-	cursor->Set_Type(console->current_action, &Return_Tile_By_Inventory_Item(*console->current_selected_item));
+	cursor->Set_Type(console->current_action, &Return_Tile_By_Inventory_Item(console->current_selected_inventory_item));
 
 	int x_pos = (current_mouse_pos_x + camera->camera_box.x);
 	int y_pos = (current_mouse_pos_y + camera->camera_box.y);
@@ -319,7 +326,7 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 			mouse_click_state[0][1] = 1;
 			if (console->check_console_for_clicks(current_mouse_pos_x, current_mouse_pos_y) == false)
 			{
-				intelligence->Handle_Non_Console_Click(console->current_action, x_tile, y_tile, x_pos, y_pos, *console->current_selected_item);
+				intelligence->Handle_Non_Console_Click(console->current_action, x_tile, y_tile, x_pos, y_pos, console->current_selected_inventory_item);
 			}
 			else
 			{
@@ -330,7 +337,7 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 		{
 			if (console->check_console_for_clicks(current_mouse_pos_x, current_mouse_pos_y) == false)
 			{
-				intelligence->Handle_Non_Console_Click_And_Hold(console->current_action, x_tile, y_tile, x_pos, y_pos, *console->current_selected_item);
+				intelligence->Handle_Non_Console_Click_And_Hold(console->current_action, x_tile, y_tile, x_pos, y_pos, console->current_selected_inventory_item);
 			}
 			else
 			{
@@ -342,7 +349,7 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 	// SITUATION WHERE YOU UNCLICK
 	if (mouse_click_state[0][0] == 0 && mouse_click_state[0][1] == 1)
 	{
-		intelligence->Handle_Non_Console_Unclick(console->current_action, x_tile, y_tile, x_pos, y_pos, *console->current_selected_item);
+		intelligence->Handle_Non_Console_Unclick(console->current_action, x_tile, y_tile, x_pos, y_pos, console->current_selected_inventory_item);
 	}
 
 	// SITUATION WHERE YOU RIGHT CLICK 
@@ -379,6 +386,7 @@ int main(int argc, char* args[])
 		
 		load_textures();
 		Load_Tiles();
+		Load_Inventory_Items();
 
 		//if (debug) cout << "Creating Save" << endl;
 		//Save_File* current_save_state = new Save_File();
@@ -387,11 +395,16 @@ int main(int argc, char* args[])
 		////load_save_from_disk("Save/nums.bin", current_save_state);
 
 		//Create the world
-		if (debug) cout << "Loading World" << endl;
-
+		if (debug) cout << "Loading Camera" << endl;
 		Camera camera;
+
+		if (debug) cout << "Loading World" << endl;
 		World world(gRenderer, texture_array, tilesheet_clips, new_game);
+
+		if (debug) cout << "Loading Intelligence" << endl;
 		Intelligence intelligence(&world, gRenderer, &camera, texture_array, new_game);
+
+		if (debug) cout << "Loading Cursor" << endl;
 		Cursor cursor(gRenderer,&texture_array[TILESHEET]);
 
 		//cout << "save stating" << endl;

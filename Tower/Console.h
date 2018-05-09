@@ -235,8 +235,8 @@ void Button::render(SDL_Renderer* gRenderer)
 
 	if (slot_item_pointer != NULL)
 	{
-		button_sprite.console_sprite_clip.x = slot_item_pointer->item_type.clip_rect_x * SPRITESHEET_W;
-		button_sprite.console_sprite_clip.y = slot_item_pointer->item_type.clip_rect_y * SPRITESHEET_H;
+		button_sprite.console_sprite_clip.x = Fetch_Inventory(slot_item_pointer->inventory_item_code).clip_rect_x * SPRITESHEET_W;
+		button_sprite.console_sprite_clip.y = Fetch_Inventory(slot_item_pointer->inventory_item_code).clip_rect_y * SPRITESHEET_H;
 	}
 
 	if (button_filled)
@@ -375,7 +375,7 @@ Button Console_Window::Create_Dot_Inventory_Slot(SDL_Renderer* gRenderer, SDL_Re
 	Button new_inventory_button = Button(gRenderer, BUTTON_ACTION_INVENTORY_BUTTON, pos_rect, true, panel_name);
 	new_inventory_button.slot_item_pointer = slot_pointer;
 	new_inventory_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont, &slot_pointer->item_number, true);
-	new_inventory_button.Add_Button_Sprite(spritesheet, { slot_pointer->item_type.clip_rect_x * SPRITESHEET_W, slot_pointer->item_type.clip_rect_y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
+	new_inventory_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_x * SPRITESHEET_W, Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
 	return new_inventory_button;
 }
 
@@ -384,7 +384,7 @@ Button Console_Window::Create_Crafting_Button(SDL_Renderer* gRenderer, SDL_Rect 
 	Button new_crafting_button = Button(gRenderer, BUTTON_ACTION_CRAFT_ITEM, pos_rect, true, panel_name);
 	new_crafting_button.slot_item_pointer = slot_pointer;
 	new_crafting_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont, &slot_pointer->item_number, true);
-	new_crafting_button.Add_Button_Sprite(spritesheet, { slot_pointer->item_type.clip_rect_x * SPRITESHEET_W, slot_pointer->item_type.clip_rect_y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
+	new_crafting_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_x * SPRITESHEET_W, Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
 	return new_crafting_button;
 }
 
@@ -676,7 +676,7 @@ public:
 	void Update_Console(SDL_Renderer* gRenderer);
 
 	int current_action = BUTTON_ACTION_ATTACK;
-	Inventory_Item* current_selected_item;
+	int current_selected_inventory_item;
 
 	Intelligence* current_intelligence;
 	Dot* currently_selected_dot;
@@ -721,7 +721,7 @@ Console::Console(SDL_Renderer* gRenderer, TTF_Font* gFont, Intelligence* intelli
 	inventory_spritesheet = texture_array[INVENTORY_SPRITESHEET];
 	standard_tilesheet = texture_array[TILESHEET];
 
-	current_selected_item = &Inventory_Empty_Slot;
+	current_selected_inventory_item = INVENTORY_EMPTY_SLOT;
 	
 	current_intelligence = intelligence;
 	currently_selected_dot = intelligence->player_dot;
@@ -805,24 +805,24 @@ void Console::Handle_Console_Clicks()
 		case PANEL_CRAFTABLE_ITEMS:
 			if (last_clicked_button->button_action == BUTTON_ACTION_CRAFT_ITEM)
 			{
-				current_intelligence->Dot_Craft_Item(current_intelligence->player_dot, last_clicked_button->slot_item_pointer->item_type, 1);
+				current_intelligence->Dot_Craft_Item(current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
 			}
 			break;
 		case PANEL_DOT_INVENTORY:
 			if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
 			{
-				current_selected_item = &last_clicked_button->slot_item_pointer->item_type;
+				current_selected_inventory_item = last_clicked_button->slot_item_pointer->inventory_item_code;
 				current_action = BUTTON_ACTION_PLACE_ITEM;
 			}
 			break;
 		case PANEL_EQUIPMENT_LOADOUT:
 			if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
 			{
-				if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->item_type).tile_type == ITEM_TYPE_MINING_LASER)
+				if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->inventory_item_code).tile_type == ITEM_TYPE_MINING_LASER)
 				{
 					current_action = BUTTON_ACTION_MINING_LASER;
 				}
-				else if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->item_type).tile_type == ITEM_TYPE_WEAPON)
+				else if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->inventory_item_code).tile_type == ITEM_TYPE_WEAPON)
 				{
 					current_action = BUTTON_ACTION_ATTACK;
 				}
@@ -838,15 +838,15 @@ void Console::Handle_Console_Clicks()
 			{
 				if (current_action == BUTTON_ACTION_PLACE_ITEM)
 				{
-					current_intelligence->Dot_Give_Inventory_To_Another_Dot(current_intelligence->player_dot, currently_selected_dot, *current_selected_item, 1);
+					current_intelligence->Dot_Give_Inventory_To_Another_Dot(current_intelligence->player_dot, currently_selected_dot, current_selected_inventory_item, 1);
 				}
-				else current_intelligence->Dot_Give_Inventory_To_Another_Dot(currently_selected_dot, current_intelligence->player_dot, last_clicked_button->slot_item_pointer->item_type, 1);
+				else current_intelligence->Dot_Give_Inventory_To_Another_Dot(currently_selected_dot, current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
 			}
 			break;
 		case PANEL_CRAFTABLE_ITEMS:
 			if (last_clicked_button->button_action == BUTTON_ACTION_CRAFT_ITEM)
 			{
-				current_selected_item = &last_clicked_button->slot_item_pointer->item_type;
+				current_selected_inventory_item = last_clicked_button->slot_item_pointer->inventory_item_code;
 				current_action = BUTTON_ACTION_PLACE_SCAFFOLD;
 			}
 			break;

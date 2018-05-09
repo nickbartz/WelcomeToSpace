@@ -80,9 +80,13 @@ public:
 	void Grow_Frenzel(int i, int p, int current_frenzel_amount);
 
 	// Aggregate Commands
-	bool Test_All_Tile_Neighbors_For_Leaks(int i, int p, bool breached);
-	void Toggle_Room_Tiles_Oxygenated(int i, int p, bool oxygenated);
-	void Oxygenate_Tiles(Dot* oxygen_machine);
+	struct oxygenation_check
+	{
+		bool breach_status;
+		vector<Tile*> tile_vector;
+	};
+	oxygenation_check* Test_All_Tile_Neighbors_For_Leaks(Tile* tile, oxygenation_check* current_breach_check);
+	void Toggle_Room_Tiles_Oxygenated(vector<Tile*> vector_to_oxygenate, float oxygen_per_tile);
 
 	// Overall Flow Commands
 	void Update_World();
@@ -235,7 +239,7 @@ void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile)
 {
 	if (tile.tile_or_item == 0)
 	{
-		if (world_tiles[x_tile][y_tile] != NULL && world_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer.item_code != tile.inventory_pointer.item_code) delete world_tiles[x_tile][y_tile];
+		//if (world_tiles[x_tile][y_tile] != NULL && world_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete world_tiles[x_tile][y_tile];
 		world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
 
 		if (tile.is_smooth == 1)
@@ -251,7 +255,7 @@ void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile)
 	}
 	else if (tile.tile_or_item == 1)
 	{
-		if (item_tiles[x_tile][y_tile] != NULL && item_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer.item_code != tile.inventory_pointer.item_code) delete item_tiles[x_tile][y_tile];
+		if (item_tiles[x_tile][y_tile] != NULL && item_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete item_tiles[x_tile][y_tile];
 		item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
 	}
 }
@@ -591,81 +595,49 @@ void World::Grow_Frenzel(int i, int p, int current_frenzel_amount)
 
 // Aggregate Commands
 
-bool World::Test_All_Tile_Neighbors_For_Leaks(int i, int p, bool breached)
+
+World::oxygenation_check* World::Test_All_Tile_Neighbors_For_Leaks(Tile* tile, oxygenation_check* current_breach_check)
 {
-	bool current_breach_status = breached;
-	if (world_tiles[i][p]->multi_tile_config.tile_type == VACUUM)
+	int i = tile->getTileX(); 
+	int p = tile->getTileY();
+	
+	tile->multi_tile_config.leak_check = 1;
+
+	if (tile->multi_tile_config.tile_type == VACUUM)
 	{
-		current_breach_status = true;
-		return current_breach_status;
+		current_breach_check->breach_status = true;
+		return current_breach_check;
 	}
 	else 
 	{
-		world_tiles[i][p]->multi_tile_config.leak_check = 1;
-		for (int q = 1; q < 9; q++)
+		tile->multi_tile_config.leak_check = 1;
+		current_breach_check->tile_vector.push_back(tile);
+		for (int q = 2; q < 9; q += 2)
 		{
 			Tile* neighboring_tile = Return_Tile_Neighbor(i, p, q, false);
-			Tile* neighboring_item = Return_Tile_Neighbor(i, p, q, true);
-			if (neighboring_tile->multi_tile_config.tile_type == VACUUM && neighboring_item != NULL && neighboring_item->multi_tile_config.tile_type != WALL_TILE && neighboring_item->multi_tile_config.tile_type != DOOR_TILE)
+			if (neighboring_tile == NULL || neighboring_tile->multi_tile_config.tile_type == VACUUM)
 			{
-				current_breach_status = true;
-				return current_breach_status;
+				current_breach_check->breach_status = true;
+				return current_breach_check;
 			}
-			else if (neighboring_item != NULL && neighboring_item->multi_tile_config.tile_type != WALL_TILE && neighboring_tile->multi_tile_config.tile_type == FLOOR_TILE_1 && neighboring_tile->multi_tile_config.leak_check == 0)
-			{
-				if (neighboring_item != NULL && neighboring_item->multi_tile_config.door_state != 0)
-				{
-				}
-				else 
-				{
-					current_breach_status = Test_All_Tile_Neighbors_For_Leaks(neighboring_tile->getTileX(), neighboring_tile->getTileY(), current_breach_status);
-				}
+			else if ((neighboring_tile->multi_tile_config.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || neighboring_tile->multi_tile_config.door_state == 1) && neighboring_tile->multi_tile_config.leak_check == 0)
+			{	
+				current_breach_check = Test_All_Tile_Neighbors_For_Leaks(neighboring_tile, current_breach_check);
 			}
 		}
 	}
-	return current_breach_status;
+	return current_breach_check;
 }
 
-void World::Toggle_Room_Tiles_Oxygenated(int i, int p, bool oxygenate)
+void World::Toggle_Room_Tiles_Oxygenated(vector<Tile*> vector_to_oxygenate, float oxygen_per_tile)
 {
-	for (int q = 1; q < 9; ++q)
+	for (int i = 0; i < vector_to_oxygenate.size(); i++)
 	{
-		Tile* neighboring_item = Return_Tile_Neighbor(i, p, q, true);
-		Tile* neighboring_tile = Return_Tile_Neighbor(i, p, q, false);
-		if (oxygenate == true)
-		{
-			if (neighboring_tile->multi_tile_config.tile_type == FLOOR_TILE_1 && neighboring_tile->multi_tile_config.oxygenation_check == 0)
-			{
-				if (!(neighboring_item != NULL
-					&& neighboring_item->multi_tile_config.door_state == 2))
-				{
-					neighboring_tile->multi_tile_config.oxygenation_check = 1;
-					neighboring_tile->multi_tile_config.is_oxygenated = 1;
-					Toggle_Room_Tiles_Oxygenated(neighboring_tile->getTileX(), neighboring_tile->getTileY(), true);
-				}
-			}
-		}
-	}
+		vector_to_oxygenate[i]->multi_tile_config.is_oxygenated += oxygen_per_tile;
+		vector_to_oxygenate[i]->multi_tile_config.leak_check = 0;
+	}	
 }
 
-void World::Oxygenate_Tiles(Dot* tile)
-{
-	for (int i = 0; i < 9; i++)
-	{
-		Tile* neighbor_tile = Return_Tile_Neighbor(tile->getTileX(), tile->getTileY(), i, false);
-		if (neighbor_tile->multi_tile_config.tile_type != TILE_TYPE_CONSTRUCTION_TUBING_WALL && neighbor_tile->multi_tile_config.tile_type != TILE_TYPE_CONSTRUCTION_TUBING_DOOR)
-		{
-			if ((tile->multi_tile_config.is_oxygenated - neighbor_tile->multi_tile_config.is_oxygenated) >= 2)
-			{
-				int oxygen_to_share = (tile->multi_tile_config.is_oxygenated - neighbor_tile->multi_tile_config.is_oxygenated)/2;
-				neighbor_tile->multi_tile_config.is_oxygenated += oxygen_to_share;
-				tile->multi_tile_config.is_oxygenated -= oxygen_to_share;
-				
-				Oxygenate_Tiles(neighbor_tile);
-			}
-		}
-	}
-}
 
 // Basic Functions
 

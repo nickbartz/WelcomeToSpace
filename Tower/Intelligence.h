@@ -10,9 +10,9 @@ public:
 	void Erase_Alerts(Dot* dot);
 
 	// INPUT COMMANDS
-	void Handle_Non_Console_Click(int current_action, int x_tile, int y_tile, int x, int y, Inventory_Item item = Inventory_Empty_Slot);
-	void Handle_Non_Console_Click_And_Hold(int current_action, int x_tile, int y_tile, int x, int y, Inventory_Item item = Inventory_Empty_Slot);
-	void Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, Inventory_Item item = Inventory_Empty_Slot);
+	void Handle_Non_Console_Click(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
+	void Handle_Non_Console_Click_And_Hold(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
+	void Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
 	void Handle_Keyboard_Input(SDL_Event* e);
 	void Test_Cursor_Position(int mouse_pos_x, int mouse_pos_y, int tile_x, int tile_y);
 	Dot* Return_Clicked_Dot(int mouse_pos_x, int mouse_pos_y);
@@ -38,16 +38,16 @@ public:
 	void Update_All_Enemy_Ships_AI();
 
 	// Dot inventory commands
-	bool dot_has_item_in_inventory(Dot* dot, Inventory_Item item);
-	void Add_Item_To_Dot_Inventory(Dot* dot, Inventory_Item item_type, int quantity);
-	void Remove_Item_From_Dot_Inventory(Dot* dot, Inventory_Item item_type, int quantity_to_remove);
+	bool dot_has_item_in_inventory(Dot* dot, int inventory_item_code);
+	void Add_Item_To_Dot_Inventory(Dot* dot, int inventory_item_code, int quantity);
+	void Remove_Item_From_Dot_Inventory(Dot* dot, int inventory_item_code, int quantity_to_remove);
 	void Remove_Building_Items_From_Dot_Inventory(Dot* dot, Multi_Tile_Type built_item);
-	void Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, Inventory_Item item_type, int quantity_dropped);
+	void Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, int inventory_item_code, int quantity_dropped);
 	void Dot_Drop_Inventory(Dot* dot, int x_pos, int y_pos);
 	void Add_Container_Items_to_Dot_Inventory(Dot* dot, Dot* container);
 	void Delete_Container_by_Pointer(Dot* container_pointer);
-	void Dot_Give_Inventory_To_Another_Dot(Dot* dot, Dot* second_dot, Inventory_Item item, int Quantity);
-	void Dot_Craft_Item(Dot* dot, Inventory_Item item, int quantity);
+	void Dot_Give_Inventory_To_Another_Dot(Dot* dot, Dot* second_dot, int inventory_item_code, int Quantity);
+	void Dot_Craft_Item(Dot* dot, int inventory_item_code, int quantity);
 
 	// NPD AI
 	void Dot_Choose_Job(NPC_Dot* npc_dot);
@@ -67,16 +67,18 @@ public:
 
 	// ENEMY NPC AI
 	void Update_Enemy_Dot_AI();
+	void Manage_Enemy_Dot_Priorities(Dot* dot);
 
 	// DOT SEARCH FUNCTIONS
 	vector<vector<Dot*>> Return_Array_of_Pointers_To_All_Dot_Vectors();
 	vector<Dot*> return_appropriate_dot_vector(int dot_vector_type);
 	vector<Tile*> return_vector_of_all_tiles();
 	vector<Dot*> return_array_of_tiles_by_type_or_name(bool type_or_name, int search_number);
+	Dot* Intelligence::return_nearest_dot_with_faction(Dot* searching_dot, int faction, int search_distance);
 	Dot* return_nearest_dot_by_type(Dot* dot, int dot_type, Multi_Tile_Type tile_type = null_tile);
-	Dot* return_nearest_container_with_item(Dot* dot, Inventory_Item item_type);
+	Dot* return_nearest_container_with_item(Dot* dot, int item_type);
 	Dot* return_nearest_container_with_item_type(Dot* dot, int item_type);
-	Dot* return_nearest_container_or_storage_tile_with_item(Dot*, Inventory_Item item_type);
+	Dot* return_nearest_container_or_storage_tile_with_item(Dot*, int item_type);
 	Dot* return_nearest_container_or_storage_tile_with_item_type(Dot* dot, int item_type);
 	Dot* return_nearest_tile_by_type_or_name(Dot* dot, bool type_or_name, int search_number);
 	vector<Dot*> return_chair_and_table_combo(Dot* dot);
@@ -88,7 +90,7 @@ public:
 	bool check_dot_type(Dot* dot, int focus_type_category, int focus_type_specific, bool tile_built);
 	void change_dot_focus(Dot* dot, Dot* new_focus, int task_type);
 	int Number_of_Containers_Not_in_Storage();
-	int Amount_of_Inventory_Item_in_Storage(Inventory_Item search_item);
+	int Amount_of_Inventory_Item_in_Storage(int search_item);
 
 	// ASTEROID COMMANDS
 	void Distribute_Asteroids();
@@ -131,10 +133,7 @@ public:
 
 	// TEST OBJECTS
 	Player_Dot* player_dot;
-
-	NPC_Dot* green_dot;
-	NPC_Dot* green_dot_2;
-	NPC_Dot* green_dot_3;
+	Multi_Dot* multi_dot;
 
 	int delay = 0;
 
@@ -151,6 +150,7 @@ private:
 	LTexture* texture_array[NUM_TILESHEETS];
 	LTexture* bolt_sprites;
 	LTexture* dot_spritesheet;
+	LTexture* multi_dot_spritesheet;
 	LTexture* asteroid_spritesheet;
 	LTexture* enemy_ship_spritesheet;
 	LTexture* container_spritesheet;
@@ -179,6 +179,7 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 
 	bolt_sprites = texture_array[BOLT_SPRITES];
 	dot_spritesheet = texture_array[DOT_SPRITESHEET];
+	multi_dot_spritesheet = texture_array[MULTI_DOT_SPRITESHEET];
 	asteroid_spritesheet = texture_array[ASTEROID_SPRITESHEET];
 	enemy_ship_spritesheet = texture_array[ENEMY_SHIP_SPRITESHEET];
 	container_spritesheet = texture_array[CONTAINER_SPRITESHEET];
@@ -193,26 +194,36 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 	iField = new Path_Field(world);
 
 	player_dot = new Player_Dot(gRenderer, dot_spritesheet, 50 * TILE_WIDTH, 50* TILE_HEIGHT, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Spacesuit_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Oxygen_Tank, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Mining_Laser_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Iron_Ore, 99);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Laser_Pistol_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Frenzel_1, 99);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Frenzel_2, 99);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Emitter_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Construction_Tubing_Floor_1,99);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Construction_Tubing_Wall_1, 99);
-	Add_Item_To_Dot_Inventory(player_dot, Inventory_Oxygen_Machine, 99);
-	player_dot->npc_dot_config.dot_equipment_config.Spacesuit = { Inventory_Spacesuit_1,1 };
-	player_dot->npc_dot_config.dot_equipment_config.Weapon = { Inventory_Laser_Pistol_1,1 };
-	player_dot->npc_dot_config.dot_equipment_config.Mining_Laser = { Inventory_Mining_Laser_1,1 };
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_SPACESUIT_1, 1);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_OXYGEN_TANK, 1);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_MINING_LASER_1, 1);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_IRON_ORE, 99);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_LASER_PISTOL_1, 1);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_FRENZEL_1, 99);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_FRENZEL_2, 99);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_EMITTER_1, 1);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_CONSTRUCTION_TUBING_FLOOR_1,99);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_CONSTRUCTION_TUBING_WALL_1, 99);
+	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_OXYGEN_MACHINE, 99);
+	player_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
+	player_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
+	player_dot->npc_dot_config.dot_equipment_config.Mining_Laser = { INVENTORY_MINING_LASER_1,1 };
 	player_dot->Check_Craftable_Items();
+
+	multi_dot = new Multi_Dot(gRenderer, multi_dot_spritesheet, 51 * TILE_WIDTH, 50 * TILE_HEIGHT, 0);
 	
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet, (50+i) * TILE_WIDTH, 48 * TILE_HEIGHT, 1));
 	}
+
+	//for (int i = 0; i < 1; i++)
+	//{
+	//	NPC_Dot* enemy_dot = new NPC_Dot(gRenderer, dot_spritesheet, 50 * TILE_WIDTH, 40 * TILE_HEIGHT, 3);
+	//	enemy_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
+	//	enemy_dot->npc_dot_config.dot_stat_faction = DOT_FACTION_ENEMY;
+	//	npc_dot_array.push_back(enemy_dot);
+	//}
 
 	//Add_Item_To_Dot_Inventory(npc_dot_array.back(), Inventory_Oxygen_Tank, 5);
 
@@ -223,10 +234,9 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 	//	Add_Item_To_Dot_Inventory(container_array[i], Inventory_Soylent_Meal_1, 1);
 	//}
 	
-	if (world->item_tiles[52][45] != NULL) Add_Item_To_Dot_Inventory(world->item_tiles[52][45], Inventory_Spacesuit_1, 5);
-	if (world->item_tiles[52][45] != NULL) Add_Item_To_Dot_Inventory(world->item_tiles[52][45], Inventory_Iron_Ore, 5);
-	if (world->item_tiles[52][45] != NULL) Add_Item_To_Dot_Inventory(world->item_tiles[52][45], Inventory_Soylent_Meal_1, 99);
-
+	if (world->item_tiles[52][45] != NULL) Add_Item_To_Dot_Inventory(world->item_tiles[52][45], INVENTORY_SPACESUIT_1, 5);
+	if (world->item_tiles[52][45] != NULL) Add_Item_To_Dot_Inventory(world->item_tiles[52][45], INVENTORY_IRON_ORE, 5);
+	if (world->item_tiles[52][45] != NULL) Add_Item_To_Dot_Inventory(world->item_tiles[52][45], INVENTORY_SOYLENT_MEAL_1, 99);
 
 }
 
@@ -255,7 +265,7 @@ void Intelligence::Erase_Alerts(Dot* dot)
 
 // INPUT COMMANDS
 
-void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int y_tile, int x, int y, Inventory_Item item)
+void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code)
 {
 	switch (current_action)
 	{
@@ -268,33 +278,36 @@ void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int 
 		break;
 	case BUTTON_ACTION_CREATE_ITEM:
 	case BUTTON_ACTION_PLACE_ITEM:
-		if (dot_has_item_in_inventory(player_dot, item) && world->Check_If_Can_Be_Placed(&Return_Tile_By_Inventory_Item(item), x_tile, y_tile))
+		if (dot_has_item_in_inventory(player_dot, inventory_item_code) && world->Check_If_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
 		{
-			world->Create_Tile(Return_Tile_By_Inventory_Item(item), x_tile, y_tile);
-			Remove_Item_From_Dot_Inventory(player_dot, item, 1);
+			world->Create_Tile(Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
+			Remove_Item_From_Dot_Inventory(player_dot, inventory_item_code, 1);
 		}
 
 		break;
 	case BUTTON_ACTION_PLACE_SCAFFOLD:
-		if (world->Check_If_Scaffold_Can_Be_Placed(&Return_Tile_By_Inventory_Item(item), x_tile, y_tile))
+		if (world->Check_If_Scaffold_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
 		{
-			Create_Scaffolding(&Return_Tile_By_Inventory_Item(item), x_tile, y_tile);
+			Create_Scaffolding(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
 		}
 		break;
 	}
 }
 
-void Intelligence::Handle_Non_Console_Click_And_Hold(int current_action, int x_tile, int y_tile, int x, int y, Inventory_Item item)
+void Intelligence::Handle_Non_Console_Click_And_Hold(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code)
 {
 	switch (current_action)
 	{
+	case BUTTON_ACTION_ATTACK:
+		if (player_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0) Fire_Weapon(player_dot, world->world_tiles[x_tile][y_tile], 0, 20, true, x, y);
+		break;
 	case BUTTON_ACTION_MINING_LASER:
 		Fire_Mining_Laser(player_dot, world->world_tiles[x_tile][y_tile], true, x, y);
 		break;
 	}
 }
 
-void Intelligence::Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, Inventory_Item item)
+void Intelligence::Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code)
 {
 	switch (current_action)
 	{
@@ -601,12 +614,12 @@ void Intelligence::Update_All_Enemy_Ships_AI()
 
 // Dot inventory commands
 
-bool Intelligence::dot_has_item_in_inventory(Dot* dot, Inventory_Item item)
+bool Intelligence::dot_has_item_in_inventory(Dot* dot, int inventory_item_code)
 {
 	bool item_in_inventory = false;
 	for (int p = 0; p < MAX_DOT_INVENTORY; ++p)
 	{
-		if (dot->npc_dot_config.inventory_slots[p].item_type.item_code == item.item_code && dot->npc_dot_config.inventory_slots[p].item_number > 0)
+		if (dot->npc_dot_config.inventory_slots[p].inventory_item_code == inventory_item_code && dot->npc_dot_config.inventory_slots[p].item_number > 0)
 		{
 			item_in_inventory = true;
 			break;
@@ -616,17 +629,17 @@ bool Intelligence::dot_has_item_in_inventory(Dot* dot, Inventory_Item item)
 
 }
 
-void Intelligence::Add_Item_To_Dot_Inventory(Dot* dot, Inventory_Item pickup, int quantity)
+void Intelligence::Add_Item_To_Dot_Inventory(Dot* dot, int inventory_item, int quantity)
 {
 	// IF ADDING ITEMS TO A CONTAINER, MAKE SURE TO ADD THEM TO THE TILE PARTS LIST SO THAT DOTS KNOW WHAT WAS IN THERE WHEN TRANSFERRING ITEMS BETWEEN PLACES //
-	if (dot->dot_config[DOT_TYPE] == DOT_CONTAINER) dot->npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ pickup,quantity });
+	if (dot->dot_config[DOT_TYPE] == DOT_CONTAINER) dot->npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ inventory_item,quantity });
 	
 	bool item_added = false;
 	for (int p = 0; p < MAX_DOT_INVENTORY; ++p)
 	{
-		if (dot->npc_dot_config.inventory_slots[p].item_type.item_code == pickup.item_code)
+		if (dot->npc_dot_config.inventory_slots[p].inventory_item_code == inventory_item)
 		{
-			dot->npc_dot_config.inventory_slots[p].item_number = dot->npc_dot_config.inventory_slots[p].item_number + quantity;
+			dot->npc_dot_config.inventory_slots[p].item_number += quantity;
 			item_added = true;
 			break;
 		}
@@ -635,24 +648,24 @@ void Intelligence::Add_Item_To_Dot_Inventory(Dot* dot, Inventory_Item pickup, in
 	{
 		for (int p = 0; p < MAX_DOT_INVENTORY; ++p)
 		{
-			if (dot->npc_dot_config.inventory_slots[p].item_type.item_code == Inventory_Empty_Slot.item_code)
+			if (dot->npc_dot_config.inventory_slots[p].inventory_item_code== INVENTORY_EMPTY_SLOT)
 			{
-				dot->npc_dot_config.inventory_slots[p].item_type = pickup;
-				dot->npc_dot_config.inventory_slots[p].item_number = dot->npc_dot_config.inventory_slots[p].item_number + quantity;
+				dot->npc_dot_config.inventory_slots[p].inventory_item_code = inventory_item;
+				dot->npc_dot_config.inventory_slots[p].item_number = quantity;
 				break;
 			}
 		}
 	}
 }
 
-void Intelligence::Remove_Item_From_Dot_Inventory(Dot* dot, Inventory_Item item_type, int quantity_to_remove)
+void Intelligence::Remove_Item_From_Dot_Inventory(Dot* dot, int inventory_item_code, int quantity_to_remove)
 {
 	int leftover_quantity = quantity_to_remove;
 	for (int p = 0; p < MAX_DOT_INVENTORY; ++p)
 	{
-		if (dot->npc_dot_config.inventory_slots[p].item_type.item_code == item_type.item_code)
+		if (dot->npc_dot_config.inventory_slots[p].inventory_item_code == inventory_item_code)
 		{
-			int current_item_quantity = dot->npc_dot_config.inventory_slots[p].item_number = dot->npc_dot_config.inventory_slots[p].item_number;
+			int current_item_quantity = dot->npc_dot_config.inventory_slots[p].item_number;
 			if (leftover_quantity >= current_item_quantity)
 			{
 				dot->npc_dot_config.inventory_slots[p].item_number = dot->npc_dot_config.inventory_slots[p].item_number = 0;
@@ -666,7 +679,7 @@ void Intelligence::Remove_Item_From_Dot_Inventory(Dot* dot, Inventory_Item item_
 
 			if (dot->npc_dot_config.inventory_slots[p].item_number <= 0)
 			{
-				dot->npc_dot_config.inventory_slots[p].item_type = Inventory_Empty_Slot;
+				dot->npc_dot_config.inventory_slots[p].inventory_item_code = INVENTORY_EMPTY_SLOT;
 				dot->npc_dot_config.inventory_slots[p].item_number = 0;
 			}
 
@@ -677,36 +690,36 @@ void Intelligence::Remove_Item_From_Dot_Inventory(Dot* dot, Inventory_Item item_
 
 void Intelligence::Remove_Building_Items_From_Dot_Inventory(Dot* dot, Multi_Tile_Type built_item)
 {
-	if (built_item.building_specs.Requirement_1_Quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_1,built_item.building_specs.Requirement_1_Quantity);
-	if (built_item.building_specs.Requirement_2_Quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_2, built_item.building_specs.Requirement_2_Quantity);
-	if (built_item.building_specs.Requirement_3_Quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_3, built_item.building_specs.Requirement_3_Quantity);
-	if (built_item.building_specs.Requirement_4_Quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_4, built_item.building_specs.Requirement_4_Quantity);
-	if (built_item.building_specs.Requirement_5_Quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_5, built_item.building_specs.Requirement_5_Quantity);
-	if (built_item.building_specs.Requirement_6_Quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_6, built_item.building_specs.Requirement_6_Quantity);
+	if (built_item.building_specs.Requirement_1.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_1.inventory_requirement,built_item.building_specs.Requirement_1.requirement_quantity);
+	if (built_item.building_specs.Requirement_2.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_2.inventory_requirement, built_item.building_specs.Requirement_2.requirement_quantity);
+	if (built_item.building_specs.Requirement_3.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_3.inventory_requirement, built_item.building_specs.Requirement_3.requirement_quantity);
+	if (built_item.building_specs.Requirement_4.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_4.inventory_requirement, built_item.building_specs.Requirement_4.requirement_quantity);
+	if (built_item.building_specs.Requirement_5.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_5.inventory_requirement, built_item.building_specs.Requirement_5.requirement_quantity);
+	if (built_item.building_specs.Requirement_6.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_6.inventory_requirement, built_item.building_specs.Requirement_6.requirement_quantity);
 }
 
-void Intelligence::Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, Inventory_Item item_type, int quantity_dropped)
+void Intelligence::Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, int inventory_item_code, int quantity_dropped)
 {
-	if (dot->Check_Inventory_For_Item(item_type))
+	if (dot->Check_Inventory_For_Item(inventory_item_code))
 	{
 		cout << dot->print_coords() << "/ " << x_pos << ", " << y_pos << endl;
-		Container* new_container = new Container(gRenderer, inventory_spritesheet, x_pos, y_pos, item_type.clip_rect_x, item_type.clip_rect_y);
-		Add_Item_To_Dot_Inventory(new_container, item_type, quantity_dropped);
-		Remove_Item_From_Dot_Inventory(dot, item_type, quantity_dropped);
+		Container* new_container = new Container(gRenderer, inventory_spritesheet, x_pos, y_pos, Fetch_Inventory(inventory_item_code).clip_rect_x, Fetch_Inventory(inventory_item_code).clip_rect_y);
+		Add_Item_To_Dot_Inventory(new_container, inventory_item_code, quantity_dropped);
+		Remove_Item_From_Dot_Inventory(dot, inventory_item_code, quantity_dropped);
 		container_array.push_back(new_container);
 	}
 }
 
 void Intelligence::Dot_Drop_Inventory(Dot* dot, int x_pos, int y_pos)
 {
-	Container* new_container = new Container(gRenderer, inventory_spritesheet, x_pos, y_pos, dot->npc_dot_config.inventory_slots[0].item_type.clip_rect_x, dot->npc_dot_config.inventory_slots[0].item_type.clip_rect_y);
+	Container* new_container = new Container(gRenderer, inventory_spritesheet, x_pos, y_pos, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_x, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_y);
 	
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++)
 	{
 		if (dot->npc_dot_config.inventory_slots[i].item_number > 0)
 		{
-			Add_Item_To_Dot_Inventory(new_container, dot->npc_dot_config.inventory_slots[i].item_type, dot->npc_dot_config.inventory_slots[i].item_number);
-			Remove_Item_From_Dot_Inventory(dot, dot->npc_dot_config.inventory_slots[i].item_type, dot->npc_dot_config.inventory_slots[i].item_number);
+			Add_Item_To_Dot_Inventory(new_container, dot->npc_dot_config.inventory_slots[i].inventory_item_code, dot->npc_dot_config.inventory_slots[i].item_number);
+			Remove_Item_From_Dot_Inventory(dot, dot->npc_dot_config.inventory_slots[i].inventory_item_code, dot->npc_dot_config.inventory_slots[i].item_number);
 		}
 	}
 
@@ -719,7 +732,7 @@ void Intelligence::Add_Container_Items_to_Dot_Inventory(Dot* dot, Dot* container
 	{
 		if (container->npc_dot_config.inventory_slots[i].item_number > 0)
 		{
-			Add_Item_To_Dot_Inventory(dot, container->npc_dot_config.inventory_slots[i].item_type, container->npc_dot_config.inventory_slots[i].item_number);
+			Add_Item_To_Dot_Inventory(dot, container->npc_dot_config.inventory_slots[i].inventory_item_code, container->npc_dot_config.inventory_slots[i].item_number);
 		}
 	}
 
@@ -732,18 +745,18 @@ void Intelligence::Delete_Container_by_Pointer(Dot* container_pointer)
 	container_array.erase(find(container_array.begin(), container_array.end(), container_pointer));
 }
 
-void Intelligence::Dot_Give_Inventory_To_Another_Dot(Dot* dot, Dot* second_dot, Inventory_Item item, int quantity)
+void Intelligence::Dot_Give_Inventory_To_Another_Dot(Dot* dot, Dot* second_dot, int inventory_item_code, int quantity)
 {
 	if (second_dot->multi_tile_config.built_percent < 100)
 	{
 		for (int i = 0; i < second_dot->npc_dot_config.tile_parts_list.size(); i++)
 		{
-			int item_quantity = dot->Check_Inventory_For_Item(second_dot->npc_dot_config.tile_parts_list[i].item_type);
+			int item_quantity = dot->Check_Inventory_For_Item(second_dot->npc_dot_config.tile_parts_list[i].inventory_item_code);
 			if (item_quantity > 0)
 			{
 				int quantity = min(second_dot->npc_dot_config.tile_parts_list[i].item_number, item_quantity);
-				Add_Item_To_Dot_Inventory(second_dot, second_dot->npc_dot_config.tile_parts_list[i].item_type, quantity);
-				Remove_Item_From_Dot_Inventory(dot, second_dot->npc_dot_config.tile_parts_list[i].item_type, quantity);
+				Add_Item_To_Dot_Inventory(second_dot, second_dot->npc_dot_config.tile_parts_list[i].inventory_item_code, quantity);
+				Remove_Item_From_Dot_Inventory(dot, second_dot->npc_dot_config.tile_parts_list[i].inventory_item_code, quantity);
 				second_dot->npc_dot_config.tile_parts_list[i].item_number = second_dot->npc_dot_config.tile_parts_list[i].item_number - item_quantity;
 				if (second_dot->npc_dot_config.tile_parts_list[i].item_number == 0) second_dot->npc_dot_config.tile_parts_list.erase(second_dot->npc_dot_config.tile_parts_list.begin() + i);
 			}
@@ -751,20 +764,20 @@ void Intelligence::Dot_Give_Inventory_To_Another_Dot(Dot* dot, Dot* second_dot, 
 	}
 	else
 	{
-		if (dot->Check_Inventory_For_Item(item) >= quantity)
+		if (dot->Check_Inventory_For_Item(inventory_item_code) >= quantity)
 		{
-			Remove_Item_From_Dot_Inventory(dot, item, quantity);
-			Add_Item_To_Dot_Inventory(second_dot, item, quantity);
+			Remove_Item_From_Dot_Inventory(dot, inventory_item_code, quantity);
+			Add_Item_To_Dot_Inventory(second_dot, inventory_item_code, quantity);
 		}
 	}
 }
 
-void Intelligence::Dot_Craft_Item(Dot* dot, Inventory_Item item, int quantity)
+void Intelligence::Dot_Craft_Item(Dot* dot, int inventory_item_code, int quantity)
 {
 	for (int i=0; i < quantity; i++)
 	{
-		Add_Item_To_Dot_Inventory(dot, item, 1);
-		Remove_Building_Items_From_Dot_Inventory(dot, Return_Tile_By_Inventory_Item(item));
+		Add_Item_To_Dot_Inventory(dot, inventory_item_code, 1);
+		Remove_Building_Items_From_Dot_Inventory(dot, Return_Tile_By_Inventory_Item(inventory_item_code));
 	}
 }
 
@@ -775,6 +788,8 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 	int available_quantity;
 	int transfer_quantity;
 	Carried_Multi_Tile new_carried_item;
+	vector<Tile*> oxygenation_search_vector;
+	World::oxygenation_check new_check = { false, oxygenation_search_vector };
 	
 	Dot* current_dot_goal_pointer = dot->npc_dot_config.current_goal_list.back().pointer_to_dot_pointer;
 	int* current_dot_value_pointer = dot->npc_dot_config.current_goal_list.back().pointer_to_quantity_to_change;
@@ -807,11 +822,8 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		break;
 	case ACTION_OXYGENATE_AIR:
 		dot->multi_tile_config.is_oxygenated = 500;
-		world->Oxygenate_Tiles(dot);
-		goal_complete = true;
-		break;
-	case ACTION_TILE_STREAMLINE:
-		//world->Streamline_Tile(dot);
+		world->Test_All_Tile_Neighbors_For_Leaks(world->world_tiles[dot->getTileX()][dot->getTileY()], &new_check);
+		if (new_check.breach_status == false) world->Toggle_Room_Tiles_Oxygenated(new_check.tile_vector, dot->multi_tile_config.is_oxygenated/new_check.tile_vector.size());
 		goal_complete = true;
 		break;
 	case ACTION_GROW_FRENZEL:
@@ -868,7 +880,7 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		goal_complete = true;
 		break;
 	case ACTION_SET_DOT_TO_NOT_CARRY_ITEM:
-		current_dot_goal_pointer->Set_Carried_item(gRenderer, inventory_spritesheet, null_tile.inventory_pointer);
+		current_dot_goal_pointer->Set_Carried_item(gRenderer, inventory_spritesheet, INVENTORY_NULL_ITEM);
 		goal_complete = true;
 		break;
 
@@ -998,20 +1010,36 @@ void Intelligence::Update_NPD_AI()
 	total_job_priority = Calculate_Total_Job_Priority();
 	for (int p = 0; p < npc_dot_array.size(); ++p)
 	{
-		Erase_Alerts(npc_dot_array[p]);
-
-		// Choose a job if you don't have one already
-		if (npc_dot_array[p]->npc_dot_config.current_goal_list.size() == 0)
+		npc_dot_array[p]->x_tile = npc_dot_array[p]->getTileX();
+		npc_dot_array[p]->y_tile = npc_dot_array[p]->getTileY();
+		
+		// HANDLE GOALS FOR FRIENDLY NPCS
+		if (npc_dot_array[p]->npc_dot_config.dot_stat_faction == 0)
 		{
-			npc_dot_array[p]->Set_Carried_item(gRenderer, inventory_spritesheet, null_tile.inventory_pointer);
-			Dot_Choose_Job(npc_dot_array[p]);
-			npc_dot_array[p]->dot_current_job.Run_Job(npc_dot_array[p]);
+			Erase_Alerts(npc_dot_array[p]);
+
+			// Choose a job if you don't have one already
+			if (npc_dot_array[p]->npc_dot_config.current_goal_list.size() == DOT_FACTION_PLAYER)
+			{
+				npc_dot_array[p]->Set_Carried_item(gRenderer, inventory_spritesheet, INVENTORY_NULL_ITEM);
+				Dot_Choose_Job(npc_dot_array[p]);
+				npc_dot_array[p]->dot_current_job.Run_Job(npc_dot_array[p]);
+			}
+
+			// Run personal health jobs
+			Manage_Dot_Equipment(npc_dot_array[p]);
+			Manage_Dot_Health(npc_dot_array[p]);
+
 		}
 
-		// Run personal health jobs
-		Manage_Dot_Equipment(npc_dot_array[p]);
-		Manage_Dot_Health(npc_dot_array[p]);
-
+		// HANDLE GOALS FOR ENEMY NPCS
+		if (npc_dot_array[p]->npc_dot_config.dot_stat_faction == DOT_FACTION_ENEMY)
+		{
+			Manage_Enemy_Dot_Priorities(npc_dot_array[p]);
+			Dot* target_dot = return_nearest_dot_with_faction(npc_dot_array[p], 0, 100);
+			if (target_dot != NULL && npc_dot_array[p]->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0) Fire_Weapon(npc_dot_array[p], target_dot, 0, 10);
+		}
+		
 		// Run Goals
 
 		if (!empty(npc_dot_array[p]->npc_dot_config.current_goal_list))
@@ -1019,8 +1047,8 @@ void Intelligence::Update_NPD_AI()
 			//cout << "dot: " << to_string(int(&npc_dot_array[p])) << " with job type: " << npc_dot_array[p]->dot_current_job.job_type << " starting work on: " << npc_dot_array[p]->npc_dot_config.current_goal_list.back().goal_action << endl;
 			Process_Most_Recent_Dot_Goal(npc_dot_array[p]);
 			//cout << "dot finished with goal" << endl;
-		}
-
+		}		
+		
 		// HANDLE DOT MOVEMENT
 		Set_Dot_Target_to_Next_Node_on_Path(npc_dot_array[p]);
 
@@ -1037,7 +1065,26 @@ void Intelligence::Update_NPD_AI()
 			delete npc_dot_array[p];
 			npc_dot_array.erase(npc_dot_array.begin() + p);
 		}
+		
 	}
+}
+
+void Intelligence::Update_Enemy_Dot_AI()
+{
+	for (int p = 0; p < npc_dot_array.size(); ++p)
+	{
+
+	}
+}
+
+void Intelligence::Manage_Enemy_Dot_Priorities(Dot* dot)
+{
+	Manage_Priority_Delays(dot, DOT_PRIORITY_WEAPON_COOLDOWN);
+	if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_delay == 0)
+	{
+		Manage_Priority_Changes(dot, DOT_PRIORITY_WEAPON_COOLDOWN);
+	}
+
 }
 
 void Intelligence::Manage_Dot_Health(NPC_Dot* dot)
@@ -1061,25 +1108,26 @@ void Intelligence::Manage_Dot_Health(NPC_Dot* dot)
 
 void Intelligence::Manage_Dot_Equipment(Dot* dot)
 {
-	if (dot->Check_Inventory_For_Item(Inventory_Oxygen_Tank) > 0)
+	if (dot->Check_Inventory_For_Item(INVENTORY_OXYGEN_TANK) > 0)
 	{
-		dot->npc_dot_config.dot_equipment_config.Oxygen_Tank.item_type = Inventory_Oxygen_Tank;
-		dot->npc_dot_config.dot_equipment_config.Oxygen_Tank.item_number = dot->Check_Inventory_For_Item(Inventory_Oxygen_Tank);
+		dot->npc_dot_config.dot_equipment_config.Oxygen_Tank.inventory_item_code = INVENTORY_OXYGEN_TANK;
+		dot->npc_dot_config.dot_equipment_config.Oxygen_Tank.item_number = dot->Check_Inventory_For_Item(INVENTORY_OXYGEN_TANK);
 	}
 	else
 	{
-		dot->npc_dot_config.dot_equipment_config.Oxygen_Tank.item_type = Inventory_Empty_Slot;
+		dot->npc_dot_config.dot_equipment_config.Oxygen_Tank.inventory_item_code = INVENTORY_EMPTY_SLOT;
 		dot->npc_dot_config.dot_equipment_config.Oxygen_Tank.item_number = 0;
 	}
 
-	if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].current_level >= dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].alarm_level && dot->Check_Inventory_For_Item(Inventory_Spacesuit_1) > 0 && dot->npc_dot_config.dot_equipment_config.Spacesuit.item_type.item_code != INVENTORY_SPACESUIT_1)
+	if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].current_level >= dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].alarm_level && dot->Check_Inventory_For_Item(INVENTORY_SPACESUIT_1) > 0 && dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code != INVENTORY_SPACESUIT_1)
 	{
-		dot->npc_dot_config.dot_equipment_config.Spacesuit.item_type = Inventory_Spacesuit_1;
+		cout << "putting on spacesuit" << endl;
+		dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code = INVENTORY_SPACESUIT_1;
 		dot->npc_dot_config.dot_equipment_config.Spacesuit.item_number = 1;
 	}
 	else if (get_current_dot_tile(dot)->multi_tile_config.is_oxygenated >= 1  && dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].current_level < dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].alarm_level)
 	{
-		dot->npc_dot_config.dot_equipment_config.Spacesuit.item_type = Inventory_Empty_Slot;
+		dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code = INVENTORY_EMPTY_SLOT;
 		dot->npc_dot_config.dot_equipment_config.Spacesuit.item_number = 0;
 	}
 }
@@ -1090,7 +1138,7 @@ void Intelligence::Manage_Priority_Changes(Dot* dot, int dot_priority_name)
 	{
 	case DOT_PRIORITY_OXYGEN_NEED:
 		if (get_current_dot_tile(dot)->multi_tile_config.is_oxygenated >= 1 || 
-			dot->npc_dot_config.dot_equipment_config.Spacesuit.item_type.item_code == INVENTORY_SPACESUIT_1 && 
+			dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code == INVENTORY_SPACESUIT_1 && 
 			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].current_level > 0)
 		{
 			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].current_level--;
@@ -1110,7 +1158,7 @@ void Intelligence::Manage_Priority_Changes(Dot* dot, int dot_priority_name)
 		}
 		break;
 	case DOT_PRIORITY_SPACESUIT_OXYGEN:
-		if (dot->npc_dot_config.dot_equipment_config.Spacesuit.item_type.item_code == INVENTORY_SPACESUIT_1)
+		if (dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code == INVENTORY_SPACESUIT_1)
 		{
 			if (get_current_dot_tile(dot)->multi_tile_config.is_oxygenated >= 1)
 			{
@@ -1129,9 +1177,9 @@ void Intelligence::Manage_Priority_Changes(Dot* dot, int dot_priority_name)
 
 			if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].current_level <= dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].min_level)
 			{
-				if (dot->Check_Inventory_For_Item(Inventory_Oxygen_Tank) > 0)
+				if (dot->Check_Inventory_For_Item(INVENTORY_OXYGEN_TANK) > 0)
 				{
-					Remove_Item_From_Dot_Inventory(dot, Inventory_Oxygen_Tank, 1);
+					Remove_Item_From_Dot_Inventory(dot, INVENTORY_OXYGEN_TANK, 1);
 					dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].current_level = 100;
 				}
 			}
@@ -1159,6 +1207,12 @@ void Intelligence::Manage_Priority_Changes(Dot* dot, int dot_priority_name)
 			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].min_level;
 		}
 		break;
+	case DOT_PRIORITY_WEAPON_COOLDOWN:
+		dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level--;
+		if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level <= dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].min_level)
+		{
+			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].min_level;
+		}
 	}
 }
 
@@ -1174,19 +1228,19 @@ void Intelligence::Respond_To_Dot_Priority_Alarm_Level(NPC_Dot* dot, int dot_pri
 	{
 	case DOT_PRIORITY_OXYGEN_NEED:
 
-		if (dot->npc_dot_config.dot_equipment_config.Spacesuit.item_type.item_code == Inventory_Empty_Slot.item_code && dot->Check_Inventory_For_Item(Inventory_Spacesuit_1) > 0)
+		if (dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code == INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(INVENTORY_SPACESUIT_1) > 0)
 		{
-			dot->npc_dot_config.dot_equipment_config.Spacesuit.item_type = Inventory_Spacesuit_1;
+			dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code = INVENTORY_SPACESUIT_1;
 			dot->npc_dot_config.dot_equipment_config.Spacesuit.item_number = 1;
 		}
-		else if (dot->Check_Inventory_For_Item(Inventory_Spacesuit_1) <= 0 && dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_GET_SPACESUIT)
+		else if (dot->Check_Inventory_For_Item(INVENTORY_SPACESUIT_1) <= 0 && dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_GET_SPACESUIT)
 		{
 			
 			dot->dot_wipe_goals();
-			Dot* nearest_space_suit_closet = return_nearest_container_or_storage_tile_with_item(dot, Inventory_Spacesuit_1);
+			Dot* nearest_space_suit_closet = return_nearest_container_or_storage_tile_with_item(dot, INVENTORY_SPACESUIT_1);
 			if (nearest_space_suit_closet != NULL)
 			{
-				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_GET_SPACESUIT, 1.0 , nearest_space_suit_closet, NULL, Return_Tile_By_Inventory_Item(Inventory_Spacesuit_1), 1 };
+				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_GET_SPACESUIT, 1.0 , nearest_space_suit_closet, NULL, Return_Tile_By_Inventory_Item(INVENTORY_SPACESUIT_1), 1 };
 				dot->dot_current_job.Run_Job(dot);
 			}
 			else if (world->world_tiles[dot->getTileX()][dot->getTileY()]->multi_tile_config.is_oxygenated == 0 && dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_FIND_OXYGENATED_TILE)
@@ -1215,17 +1269,17 @@ void Intelligence::Respond_To_Dot_Priority_Alarm_Level(NPC_Dot* dot, int dot_pri
 			vector<Dot*> chair_and_table_combo = return_chair_and_table_combo(dot);
 			if (chair_and_table_combo.size() == 2)
 			{
-				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_EAT_FOOD, 1.0 , chair_and_table_combo[0], chair_and_table_combo[1], Return_Tile_By_Inventory_Item(dot->Check_Inventory_For_Item_Type(ITEM_TYPE_FOOD)), -1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
+				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_EAT_FOOD, 1.0 , chair_and_table_combo[0], chair_and_table_combo[1], Return_Tile_By_Inventory_Item(dot->Check_Inventory_For_Item_Type(INVENTORY_TYPE_FOOD).item_code), -1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
 				dot->dot_current_job.Run_Job(dot);
 			}
 		}
 		else if (dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_FIND_FOOD)
 		{
 			dot->dot_wipe_goals();
-			Dot* nearest_soylent_meal = return_nearest_container_or_storage_tile_with_item_type(dot, ITEM_TYPE_FOOD);
+			Dot* nearest_soylent_meal = return_nearest_container_or_storage_tile_with_item_type(dot, INVENTORY_TYPE_FOOD);
 			if (nearest_soylent_meal != NULL)
 			{
-				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_FIND_FOOD, 1.0 , nearest_soylent_meal, NULL, Return_Tile_By_Inventory_Item(nearest_soylent_meal->Check_Inventory_For_Item_Type(ITEM_TYPE_FOOD)), 1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
+				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_FIND_FOOD, 1.0 , nearest_soylent_meal, NULL, Return_Tile_By_Inventory_Item(nearest_soylent_meal->Check_Inventory_For_Item_Type(ITEM_TYPE_FOOD).item_code), 1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
 				dot->dot_current_job.Run_Job(dot);
 			}
 		}
@@ -1325,12 +1379,6 @@ void Intelligence::set_dot_tile_target(int new_target_tile_x, int new_target_til
 }
 
 
-// ENEMY DOT COMMANDS
-
-void Intelligence::Update_Enemy_Dot_AI()
-{
-
-}
 
 // Dot Search Functions
 
@@ -1435,6 +1483,32 @@ vector<Dot*> Intelligence::return_array_of_tiles_by_type_or_name(bool type_or_na
 	return search_vector;
 }
 
+Dot* Intelligence::return_nearest_dot_with_faction(Dot* searching_dot, int faction, int search_distance)
+{
+	int closest_x = 9999;
+	int closest_y = 9999;
+
+	Dot* final_dot = NULL;
+
+	for (int i = 0; i < npc_dot_array.size(); i++)
+	{
+		if (npc_dot_array[i]->npc_dot_config.dot_stat_faction == faction)
+		{
+			Dot* cur_dot = npc_dot_array[i];
+			unsigned int dist_x = abs(cur_dot->getTileX() - searching_dot->getTileX());
+			unsigned int dist_y = abs(cur_dot->getTileY() - searching_dot->getTileY());
+
+			if (cur_dot->npc_dot_config.dot_stat_faction == faction && pow((dist_x + dist_y), 2) < pow(search_distance, 2) && (dist_x + dist_y) < (closest_x + closest_y))
+			{
+				final_dot = cur_dot;
+				closest_x = dist_x;
+				closest_y = dist_y;
+			}
+		}
+	}
+	return final_dot;
+}
+
 Dot* Intelligence::return_nearest_dot_by_type(Dot* dot, int dot_vector_type, Multi_Tile_Type tile_type)
 {
 	vector <Dot*> search_vector = return_appropriate_dot_vector(dot_vector_type);
@@ -1464,14 +1538,14 @@ Dot* Intelligence::return_nearest_dot_by_type(Dot* dot, int dot_vector_type, Mul
 	return final_dot;
 }
 
-Dot* Intelligence::return_nearest_container_with_item(Dot* dot, Inventory_Item item_type)
+Dot* Intelligence::return_nearest_container_with_item(Dot* dot, int inventory_item_code)
 {
 	double dot_distance = 9999;
 	int dot_number = -1;
 
 	for (int i = 0; i < container_array.size(); i++)
 	{
-		if (container_array[i]->Check_Inventory_For_Item(item_type) > 0)
+		if (container_array[i]->Check_Inventory_For_Item(inventory_item_code) > 0)
 		{
 
 			int distance_x = abs(dot->getTileX() - container_array[i]->getTileX());
@@ -1498,7 +1572,7 @@ Dot* Intelligence::return_nearest_container_with_item_type(Dot* dot, int item_ty
 
 	for (int i = 0; i < container_array.size(); i++)
 	{
-		if (container_array[i]->Check_Inventory_For_Item_Type(item_type).item_code != INVENTORY_EMPTY_SLOT)
+		if (container_array[i]->Check_Inventory_For_Item_Type(item_type).item_type == item_type)
 		{
 
 			int distance_x = abs(dot->getTileX() - container_array[i]->getTileX());
@@ -1518,7 +1592,7 @@ Dot* Intelligence::return_nearest_container_with_item_type(Dot* dot, int item_ty
 	}
 }
 
-Dot* Intelligence::return_nearest_container_or_storage_tile_with_item(Dot* dot, Inventory_Item item_type)
+Dot* Intelligence::return_nearest_container_or_storage_tile_with_item(Dot* dot, int item_type)
 {
 	vector<Dot*> search_array = return_array_of_tiles_by_type_or_name(false, STORAGE_TILE_1);
 
@@ -1727,7 +1801,7 @@ bool Intelligence::check_dot_type(Dot* test_dot, int focus_type_category, int fo
 		if (test_focus == focus_type_specific) dot_focus_match = true;
 		break;
 	case DOT_FOCUS_INVENTORY_TYPE:
-		test_focus = test_dot->multi_tile_config.inventory_pointer.item_code;
+		test_focus = test_dot->multi_tile_config.inventory_pointer;
 		if (test_focus == focus_type_specific) dot_focus_match = true;
 		break;
 	}
@@ -1746,7 +1820,7 @@ int Intelligence::Number_of_Containers_Not_in_Storage()
 	return container_array.size();
 }
 
-int Intelligence::Amount_of_Inventory_Item_in_Storage(Inventory_Item search_item)
+int Intelligence::Amount_of_Inventory_Item_in_Storage(int search_item)
 {
 	vector<Dot*> search_vector = return_array_of_tiles_by_type_or_name(false, STORAGE_TILE_1);
 	int count = 0;
@@ -1905,6 +1979,8 @@ void Intelligence::Create_Bolt(SDL_Rect* owners_dot_rect, int target_x, int targ
 
 void Intelligence::Fire_Weapon(Dot* firing_dot, Dot* target_dot, int sprite_row, double speed, bool specific_point, int target_x, int target_y)
 {
+	firing_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level = 1;
+	
 	int target_pos_x = 0;
 	int target_pos_y = 0;
 	
@@ -2056,12 +2132,17 @@ void Intelligence::Update_World_Ai()
 					Dot_Drop_Inventory(world->world_tiles[i][p], world->world_tiles[i][p]->getPosX(), world->world_tiles[i][p]->getPosY());
 					world->Create_Tile(Return_Tile_By_Name(TILE_VACUUM), world->world_tiles[i][p]->getTileX(), world->world_tiles[i][p]->getTileY());
 				}
-				//if (world->world_tiles[i][p]->multi_tile_config.tile_type == TILE_TYPE_CONSTRUCTION_TUBING && world->world_tiles[i][p]->multi_tile_config.item_job_type == ITEM_JOB_DOOR)
-				//{
-				//	world->world_tiles[i][p]->item_job.Run_Job(world->world_tiles[i][p]);
-				//	Process_Most_Recent_Dot_Goal(world->world_tiles[i][p]);
-				//	Check_If_Tile_Has_Needs(world->world_tiles[i][p]);
-				//}
+			}
+
+			if (world->world_tiles[i][p] != NULL && world->world_tiles[i][p]->npc_dot_config.dot_stat_health <= 0)
+			{
+				//Dot_Drop_Inventory(world->world_tiles[i][p], world->world_tiles[i][p]->getPosX(), world->world_tiles[i][p]->getPosY());
+				Delete_Tile(world->world_tiles[i][p]);
+			}
+			if (world->item_tiles[i][p] != NULL && world->item_tiles[i][p]->npc_dot_config.dot_stat_health <= 0)
+			{
+				//Dot_Drop_Inventory(world->item_tiles[i][p], world->item_tiles[i][p]->getPosX(), world->item_tiles[i][p]->getPosY());
+				Delete_Tile(world->item_tiles[i][p]);
 			}
 		}
 	}
@@ -2076,12 +2157,12 @@ void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
 	for (int i = 0; i < tile->npc_dot_config.tile_parts_list.size(); i++)
 	{
 		Dot* project_dot = tile;
-		Dot* dot_with_item = return_nearest_container_or_storage_tile_with_item(tile, tile->npc_dot_config.tile_parts_list[i].item_type);
-		Multi_Tile_Type item_to_transport = Return_Tile_By_Inventory_Item(tile->npc_dot_config.tile_parts_list[i].item_type);
+		Dot* dot_with_item = return_nearest_container_or_storage_tile_with_item(tile, tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
+		Multi_Tile_Type item_to_transport = Return_Tile_By_Inventory_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
 
 		if (dot_with_item != NULL)
 		{
-			int quantity = max(dot_with_item->Check_Inventory_For_Item(tile->npc_dot_config.tile_parts_list[i].item_type), tile->npc_dot_config.tile_parts_list[i].item_number);
+			int quantity = max(dot_with_item->Check_Inventory_For_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code), tile->npc_dot_config.tile_parts_list[i].item_number);
 			dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_SHUTTLE_ITEM_TO_PROJECT, 1 , project_dot, dot_with_item, item_to_transport, tile->npc_dot_config.tile_parts_list[i].item_number });
 		}
 	}
@@ -2289,7 +2370,19 @@ bool Intelligence::check_global_collisions(Dot* dot, SDL_Rect* owner_rect)
 
 void Intelligence::damage_nearby_dots(SDL_Rect* object_doing_damage, SDL_Rect* owner_dot_rect, int damage_radius, int weapon_damage)
 {
+	int x_tile = (object_doing_damage->x + (object_doing_damage->w/2)) / TILE_WIDTH;
+	int y_tile = (object_doing_damage->y + (object_doing_damage->h/2)) / TILE_HEIGHT;
+
 	test_dot_for_damage(player_dot, object_doing_damage, owner_dot_rect, damage_radius, weapon_damage);
+
+	for (int p = -damage_radius / TILE_HEIGHT; p < damage_radius / TILE_HEIGHT + 1; p++)
+	{
+		for (int i = -damage_radius / TILE_WIDTH; i < damage_radius / TILE_WIDTH; i++)
+		{
+			if (world->world_tiles[x_tile + i][y_tile + p] != NULL && world->world_tiles[x_tile + i][y_tile + p]->multi_tile_config.tile_type != VACUUM) test_dot_for_damage(world->world_tiles[x_tile + i][y_tile + p], object_doing_damage, owner_dot_rect, damage_radius, weapon_damage);
+			if (world->item_tiles[x_tile + i][y_tile + p] != NULL) test_dot_for_damage(world->item_tiles[x_tile + i][y_tile + p], object_doing_damage, owner_dot_rect, damage_radius, weapon_damage);
+		}
+	}
 	
 	for (int p = 0; p < npc_dot_array.size(); p++)
 	{
@@ -2360,6 +2453,7 @@ void Intelligence::Advance_Time(float avgFPS)
 	if (ai_debug) cout << "updating NPD ai" << endl;
 	
 	Update_NPD_AI();
+	Update_Enemy_Dot_AI();
 
 	if (ai_debug) cout << "updating player dot ai" << endl;
 	update_player_dot_ai(player_dot);
@@ -2413,10 +2507,14 @@ void Intelligence::render()
 	}
 
 	player_dot->render(gRenderer, camera);
+	multi_dot->render(gRenderer, camera);
 
 	for (int p = 0; p < npc_dot_array.size(); p++) if (npc_dot_array[p]->is_onscreen(camera)) npc_dot_array[p]->render(gRenderer, camera);
 
-	for (int p = 0; p < asteroid_array.size(); p++) if (asteroid_array[p]->is_onscreen(camera)) asteroid_array[p]->render(gRenderer, camera);
+	for (int p = 0; p < asteroid_array.size(); p++) if (asteroid_array[p]->is_onscreen(camera))
+	{
+		asteroid_array[p]->render(gRenderer, camera);
+	}
 
 	for (int p = 0; p < container_array.size(); p++) if (container_array[p]->is_onscreen(camera)) container_array[p]->render(gRenderer, camera);
 

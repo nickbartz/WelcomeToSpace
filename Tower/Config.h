@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+void print(string print_string);
 
 
 //Screen dimension constants
@@ -36,7 +37,7 @@ const int SCREEN_HEIGHT = 1080;
 const int BASIC_TILESHEET_WIDTH = 8;
 const int BASIC_TILESHEET_HEIGHT = 20;
 
-const int NUM_TILESHEETS = 9; // Change this when adding or subtracting spritesheets
+const int NUM_TILESHEETS = 10; // Change this when adding or subtracting spritesheets
 
 enum Spritesheets
 {
@@ -45,6 +46,7 @@ enum Spritesheets
 	CONSOLE_BACKGROUND,
 	BOLT_SPRITES,
 	DOT_SPRITESHEET,
+	MULTI_DOT_SPRITESHEET,
 	ASTEROID_SPRITESHEET,
 	INVENTORY_SPRITESHEET,
 	ENEMY_SHIP_SPRITESHEET,
@@ -220,7 +222,7 @@ enum TILE_RENDER_LAYERS
 	RENDER_ROOF
 };
 
-enum INVENTORY_ITEM_TYPES
+enum INVENTORY_ITEM_CODES
 {
 	INVENTORY_NULL_ITEM,
 	INVENTORY_FLOOR_TILE_1,
@@ -260,6 +262,19 @@ enum INVENTORY_ITEM_TYPES
 	INVENTORY_LASER_PISTOL_1,
 	INVENTORY_CONSTRUCTION_TUBING_FLOOR_1,
 	INVENTORY_CONSTRUCTION_TUBING_WALL_1
+};
+
+enum INVENTORY_ITEM_TYPES
+{
+	INVENTORY_TYPE_EMPTY,
+	INVENTORY_TYPE_WEAPON,
+	INVENTORY_TYPE_MINING_LASER,
+	INVENTORY_TYPE_SPACESUIT,
+	INVENTORY_TYPE_BUILDING_TILE,
+	INVENTORY_TYPE_ITEM,
+	INVENTORY_TYPE_FOOD,
+	INVENTORY_TYPE_OXYGEN_TANK,
+	INVENTORY_TYPE_ORE
 };
 
 const int NUM_TILE_STATES = 20;
@@ -327,7 +342,8 @@ enum DOT_PRIORITIES
 	DOT_PRIORITY_SPACESUIT_OXYGEN,
 	DOT_PRIORITY_ENNUI,
 	DOT_PRIORITY_HAPPINESS,
-	DOT_PRIORITY_SANITY
+	DOT_PRIORITY_SANITY,
+	DOT_PRIORITY_WEAPON_COOLDOWN
 };
 
 enum DOT_TYPES
@@ -402,6 +418,12 @@ enum DOT_GOAL_ACTIONS
 	ACTION_GET_OUT_OF_ANOTHER_DOT
 };
 
+enum DOT_FACTION
+{
+	DOT_FACTION_PLAYER,
+	DOT_FACTION_ENEMY
+};
+
 // DOT INVENTORY
 
 const int MAX_DOT_INVENTORY = 24;
@@ -416,78 +438,42 @@ const int NUM_CONSOLE_CRAFTING_COLUMNS = 4;
 struct Inventory_Item
 {
 	int item_code;
+	string item_name;
 	int clip_rect_x;
 	int clip_rect_y;
 	int tile_or_item;
+	int item_type;
 };
-
-Inventory_Item Inventory_Empty_Slot{ INVENTORY_EMPTY_SLOT,7,0,0 };
-Inventory_Item Inventory_Null_Item{ INVENTORY_NULL_ITEM,0,0 };
-Inventory_Item Inventory_Iron_Ore{ INVENTORY_IRON_ORE,2,4,1 };
-Inventory_Item Inventory_Cobalt_Ore{ INVENTORY_COBALT_ORE,3,4,1 };
-Inventory_Item Inventory_Nickel_Ore{ INVENTORY_NICKEL_ORE,4,4,1 };
-Inventory_Item Inventory_Oxygen_Machine{ INVENTORY_OXYGEN_MACHINE,3,0,1 };
-Inventory_Item Inventory_Door_1{ INVENTORY_DOOR_TILE_1,4,0,1 };
-Inventory_Item Inventory_Door_2{ INVENTORY_DOOR_TILE_2,7,1,1 };
-Inventory_Item Inventory_Wall_1{ INVENTORY_WALL_TILE_1,5,0,0 };
-Inventory_Item Inventory_Wall_2{ INVENTORY_WALL_TILE_2,6,1,0 };
-Inventory_Item Inventory_Frenzel_1{ INVENTORY_FRENZEL_1,6,2,0 };
-Inventory_Item Inventory_Frenzel_2{ INVENTORY_FRENZEL_2,6,2,0 };
-Inventory_Item Inventory_Floor_1{ INVENTORY_FLOOR_TILE_1,6,0,0 };
-Inventory_Item Inventory_Solar_Array_1{ INVENTORY_SOLAR_ARRAY_1,3,1,1 };
-Inventory_Item Inventory_Bed_1{ INVENTORY_BED_1,4,1,1 };
-Inventory_Item Inventory_Bed_2{ INVENTORY_BED_2,5,1,1 };
-Inventory_Item Inventory_Storage_1{ INVENTORY_STORAGE_1,0,2,1 };
-Inventory_Item Inventory_Tree_Tile_1{ INVENTORY_TREE_1, 1,2,1 };
-Inventory_Item Inventory_Console_Tile_1{ INVENTORY_CONSOLE_1, 3,2,1 };
-Inventory_Item Inventory_Locker_Tile_1{ INVENTORY_LOCKER_1, 4,2,1 };
-Inventory_Item Inventory_Plant_1{ INVENTORY_PLANT_1, 5,2,1 };
-Inventory_Item Inventory_Emitter_1{ INVENTORY_EMITTER_1,7,2,1 };
-Inventory_Item Inventory_Soylent_Machine_1{ INVENTORY_SOYLENT_MACHINE_1,2,3,1 };
-Inventory_Item Inventory_Soylent_1{ INVENTORY_SOYLENT_1,1,3,1 };
-Inventory_Item Inventory_Soylent_Meal_1{ INVENTORY_SOYLENT_MEAL_1,5,3,1 };
-Inventory_Item Inventory_Spacesuit_1{ INVENTORY_SPACESUIT_1, 0,4,1 };
-Inventory_Item Inventory_Oxygen_Tank{ INVENTORY_OXYGEN_TANK,5,4,1};
-Inventory_Item Inventory_Microwave_1{ INVENTORY_MICROWAVE_1, 4,3,1 };
-Inventory_Item Inventory_Chair_1{ INVENTORY_CHAIR_1, 6,3,1 };
-Inventory_Item Inventory_Table_1{ INVENTORY_TABLE_1, 7,3,1 };
-Inventory_Item Inventory_Processed_Iron{ INVENTORY_PROCESSED_IRON, 0,0,1 };
-Inventory_Item Inventory_Processed_Cobalt{ INVENTORY_PROCESSED_COBALT, 1,0,1 };
-Inventory_Item Inventory_Processed_Nickel{ INVENTORY_PROCESSED_NICKEL, 2,0,1 };
-Inventory_Item Inventory_Mining_Laser_1{ INVENTORY_MINING_LASER_1, 6,4,1 };
-Inventory_Item Inventory_Laser_Pistol_1{ INVENTORY_LASER_PISTOL_1,7,4,1 };
-Inventory_Item Inventory_Construction_Tubing_Floor_1{ INVENTORY_CONSTRUCTION_TUBING_FLOOR_1,5,1,0 };
-Inventory_Item Inventory_Construction_Tubing_Wall_1{ INVENTORY_CONSTRUCTION_TUBING_WALL_1,5,1,0 };
 
 const int MAX_BUILDING_REQUIREMENTS = 6;
 
+struct Building_Spec_Requirement
+{
+	int inventory_requirement = INVENTORY_EMPTY_SLOT;
+	int requirement_quantity = 0;
+};
+
 struct Building_Spec
 {
-	Inventory_Item Requirement_1 = Inventory_Empty_Slot;
-	int Requirement_1_Quantity = 0;
-	Inventory_Item Requirement_2 = Inventory_Empty_Slot;
-	int Requirement_2_Quantity = 0;
-	Inventory_Item Requirement_3 = Inventory_Empty_Slot;
-	int Requirement_3_Quantity = 0;
-	Inventory_Item Requirement_4 = Inventory_Empty_Slot;
-	int Requirement_4_Quantity = 0;
-	Inventory_Item Requirement_5 = Inventory_Empty_Slot;
-	int Requirement_5_Quantity = 0;
-	Inventory_Item Requirement_6 = Inventory_Empty_Slot;
-	int Requirement_6_Quantity = 0;
+	Building_Spec_Requirement Requirement_1 = { INVENTORY_EMPTY_SLOT,0 };
+	Building_Spec_Requirement Requirement_2 = { INVENTORY_EMPTY_SLOT,0 };
+	Building_Spec_Requirement Requirement_3 = { INVENTORY_EMPTY_SLOT,0 };
+	Building_Spec_Requirement Requirement_4 = { INVENTORY_EMPTY_SLOT,0 };
+	Building_Spec_Requirement Requirement_5 = { INVENTORY_EMPTY_SLOT,0 };
+	Building_Spec_Requirement Requirement_6 = { INVENTORY_EMPTY_SLOT,0 };
 };
 
 Building_Spec no_requirements;
-Building_Spec cannot_build = { Inventory_Null_Item, 1 };
-Building_Spec Wall_and_Floor_Specs = { Inventory_Processed_Iron, 1 };
-Building_Spec Oxygen_Machine_1_Specs = { Inventory_Processed_Cobalt, 1 };
-Building_Spec Solar_Array_Specs_1 = { Inventory_Processed_Cobalt, 1, Inventory_Processed_Iron, 2 };
-Building_Spec Soylent_Machine_Specs = { Inventory_Processed_Iron, 5 };
-Building_Spec Soylent_Specs_1 = { Inventory_Frenzel_1,1 };
-Building_Spec Soylent_Meal_Specs_1 = { Inventory_Soylent_1,1 };
-Building_Spec Specs_Processed_Iron = { Inventory_Iron_Ore, 2 };
-Building_Spec Specs_Processed_Cobalt = { Inventory_Cobalt_Ore, 2 };
-Building_Spec Specs_Processed_Nickel = { Inventory_Nickel_Ore, 2 };
+Building_Spec cannot_build = { {INVENTORY_NULL_ITEM, 1} };
+Building_Spec Wall_and_Floor_Specs = { {INVENTORY_PROCESSED_IRON, 1} };
+Building_Spec Oxygen_Machine_1_Specs = { {INVENTORY_PROCESSED_COBALT, 1} };
+Building_Spec Solar_Array_Specs_1 = { {INVENTORY_PROCESSED_COBALT, 1}, {INVENTORY_PROCESSED_IRON, 2} };
+Building_Spec Soylent_Machine_Specs = { {INVENTORY_PROCESSED_IRON, 5} };
+Building_Spec Soylent_Specs_1 = { {INVENTORY_FRENZEL_1,1} };
+Building_Spec Soylent_Meal_Specs_1 = { {INVENTORY_SOYLENT_1,1} };
+Building_Spec Specs_Processed_Iron = { {INVENTORY_IRON_ORE, 2} };
+Building_Spec Specs_Processed_Cobalt = { {INVENTORY_COBALT_ORE, 2} };
+Building_Spec Specs_Processed_Nickel = { {INVENTORY_NICKEL_ORE, 2} };
 
 struct Sprite_Specs
 {
@@ -509,14 +495,14 @@ struct Multi_Tile_Type
 	int is_collidable = 0;
 	int can_be_placed_in_vacuum = 0;
 	int oxygenation_check = 0;
-	int is_oxygenated = 0;
+	float is_oxygenated = 0.0;
 	int leak_check = 0;
 	int door_state = 0; // 0 is not door, 1 is open, 2 is closed
 	int door_open_length = 0;
 	int current_health = 34;
 	int max_health = 34;
 	int is_passively_picked_up = 0; // for things like ore etc - 0 is no, 1 is yes
-	Inventory_Item inventory_pointer = Inventory_Empty_Slot;
+	int inventory_pointer = INVENTORY_EMPTY_SLOT;
 	int is_animated = 0; // 0 is no, anything greater than zero is number of frames
 	int is_smooth = 0; 
 	Building_Spec building_specs = no_requirements;
@@ -525,62 +511,103 @@ struct Multi_Tile_Type
 	int render_layer = RENDER_TILES;
 };
 
+unordered_map <int, Inventory_Item> inventory_item_map;
 vector<Multi_Tile_Type> tile_vector;
 Multi_Tile_Type null_tile; 
 
 void Load_Tiles()
 {
-	tile_vector.push_back({ TILE_IRON_ORE, CONTAINER_SPRITESHEET,{ 0,0,1,1,1,1 },ITEM_TYPE_ORE,1,1,0,0,0,0,0,0,34,34,1,Inventory_Iron_Ore,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
-	tile_vector.push_back({ TILE_COBALT_ORE, CONTAINER_SPRITESHEET,{ 0,1,1,1,1,1 }, ITEM_TYPE_ORE,1,1,0,0,0,0,0,0,34,34,1,Inventory_Cobalt_Ore,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
-	tile_vector.push_back({ TILE_NICKEL_ORE, CONTAINER_SPRITESHEET,{ 0,2,1,1,1,1 },ITEM_TYPE_ORE,1,1,0,0,0,0,0,0,34,34,1,Inventory_Nickel_Ore,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_IRON_ORE, CONTAINER_SPRITESHEET,{ 0,0,1,1,1,1 },ITEM_TYPE_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_IRON_ORE,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_COBALT_ORE, CONTAINER_SPRITESHEET,{ 0,1,1,1,1,1 }, ITEM_TYPE_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_COBALT_ORE,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_NICKEL_ORE, CONTAINER_SPRITESHEET,{ 0,2,1,1,1,1 },ITEM_TYPE_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_NICKEL_ORE,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_vector.push_back({ TILE_PROCESSED_IRON, TILESHEET,{ 0,0,1,1,1,1 },ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,Inventory_Processed_Iron,0,0, Specs_Processed_Iron,100,0,RENDER_UNDER_PLAYER_ITEMS });
-	tile_vector.push_back({ TILE_PROCESSED_COBALT, TILESHEET,{ 0,1,1,1,1,1 }, ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,Inventory_Processed_Cobalt,0,0, Specs_Processed_Cobalt,100,0,RENDER_UNDER_PLAYER_ITEMS });
-	tile_vector.push_back({ TILE_PROCESSED_NICKEL, TILESHEET,{ 0,2,1,1,1,1 },ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,Inventory_Processed_Nickel,0,0, Specs_Processed_Nickel,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_PROCESSED_IRON, TILESHEET,{ 0,0,1,1,1,1 },ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_PROCESSED_IRON,0,0, Specs_Processed_Iron,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_PROCESSED_COBALT, TILESHEET,{ 0,1,1,1,1,1 }, ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_PROCESSED_COBALT,0,0, Specs_Processed_Cobalt,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_PROCESSED_NICKEL, TILESHEET,{ 0,2,1,1,1,1 },ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_PROCESSED_NICKEL,0,0, Specs_Processed_Nickel,100,0,RENDER_UNDER_PLAYER_ITEMS });
 	
-	tile_vector.push_back({ TILE_GENERIC_TILE,TILESHEET,{ 3,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,Inventory_Empty_Slot,0,0,cannot_build,100,0,RENDER_TILES });
+	tile_vector.push_back({ TILE_GENERIC_TILE,TILESHEET,{ 3,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0,cannot_build,100,0,RENDER_TILES });
 
-	tile_vector.push_back({ TILE_GENERIC_ITEM,TILESHEET,{ 3,0,1,1,1,1 },VACUUM, 1, 0,1, 0, 0, 0, 0, 0, 34, 34, 0, Inventory_Empty_Slot, 0, 0, cannot_build, 100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_GENERIC_ITEM,TILESHEET,{ 3,0,1,1,1,1 },VACUUM, 1, 0,1, 0, 0, 0, 0, 0, 34, 34, 0, INVENTORY_EMPTY_SLOT, 0, 0, cannot_build, 100,0,RENDER_ITEMS });
 
-	tile_vector.push_back({ TILE_OXYGEN_MACHINE, ITEM_SPRITES,{ 0,0,1,1,1,1 },OXYGEN_MACHINE,1,1,0,0,0,0,0,0,34,34,0,Inventory_Oxygen_Machine,8,0, Oxygen_Machine_1_Specs,100,ITEM_JOB_OXYGENATE,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_SOLAR_ARRAY_1, ITEM_SPRITES,{ 0,5,1,1,1,1 },SOLAR_ARRAY,1,1,1,0,0,0,0,0,34,34,0,Inventory_Solar_Array_1,8,0 , Solar_Array_Specs_1,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_OXYGEN_MACHINE, ITEM_SPRITES,{ 0,0,1,1,1,1 },OXYGEN_MACHINE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_OXYGEN_MACHINE,8,0, Oxygen_Machine_1_Specs,100,ITEM_JOB_OXYGENATE,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_SOLAR_ARRAY_1, ITEM_SPRITES,{ 0,5,1,1,1,1 },SOLAR_ARRAY,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_SOLAR_ARRAY_1,8,0 , Solar_Array_Specs_1,100,0,RENDER_ITEMS });
 
-	tile_vector.push_back({ TILE_FLOOR_TILE_1, TILESHEET,{ 0,0,1,1,1,1 },FLOOR_TILE_1,0,0,1,0,0,0,0,0,34,34,0,Inventory_Floor_1,0,0, Wall_and_Floor_Specs,100,0,RENDER_TILES });
-	tile_vector.push_back({ TILE_STORAGE_TILE_1, TILESHEET,{ 7,0,1,1,1,1 },STORAGE_TILE_1,0,0,0,0,0,0,0,0,34,34,0,Inventory_Storage_1,0,0, Wall_and_Floor_Specs,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_STORAGE_TILE_1, TILESHEET,{ 7,0,1,1,1,1 },STORAGE_TILE_1,0,0,0,0,0,0,0,0,34,34,0,INVENTORY_STORAGE_1,0,0, Wall_and_Floor_Specs,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_vector.push_back({ TILE_FRENZEL_1, TILESHEET,{ 4,5,1,1,1,1 },TILE_TYPE_FRENZEL,0,0,1,0,0,0,0,0,34,34,0,Inventory_Frenzel_1,0,1, cannot_build,100,ITEM_JOB_GROW_FRENZEL,RENDER_TILES });
-	tile_vector.push_back({ TILE_FRENZEL_2, ITEM_SPRITES,{ 0,10,1,1,1,1 },ITEM_TYPE_FRENZEL,1,1,1,0,0,0,0,0,34,34,0,Inventory_Frenzel_2,8,0, cannot_build,100,0,RENDER_TILES });
+	tile_vector.push_back({ TILE_FRENZEL_1, TILESHEET,{ 4,5,1,1,1,1 },TILE_TYPE_FRENZEL,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_FRENZEL_1,0,1, cannot_build,100,ITEM_JOB_GROW_FRENZEL,RENDER_TILES });
+	tile_vector.push_back({ TILE_FRENZEL_2, ITEM_SPRITES,{ 0,10,1,1,1,1 },ITEM_TYPE_FRENZEL,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_FRENZEL_2,8,0, cannot_build,100,0,RENDER_TILES });
 
-	tile_vector.push_back({ TILE_VACUUM, TILESHEET,{ 5,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,Inventory_Empty_Slot,0,0, cannot_build,100,0,RENDER_TILES });
-	tile_vector.push_back({ TILE_VACUUM_2, TILESHEET,{ 4,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,Inventory_Empty_Slot,0,0, cannot_build,100,0,RENDER_TILES });
+	tile_vector.push_back({ TILE_VACUUM, TILESHEET,{ 5,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0, cannot_build,100,0,RENDER_TILES });
+	tile_vector.push_back({ TILE_VACUUM_2, TILESHEET,{ 4,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0, cannot_build,100,0,RENDER_TILES });
 
-	tile_vector.push_back({ TILE_BED_1, TILESHEET,{ 0,11,2,1,2,1 }, ITEM_TYPE_BED,1,1,0,0,0,0,0,0,34,34,0,Inventory_Bed_1,0,0, no_requirements,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_BED_1, TILESHEET,{ 0,11,2,1,2,1 }, ITEM_TYPE_BED,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_BED_1,0,0, no_requirements,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_vector.push_back({ TILE_TREE_1, TILESHEET,{ 0,9,1,-2,1,1 },TREE,1,1,0,0,0,0,0,0,34,34,0,Inventory_Tree_Tile_1,0,0, no_requirements,100,0,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_CONSOLE_1, ITEM_SPRITES,{ 0,3,2,-2,2,1 },CONSOLE,1,1,0,0,0,0,0,0,34,34,0,Inventory_Console_Tile_1,4,0, no_requirements,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_TREE_1, TILESHEET,{ 0,9,1,-2,1,1 },TREE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_TREE_1,0,0, no_requirements,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_CONSOLE_1, ITEM_SPRITES,{ 0,3,2,-2,2,1 },CONSOLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CONSOLE_1,4,0, no_requirements,100,0,RENDER_ITEMS });
 
-	tile_vector.push_back({ TILE_LOCKER_1, TILESHEET,{ 1,9,1,-2,1,1 },STORAGE_TILE_1,1,1,0,0,0,0,0,0,34,34,0,Inventory_Locker_Tile_1,0,0, no_requirements,100,0,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_SPACESUIT_1, TILESHEET,{ 1,1,1,1,1,1 },INVENTORY_TYPE_SUIT,1,1,0,0,0,0,0,0,34,34,0,Inventory_Spacesuit_1,0,0, cannot_build,100,0,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_OXYGEN_TANK, TILESHEET,{ 3,9,1,1,1,1 },ITEM_TYPE_OXYGEN_TANK,1,1,0,0,0,0,0,0,34,34,0,Inventory_Oxygen_Tank,0,0, cannot_build,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_LOCKER_1, TILESHEET,{ 1,9,1,-2,1,1 },STORAGE_TILE_1,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_LOCKER_1,0,0, no_requirements,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_SPACESUIT_1, TILESHEET,{ 1,1,1,1,1,1 },INVENTORY_TYPE_SUIT,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_SPACESUIT_1,0,0, cannot_build,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_OXYGEN_TANK, TILESHEET,{ 3,9,1,1,1,1 },ITEM_TYPE_OXYGEN_TANK,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_OXYGEN_TANK,0,0, cannot_build,100,0,RENDER_ITEMS });
 
-	tile_vector.push_back({ TILE_PLANT_1, ITEM_SPRITES,{ 0,8,1,-2,1,1 },TILE_TYPE_PLANT,1,1,0,0,0,0,0,0,34,34,0,Inventory_Plant_1,8,0, cannot_build,100,0,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_EMITTER_1, ITEM_SPRITES,{ 0,11,1,-2,1,1 },ITEM_TYPE_EMITTER,1,1,1,0,0,0,0,0,34,34,0,Inventory_Emitter_1,8,0, cannot_build,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_PLANT_1, ITEM_SPRITES,{ 0,8,1,-2,1,1 },TILE_TYPE_PLANT,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_PLANT_1,8,0, cannot_build,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_EMITTER_1, ITEM_SPRITES,{ 0,11,1,-2,1,1 },ITEM_TYPE_EMITTER,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_EMITTER_1,8,0, cannot_build,100,0,RENDER_ITEMS });
 
-	tile_vector.push_back({ TILE_SOYLENT_MACHINE_1, ITEM_SPRITES,{ 0,13,1,-2,1,1 },ITEM_TYPE_SOYLENT_MACHINE,1,1,1,0,0,0,0,0,34,34,0,Inventory_Soylent_Machine_1,8,0, Soylent_Machine_Specs,100,ITEM_JOB_CREATE_SOYLENT,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_SOYLENT_1, TILESHEET,{ 2,9,1,1,1,1 },ITEM_TYPE_FOOD,1,0,1,0,0,0,0,0,34,34,0,Inventory_Soylent_1,0,0, Soylent_Specs_1,100,0,RENDER_UNDER_PLAYER_ITEMS });
-	tile_vector.push_back({ TILE_SOYLENT_MEAL_1, TILESHEET,{ 2,10,1,1,1,1 },ITEM_TYPE_FOOD,1,0,1,0,0,0,0,0,34,34,0,Inventory_Soylent_Meal_1,0,0, Soylent_Meal_Specs_1,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_SOYLENT_MACHINE_1, ITEM_SPRITES,{ 0,13,1,-2,1,1 },ITEM_TYPE_SOYLENT_MACHINE,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_SOYLENT_MACHINE_1,8,0, Soylent_Machine_Specs,100,ITEM_JOB_CREATE_SOYLENT,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_SOYLENT_1, TILESHEET,{ 2,9,1,1,1,1 },ITEM_TYPE_FOOD,1,0,1,0,0,0,0,0,34,34,0,INVENTORY_SOYLENT_1,0,0, Soylent_Specs_1,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_SOYLENT_MEAL_1, TILESHEET,{ 2,10,1,1,1,1 },ITEM_TYPE_FOOD,1,0,1,0,0,0,0,0,34,34,0,INVENTORY_SOYLENT_MEAL_1,0,0, Soylent_Meal_Specs_1,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_vector.push_back({ TILE_MICROWAVE_1, ITEM_SPRITES,{ 0,15,1,-2,1,1 },ITEM_TYPE_FOOD_PREPARATION,1,1,1,0,0,0,0,0,34,34,0,Inventory_Microwave_1,8,0, cannot_build,100,ITEM_JOB_CREATE_SOYLENT_MEAL,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_CHAIR_1, TILESHEET,{ 2,11,1,1,1,1 },ITEM_TYPE_CHAIR,1,1,0,0,0,0,0,0,34,34,0,Inventory_Chair_1,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_MICROWAVE_1, ITEM_SPRITES,{ 0,15,1,-2,1,1 },ITEM_TYPE_FOOD_PREPARATION,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_MICROWAVE_1,8,0, cannot_build,100,ITEM_JOB_CREATE_SOYLENT_MEAL,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_CHAIR_1, TILESHEET,{ 2,11,1,1,1,1 },ITEM_TYPE_CHAIR,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CHAIR_1,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_vector.push_back({ TILE_TABLE_1, TILESHEET,{ 5,10,1,1,1,1 },ITEM_TYPE_TABLE,1,1,0,0,0,0,0,0,34,34,0,Inventory_Table_1,0,0, cannot_build,100,ITEM_JOB_TILE_STREAMLINE,RENDER_UNDER_PLAYER_ITEMS });
+	tile_vector.push_back({ TILE_TABLE_1, TILESHEET,{ 5,10,1,1,1,1 },ITEM_TYPE_TABLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_TABLE_1,0,0, cannot_build,100,ITEM_JOB_TILE_STREAMLINE,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_vector.push_back({ TILE_MINING_LASER_1, TILESHEET,{ 3,10,1,1,1,1 },ITEM_TYPE_MINING_LASER,1,1,0,0,0,0,0,0,34,34,0,Inventory_Mining_Laser_1,0,0, cannot_build,100,0,RENDER_ITEMS });
-	tile_vector.push_back({ TILE_LASER_PISTOL_1, TILESHEET,{ 3,11,1,1,1,1 },ITEM_TYPE_WEAPON,1,1,0,0,0,0,0,0,34,34,0,Inventory_Laser_Pistol_1,0,0, cannot_build,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_MINING_LASER_1, TILESHEET,{ 3,10,1,1,1,1 },ITEM_TYPE_MINING_LASER,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_MINING_LASER_1,0,0, cannot_build,100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_LASER_PISTOL_1, TILESHEET,{ 3,11,1,1,1,1 },ITEM_TYPE_WEAPON,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_LASER_PISTOL_1,0,0, cannot_build,100,0,RENDER_ITEMS });
 
-	tile_vector.push_back({ TILE_CONSTRUCTION_TUBE_FLOOR_1, TILESHEET,{ 5,13,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_FLOOR,0,0,1,0,0,0,0,0,34,34,0,Inventory_Construction_Tubing_Floor_1,0,1, no_requirements,100 });
-	tile_vector.push_back({ TILE_CONSTRUCTION_TUBE_WALL_1, TILESHEET,{ 0,15,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,1,0,0,0,0,0,34,34,0,Inventory_Construction_Tubing_Wall_1,0,1, no_requirements,100 });
-	tile_vector.push_back({ TILE_DOOR_1,ITEM_SPRITES,{ 0,1,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_DOOR,0,1,0,0,0,0,2,0,34,34,0,Inventory_Door_1,7,1, Wall_and_Floor_Specs,100,ITEM_JOB_DOOR,RENDER_TILES });
+	tile_vector.push_back({ TILE_CONSTRUCTION_TUBE_FLOOR_1, TILESHEET,{ 5,13,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_FLOOR,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_CONSTRUCTION_TUBING_FLOOR_1,0,1, no_requirements,100 });
+	tile_vector.push_back({ TILE_CONSTRUCTION_TUBE_WALL_1, TILESHEET,{ 0,15,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_WALL,0,1,1,0,0,0,0,0,34,34,0,INVENTORY_CONSTRUCTION_TUBING_WALL_1,0,1, no_requirements,100 });
+	tile_vector.push_back({ TILE_DOOR_1,ITEM_SPRITES,{ 0,1,1,1,1,1 },TILE_TYPE_CONSTRUCTION_TUBING_DOOR,0,1,0,0,0,0,2,0,34,34,0,INVENTORY_DOOR_TILE_1,7,1, Wall_and_Floor_Specs,100,ITEM_JOB_DOOR,RENDER_TILES });
+}
+
+void Load_Inventory_Items()
+{
+	inventory_item_map.insert({ INVENTORY_EMPTY_SLOT, { INVENTORY_EMPTY_SLOT, "Empty Slot", 7,0,0,INVENTORY_TYPE_EMPTY } });
+	inventory_item_map.insert({ INVENTORY_NULL_ITEM, { INVENTORY_NULL_ITEM, "Null Item", 0,0,INVENTORY_TYPE_EMPTY } });
+	inventory_item_map.insert({ INVENTORY_IRON_ORE, { INVENTORY_IRON_ORE, "Iron Ore", 2,4,1,INVENTORY_TYPE_ORE } });
+	inventory_item_map.insert({ INVENTORY_COBALT_ORE, { INVENTORY_COBALT_ORE, "Cobalt Ore", 3,4,1,INVENTORY_TYPE_ORE } });
+	inventory_item_map.insert({ INVENTORY_NICKEL_ORE, { INVENTORY_NICKEL_ORE, "Nickel Ore",4,4,1,INVENTORY_TYPE_ORE } });
+	inventory_item_map.insert({ INVENTORY_OXYGEN_MACHINE, { INVENTORY_OXYGEN_MACHINE, "Oxygen Machine",3,0,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_DOOR_TILE_1, { INVENTORY_DOOR_TILE_1, "Auto-Door",4,0,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_FRENZEL_1, { INVENTORY_FRENZEL_1, "Frenzel Crop", 6,2,0,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_FRENZEL_2, { INVENTORY_FRENZEL_2, "Living Frenzel", 6,2,0,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_SOLAR_ARRAY_1, { INVENTORY_SOLAR_ARRAY_1, "Solar Array", 3,1,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_BED_1, { INVENTORY_BED_1, "Blue Bed", 4,1,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_STORAGE_1, { INVENTORY_STORAGE_1, "Storage Tile", 0,2,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_TREE_1, { INVENTORY_TREE_1, "Tree",  1,2,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_CONSOLE_1, { INVENTORY_CONSOLE_1, "Console",   3,2,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_LOCKER_1, { INVENTORY_LOCKER_1, "Locker", 4,2,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_PLANT_1, { INVENTORY_PLANT_1, "Plant",  5,2,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_EMITTER_1, { INVENTORY_EMITTER_1, "Frenzel Emitter", 7,2,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_SOYLENT_MACHINE_1, { INVENTORY_SOYLENT_MACHINE_1, "Soylent Machine", 2,3,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_SOYLENT_MEAL_1, { INVENTORY_SOYLENT_MEAL_1, "Soylent Meal", 5,3,1,INVENTORY_TYPE_FOOD } });
+	inventory_item_map.insert({ INVENTORY_SOYLENT_1, { INVENTORY_SOYLENT_1, "Soylent", 1,3,1,INVENTORY_TYPE_ITEM } });
+	inventory_item_map.insert({ INVENTORY_SPACESUIT_1, { INVENTORY_SPACESUIT_1, "Spacesuit",  0,4,1,INVENTORY_TYPE_SPACESUIT } });
+	inventory_item_map.insert({ INVENTORY_OXYGEN_TANK, { INVENTORY_OXYGEN_TANK, "Oxygen Tank", 5,4,1, INVENTORY_TYPE_OXYGEN_TANK } });
+	inventory_item_map.insert({ INVENTORY_MICROWAVE_1, { INVENTORY_MICROWAVE_1, "Soylent Microwave",  4,3,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_PROCESSED_IRON, { INVENTORY_PROCESSED_IRON, "Processed Iron",  0,0,1,INVENTORY_TYPE_ORE } });
+	inventory_item_map.insert({ INVENTORY_PROCESSED_COBALT, { INVENTORY_PROCESSED_COBALT, "Processed Cobalt",  1,0,1,INVENTORY_TYPE_ORE } });
+	inventory_item_map.insert({ INVENTORY_CHAIR_1, { INVENTORY_CHAIR_1, "Chair",  6,3,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_TABLE_1, { INVENTORY_TABLE_1, "Table",  7,3,1,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_PROCESSED_NICKEL, { INVENTORY_PROCESSED_NICKEL, "Processed Nickel",  2,0,1,INVENTORY_TYPE_ORE } });
+	inventory_item_map.insert({ INVENTORY_MINING_LASER_1, { INVENTORY_MINING_LASER_1, "Mining Laser",  6,4,1,INVENTORY_TYPE_MINING_LASER } });
+	inventory_item_map.insert({ INVENTORY_LASER_PISTOL_1, { INVENTORY_LASER_PISTOL_1, "Laser Pistol", 7,4,1, INVENTORY_TYPE_WEAPON } });
+	inventory_item_map.insert({ INVENTORY_CONSTRUCTION_TUBING_FLOOR_1, { INVENTORY_CONSTRUCTION_TUBING_FLOOR_1, "Floor", 0,0,0,INVENTORY_TYPE_BUILDING_TILE } });
+	inventory_item_map.insert({ INVENTORY_CONSTRUCTION_TUBING_WALL_1, { INVENTORY_CONSTRUCTION_TUBING_WALL_1, "Wall", 6,1,0,INVENTORY_TYPE_BUILDING_TILE } });
+}
+
+Inventory_Item Fetch_Inventory(int inventory_identifier)
+{
+	return inventory_item_map[inventory_identifier];
 }
 
 Multi_Tile_Type Return_Tile_By_Name(int tile_identifier)
@@ -592,18 +619,18 @@ Multi_Tile_Type Return_Tile_By_Name(int tile_identifier)
 	cout << "couldn't find tile by that identifier" << endl;
 }
 
-Multi_Tile_Type Return_Tile_By_Inventory_Item(Inventory_Item inventory_item)
+Multi_Tile_Type Return_Tile_By_Inventory_Item(int inventory_item_code)
 {
 	for (int i = 0; i < tile_vector.size(); i++)
 	{
-		if (tile_vector[i].inventory_pointer.item_code == inventory_item.item_code) return tile_vector[i];
+		if (tile_vector[i].inventory_pointer == inventory_item_code) return tile_vector[i];
 	}
-	cout << "couldn't find tile by that inventory_item: " << inventory_item.item_code << endl;
+	cout << "couldn't find tile by that inventory_item: " << inventory_item_code << endl;
 }
 
 struct Dot_Inventory_Slot
 {
-	Inventory_Item item_type;
+	int inventory_item_code;
 	int item_number = 0;
 };
 
