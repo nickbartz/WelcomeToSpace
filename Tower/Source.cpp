@@ -210,7 +210,10 @@ void load_textures()
 	texture_array[TILESHEET].loadFromFile(gRenderer, "Sprites/Tilesheets/tilesheet_1.png");
 	texture_array[CONSOLE_BACKGROUND].loadFromFile(gRenderer, "Sprites/Console/console_1.png");
 	texture_array[DOT_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Player/player_spritesheet.png");
-	texture_array[MULTI_DOT_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Player/multi_dot_spritesheet.png");
+	texture_array[DOT_SPRITESHEET_LEGS].loadFromFile(gRenderer, "Sprites/Player/dot_legs.png");
+	texture_array[DOT_SPRITESHEET_ARMS].loadFromFile(gRenderer, "Sprites/Player/dot_arms.png");
+	texture_array[DOT_SPRITESHEET_TORSOS].loadFromFile(gRenderer, "Sprites/Player/dot_torsos.png");
+	texture_array[DOT_SPRITESHEET_HEADS].loadFromFile(gRenderer, "Sprites/Player/dot_heads.png");
 	texture_array[ASTEROID_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Animated_Items/asteroid_spritesheet_1.png");
 	texture_array[INVENTORY_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Inventory_Items/Inventory_Spritesheet_1.png");
 	texture_array[ENEMY_SHIP_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Enemies/Enemy_Ships_1.png");

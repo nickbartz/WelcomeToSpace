@@ -1362,62 +1362,114 @@ public:
 	Dot_Job dot_current_job;
 	Dot_Job dot_personal_ai;
 
+	void set_velocity(bool x_or_y, int quantity);
+
 };
+
+void NPC_Dot::set_velocity(bool x_or_y, int quantity)
+{
+	if (x_or_y)
+	{
+		mVelX = quantity;
+	}
+	else
+	{
+		mVelY = quantity;
+	}
+}
 
 class Multi_Dot :public Dot
 {
 public: 
-	Multi_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos, int row_num):Dot(gRenderer, dot_spritesheet, x_pos, y_pos, row_num)
+	Multi_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet_array[], int x_pos, int y_pos, int row_num):Dot(gRenderer, dot_spritesheet_array[0], x_pos, y_pos, row_num)
 	{
-		spritesheet = dot_spritesheet;
+		dot_spritesheet[0] = dot_spritesheet_array[0];
+		dot_spritesheet[1] = dot_spritesheet_array[1];
+		dot_spritesheet[2] = dot_spritesheet_array[2];
+		dot_spritesheet[3] = dot_spritesheet_array[3];
+		create_sprite();
+		change_sprite_direction(3);
 	}
 
-	int animation_row = 3;
-	int max_frames = 4;
-	int current_frame = 0;
-	SDL_Rect sprite_specs = { 0,0,32,32 };
-	float sprite_scale_x = 1;
-	float sprite_scale_y = 1;
-
 	void render(SDL_Renderer* gRenderer, Camera* camera);
+	void render_component(SDL_Renderer* gRenderer, Camera* camera, int component);
 	void increment_animation();
+	void create_sprite();
+	void change_sprite_direction(int direction);
 
-	struct animation_delay
+	struct dot_multi_clip
 	{
-		int current_delay = 0;
-		int max_delay = 10;
+		int animation_row = 0;
+		int animation_column = 0;
+		int max_frames = 1;
+		int current_frame = 0;
+		SDL_Rect sprite_specs = { 0,0,32,32 };
+		float sprite_scale_x = 1;
+		float sprite_scale_y = 1;
+		int current_frame_delay = 0;
+		int max_frame_delay = 10;
 	};
 
-	animation_delay feet_delay;
+	SDL_Rect clip_rect;
+	SDL_Rect render_rect;
+	unordered_map <int, dot_multi_clip> dot_composite;
 
 private:
-	LTexture* spritesheet;
+	LTexture* dot_spritesheet[4];
 };
+
+void Multi_Dot::create_sprite()
+{
+	dot_composite.insert({ DOT_COMPOSITE_LEGS, { 0,0,5,0,{0,0,32,32},1,1,0,5 } });
+	dot_composite.insert({ DOT_COMPOSITE_ARMS,{ 0,0,5,0,{ 0,0,32,32 },1,1,0,5 } });
+	dot_composite.insert({ DOT_COMPOSITE_TORSO, { 0,0,1,0,{ 0,0,32,32 },1,1,0,5} });
+	dot_composite.insert({ DOT_COMPOSITE_HEAD,{ 0,1,1,0,{ 0,0,32,32 },1,1,0,5 } });
+}
+
+void Multi_Dot::change_sprite_direction(int direction)
+{
+	dot_composite[DOT_COMPOSITE_LEGS].animation_row = direction;
+	dot_composite[DOT_COMPOSITE_ARMS].animation_row = direction;
+	dot_composite[DOT_COMPOSITE_TORSO].animation_row = direction;
+	dot_composite[DOT_COMPOSITE_HEAD].animation_row = direction;
+}
 
 void Multi_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
 {
 	increment_animation();
-	
-	SDL_Rect clip_rect = { sprite_specs.x + current_frame * sprite_specs.w, sprite_specs.y + animation_row*sprite_specs.h, sprite_specs.w, sprite_specs.h };
-	SDL_Rect render_rect = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, sprite_specs.w * sprite_scale_x, sprite_specs.h * sprite_scale_y};
-	
 
-	spritesheet->render(gRenderer, &render_rect, &clip_rect);
+	render_component(gRenderer, camera, DOT_COMPOSITE_LEGS);
+	render_component(gRenderer, camera, DOT_COMPOSITE_TORSO);
+	render_component(gRenderer, camera, DOT_COMPOSITE_ARMS);
+	render_component(gRenderer, camera, DOT_COMPOSITE_HEAD);
+
+}
+
+void Multi_Dot::render_component(SDL_Renderer* gRenderer, Camera* camera, int component)
+{
+	SDL_Rect sprite_specs = dot_composite[component].sprite_specs;
+	int current_frame = dot_composite[component].current_frame;
+	int animation_row = dot_composite[component].animation_row;
+	int animation_column = dot_composite[component].animation_column;
+
+	clip_rect = { sprite_specs.x + (animation_column + current_frame)*sprite_specs.w, sprite_specs.y + animation_row*sprite_specs.h, sprite_specs.w, sprite_specs.h };
+	render_rect = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, TILE_WIDTH, TILE_HEIGHT };
+	dot_spritesheet[component]->render(gRenderer, &render_rect, &clip_rect);
 }
 
 void Multi_Dot::increment_animation()
 {
-	feet_delay.current_delay++;
+	for (int i = 0; i < dot_composite.size(); i++)
 	{
-		if (feet_delay.current_delay >= feet_delay.max_delay)
+		if (dot_composite[i].current_frame_delay == 0)
 		{
-			current_frame++;
-			if (current_frame >= max_frames) current_frame = 0;
-
-			feet_delay.current_delay = 0;
+			dot_composite[i].current_frame++;
+			if (dot_composite[i].current_frame >= dot_composite[i].max_frames) dot_composite[i].current_frame = 0;
 		}
+		
+		dot_composite[i].current_frame_delay++;
+		if (dot_composite[i].current_frame_delay >= dot_composite[i].max_frame_delay) dot_composite[i].current_frame_delay = 0;
 	}
-
 }
 
 // CONTAINER DOTS

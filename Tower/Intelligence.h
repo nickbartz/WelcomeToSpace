@@ -148,9 +148,10 @@ private:
 	Path_Field* iField;
 
 	LTexture* texture_array[NUM_TILESHEETS];
+	LTexture* dot_spritesheet_array[4];
+
 	LTexture* bolt_sprites;
 	LTexture* dot_spritesheet;
-	LTexture* multi_dot_spritesheet;
 	LTexture* asteroid_spritesheet;
 	LTexture* enemy_ship_spritesheet;
 	LTexture* container_spritesheet;
@@ -176,10 +177,13 @@ private:
 Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Camera* world_camera, LTexture textures[], bool new_game)
 {
 	for (int p = 0; p < NUM_TILESHEETS; ++p) { texture_array[p] = &textures[p];}
+	dot_spritesheet_array[0] = texture_array[DOT_SPRITESHEET_LEGS];
+	dot_spritesheet_array[1] = texture_array[DOT_SPRITESHEET_ARMS];
+	dot_spritesheet_array[2] = texture_array[DOT_SPRITESHEET_TORSOS];
+	dot_spritesheet_array[3] = texture_array[DOT_SPRITESHEET_HEADS];
 
 	bolt_sprites = texture_array[BOLT_SPRITES];
 	dot_spritesheet = texture_array[DOT_SPRITESHEET];
-	multi_dot_spritesheet = texture_array[MULTI_DOT_SPRITESHEET];
 	asteroid_spritesheet = texture_array[ASTEROID_SPRITESHEET];
 	enemy_ship_spritesheet = texture_array[ENEMY_SHIP_SPRITESHEET];
 	container_spritesheet = texture_array[CONTAINER_SPRITESHEET];
@@ -210,7 +214,7 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 	player_dot->npc_dot_config.dot_equipment_config.Mining_Laser = { INVENTORY_MINING_LASER_1,1 };
 	player_dot->Check_Craftable_Items();
 
-	multi_dot = new Multi_Dot(gRenderer, multi_dot_spritesheet, 51 * TILE_WIDTH, 50 * TILE_HEIGHT, 0);
+	multi_dot = new Multi_Dot(gRenderer, dot_spritesheet_array, 51 * TILE_WIDTH, 50 * TILE_HEIGHT, 0);
 	
 	for (int i = 0; i < 1; i++)
 	{
