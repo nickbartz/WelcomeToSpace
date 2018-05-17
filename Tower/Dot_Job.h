@@ -33,6 +33,7 @@ public:
 	void Routine_Take_Items_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity);
 	void Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project);
 	void Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab);
+	void Routine_Eliminate_Dot(Dot* dot, Dot* dot_to_eliminate, int attack_range);
 
 	// ITEM ROUTINES
 	void Routine_Oxygenate(Dot* dot);
@@ -50,6 +51,7 @@ Dot_Job::Dot_Job(int type, float priority, Dot* secondary_dot, Dot* tertiary_dot
 {
 	job_type = type;
 	job_priority = priority;
+
 
 	second_dot = secondary_dot;
 	third_dot = tertiary_dot;
@@ -95,6 +97,9 @@ void Dot_Job::Run_Job(Dot* dot)
 		dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,0,0,0,0,null_tile,0,false,second_dot });
 		dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM, 0,0,0,0,first_item,0,false,dot });
 		break;
+	case DOT_HEALTH_JOB_ELIMINATE_DOT:
+		Routine_Eliminate_Dot(dot, second_dot, first_quantity);
+		break;
 	case SPECIFIC_DOT_JOB_STORE_CONTAINER:
 		Routine_Move_Container_To_Storage(dot, second_dot, third_dot);
 		break;
@@ -135,23 +140,30 @@ void Dot_Job::Routine_Move_Container_To_Storage(Dot* dot, Dot* container, Dot* s
 {	
 	vector<Dot_Inventory_Slot> container_inventory = container->return_inventory_as_vector();
 
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,storage_tile });
-	for (int i = 0; i < container_inventory.size(); i++)
+	if (container_inventory.size() > 0)
 	{
-		dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,storage_tile });
+		if (dot->npc_dot_config.current_storage_tile != NULL && dot->npc_dot_config.current_storage_tile->multi_tile_config.tile_type == TILE_TYPE_STORAGE_TILE)
+		{
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
+			for (int i = 0; i < container_inventory.size(); i++)
+			{
+				dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,dot->npc_dot_config.current_storage_tile });
+			}
+
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,dot->npc_dot_config.current_storage_tile });
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,dot->npc_dot_config.current_storage_tile });
+
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
+		}
+
+		for (int i = 0; i < container_inventory.size(); i++)
+		{
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,container });
+		}
+
+		dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,container });
+		dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,container });
 	}
-
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,storage_tile });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,storage_tile });
-
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,container });
-	for (int i = 0; i < container_inventory.size(); i++)
-	{
-		dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,container });
-	}
-
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,container });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,container });
 }
 
 void Dot_Job::Routine_Put_Container_Items_In_Inventory(Dot* dot, Dot* container)
@@ -195,6 +207,13 @@ void Dot_Job::Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from,
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT,						0,0,0,0,item_to_grab,quantity_to_grab,false,dot_to_take_items_from });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,				0,0,0,0,null_tile,0,true,dot_to_take_items_from });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,0,true,dot_to_take_items_from });
+}
+
+void Dot_Job::Routine_Eliminate_Dot(Dot* dot, Dot* dot_to_eliminate, int attack_range)
+{
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_FIRE_AT_ANOTHER_DOT,									0,0,0,0,null_tile,attack_range,true,dot_to_eliminate });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_IN_RANGE_OF_SPECIFIC_DOT,				0,0,0,0,null_tile,attack_range,true,dot_to_eliminate });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,attack_range,true,dot_to_eliminate });
 }
 
 

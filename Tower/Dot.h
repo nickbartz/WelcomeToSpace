@@ -40,12 +40,8 @@ void Carried_Multi_Tile::render(SDL_Renderer* gRenderer, Camera* camera)
 
 class Dot {
 public:
-	//Maximum axis velocity of the dot
-	static const int DOT_VEL = 3;
-
 	//Initializes the variables
-	Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos, int row_num = 0);
-	void create_sprite_clips(SDL_Rect animation_type[], int frames, int row_num, int column_number);
+	Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos);
 	void free();
 
 	//Shows the dot on the screen
@@ -73,8 +69,6 @@ public:
 
 	// DOT BASIC PLACEMENT AND MOVEMENT
 	SDL_Rect dot_rect;
-	int rect_offset_x;
-	int rect_offset_y;
 
 	//Movement trackers
 	int delta_x, delta_y;
@@ -82,13 +76,12 @@ public:
 	int mVelX, mVelY;
 	int previous_mPosX, previous_mPosY;
 	double targetPosX, targetPosY;
+	bool dot_pause_movement = false;
 
 	//Clipped Dimensions
 	int sWidth;
 	int sHeight;
 
-	virtual void set_velocity();
-	void animate_movement(int previous_mPosX, int previous_mPosY);
 	void Dot::toggle_highlight(bool on_or_off);
 
 	// Structs
@@ -160,7 +153,17 @@ public:
 		int frenzel_rhomb = 0;
 		Mining_Laser_Config dot_mining_config;
 		NPC_Dot_Equipment_Struct dot_equipment_config;
-		Carried_Multi_Tile dot_carried_item;
+		Carried_Multi_Tile* dot_carried_item = NULL;
+		Dot* current_storage_tile = NULL;
+		int dot_init = 1;
+		SDL_Color dot_color = { 255,255,255,255 };
+		int dot_angle = 0;
+		Dot_Inventory_Slot inventory_slots[MAX_DOT_INVENTORY];
+		vector<Dot_Inventory_Slot> craftable_items;
+		int bounce = 0;
+		int search_radius = 10;
+
+		// EVENTUALLY WANT TO SPLIT THESE OUT INTO THEIR OWN STRUCT
 		Dot* current_dot_focus;
 		vector<Tile_Queue> current_goal_path;
 		vector<Dot_Goal> current_goal_list;
@@ -168,11 +171,9 @@ public:
 		Multi_Tile_Type dot_produced_item;
 		int production_current;
 		int number_of_jobs_requested = 0;
-		int dot_init = 1;
-		int dot_is_highlighted = false;
-		int dot_is_sideways = false;
-		Dot_Inventory_Slot inventory_slots[MAX_DOT_INVENTORY];
-		vector<Dot_Inventory_Slot> craftable_items;
+
+
+
 	};
 
 	//Set Dot Configuration
@@ -215,25 +216,9 @@ public:
 	
 private:
 	LTexture* dot_sprite_sheet;
-
-	// Sprite clips
-	SDL_Rect* current_animation = walk_left; // holder for current animation
-
-	SDL_Rect walk_left[MAX_ANIMATION_FRAMES];
-	SDL_Rect walk_right[MAX_ANIMATION_FRAMES];
-	SDL_Rect walk_up[MAX_ANIMATION_FRAMES];
-	SDL_Rect walk_down[MAX_ANIMATION_FRAMES];
-	
-	int num_sprite_clips;
-	int texture_change_distance_x = 2;
-	int texture_change_distance_y = 2;
-
-	// Frames
-	int frame = 0;
-
 };
 
-Dot::Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos, int row_num)
+Dot::Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos)
 {	
 	dot_sprite_sheet = dot_spritesheet;
 	
@@ -241,22 +226,13 @@ Dot::Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_po
 	dot_rect.x = x_pos;
 	dot_rect.y = y_pos;
 	dot_rect.w = TILE_WIDTH;
-	dot_rect.h = TILE_WIDTH;
-	rect_offset_x = -3;
-	rect_offset_y = -15;
-
+	dot_rect.h = TILE_HEIGHT;
 
 	//Initialize the velocity
 	mVelX = 0;
 	mVelY = 0;
 	
-	create_sprite_clips(walk_up,    4, row_num,1);
-	create_sprite_clips(walk_left,  4, row_num,3);
-	create_sprite_clips(walk_down,  4, row_num,0);
-	create_sprite_clips(walk_right, 4, row_num,2);
-
 	dot_config[FPS] = 60;
-	dot_config[DOT_IS_COLLIDABLE] = 0;
 	dot_config[DOT_TYPE] = DOT_GENERIC;
 	dot_config[IS_NOT_NULL] = 9;
 	
@@ -274,61 +250,31 @@ Dot::Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_po
 	}
 }
 
-void Dot::create_sprite_clips(SDL_Rect animation_type[], int frames, int row_num, int column_num)
-{
-	for (int i = 0; i < frames; ++i)
-	{
-		animation_type[i].x = 128*column_num + i*32;
-		animation_type[i].y = row_num*32;
-		animation_type[i].w = 32;
-		animation_type[i].h = 32;
-	}
-}
-
 void Dot::free()
 {
 
 }
 
 void Dot::render(SDL_Renderer* gRenderer, Camera* camera, double angle, SDL_Point* center, SDL_RendererFlip flip)
-{	
-	if (is_onscreen(camera))
+{		 
+	if (npc_dot_config.dot_mining_config.laser_on == true) Draw_Laser(gRenderer, camera, &dot_rect, &npc_dot_config.dot_mining_config.target_rect, npc_dot_config.dot_mining_config.laser_color);
+
+	if (show_collision_box)
 	{
-		SDL_Rect* currentClip = &current_animation[frame / 4];
-
-		SDL_Rect renderClip = *currentClip;
-
-		if (Fetch_Inventory(npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code).item_type == INVENTORY_TYPE_SPACESUIT) renderClip.y = renderClip.y- 32;
-
-		SDL_Rect renderQuad = { dot_rect.x - camera->camera_box.x + rect_offset_x, dot_rect.y - camera->camera_box.y + rect_offset_y, renderClip.w, renderClip.h };
-
-		if (npc_dot_config.dot_is_highlighted) dot_sprite_sheet->setColor(0, 255, 255);
-
-		if (npc_dot_config.dot_is_sideways) angle = -90.0;
-		else angle = 0.0;
-		 
-		if (npc_dot_config.dot_mining_config.laser_on == true) Draw_Laser(gRenderer, camera, &dot_rect, &npc_dot_config.dot_mining_config.target_rect, npc_dot_config.dot_mining_config.laser_color);
-
-		if (show_collision_box)
-		{
-			SDL_SetRenderDrawColor(gRenderer, 0xFF, 0x00, 0x00, 0xFF);
-			SDL_RenderFillRect(gRenderer, new SDL_Rect{ dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, dot_rect.w, dot_rect.h });
-		}
-
-		dot_sprite_sheet->render(gRenderer, &renderQuad, &renderClip, angle);
-
-		npc_dot_config.dot_is_highlighted = false;
-		dot_sprite_sheet->setColor(255, 255, 255);
-		if (npc_dot_config.dot_carried_item.carried_item.item_code != INVENTORY_EMPTY_SLOT)
-		{
-			npc_dot_config.dot_carried_item.render(gRenderer, camera);
-		}
+		SDL_SetRenderDrawColor(gRenderer, 0xFF, 0x00, 0x00, 0xFF);
+		SDL_RenderFillRect(gRenderer, new SDL_Rect{ dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, dot_rect.w, dot_rect.h });
+	}
+	
+	if (npc_dot_config.dot_carried_item != NULL && npc_dot_config.dot_carried_item->carried_item.item_type != INVENTORY_TYPE_EMPTY)
+	{
+		npc_dot_config.dot_carried_item->render(gRenderer, camera);
 	}
 
 	if (npc_dot_config.dot_stat_health < npc_dot_config.dot_stat_max_health) 
 	{
 		render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health);
 	}
+
 }
 
 void Dot::render_status_bar(SDL_Renderer* gRenderer, Camera* camera, int quantity_of_interest)
@@ -370,136 +316,17 @@ bool Dot::is_onscreen(Camera* camera, int buffer)
 	return onscreen;
 }
 
-void Dot::animate_movement(int previous_mPosX, int previous_mPosY)
-{
-	delta_x += (dot_rect.x - previous_mPosX);
-	delta_y += (dot_rect.y - previous_mPosY);
-
-	if (abs(delta_x) > abs(delta_y))
-	{
-		if (delta_x > 0)
-		{
-			current_animation = walk_right;
-		}
-		if (delta_x < 0)
-		{
-			current_animation = walk_left;
-		}
-	}
-
-	if (abs(delta_y) > abs(delta_x))
-	{
-		if (delta_y > 0)
-		{
-			current_animation = walk_down;
-		}
-		if (delta_y < 0)
-		{
-			current_animation = walk_up;
-		}
-	}
-
-	if (abs(delta_x) > texture_change_distance_x)
-	{
-		++frame;
-		delta_x = 0;
-	}
-
-	if (abs(delta_y) > texture_change_distance_y)
-	{
-		++frame;
-		delta_y = 0;
-	}
-
-
-	//Cycle animation
-	if (frame / 4 >= MAX_ANIMATION_FRAMES)
-	{
-		frame = 0;
-	}
-}
-
 void Dot::toggle_highlight(bool on_or_off)
 {
-	npc_dot_config.dot_is_highlighted = true;
-}
-
-void Dot::set_velocity()
-{
-	distance_x = targetPosX - (dot_rect.x + dot_rect.w / 2);
-	distance_y = targetPosY - (dot_rect.y + dot_rect.h / 2);
-
-	if (distance_x == 0)
+	if (on_or_off == true)
 	{
-		mVelX = 0;
+		npc_dot_config.dot_color.g = 155;
+		npc_dot_config.dot_color.r = 155;
 	}
-	else if (distance_x > 3)
+	else
 	{
-		mVelX = npc_dot_config.dot_stat_speed;
-	}
-	else if (distance_x < -3)
-	{
-		mVelX = -npc_dot_config.dot_stat_speed;
-	}
-	else if ((distance_x) < 3 && (distance_x) > 0)
-	{
-		mVelX = 1;
-	}
-	else if ((distance_x) > -3 && (distance_x) < 0)
-	{
-		mVelX = -1;
-	}
-	else if (distance_x)
-	{
-		mVelX = 0;
-	}
-
-	if (distance_y == 0)
-	{
-		mVelY = 0;
-	}
-	else if (distance_y > 3)
-	{
-		mVelY = npc_dot_config.dot_stat_speed;
-	}
-	else if (distance_y < -3)
-	{
-		mVelY = -npc_dot_config.dot_stat_speed;
-	}
-	else if ((distance_y) < 3 && (distance_y) > 0)
-	{
-		mVelY = 1;
-	}
-	else if ((distance_y) > -3 && (distance_y) < 0)
-	{
-		mVelY = -1;
-	}
-
-	if (distance_x == distance_y)
-	{
-		current_animation = current_animation;
-	}
-	else if (abs(distance_x) > abs(distance_y))
-	{
-		if (distance_x >= 0)
-		{
-			current_animation = walk_right;
-		}
-		else if (distance_x < 0)
-		{
-			current_animation = walk_left;
-		}
-	}
-	else if (abs(distance_y) > abs(distance_x))
-	{
-		if (distance_y >= 0)
-		{
-			current_animation = walk_down;
-		}
-		else if (distance_y < 0)
-		{
-			current_animation = walk_up;
-		}
+		npc_dot_config.dot_color.g = 255;
+		npc_dot_config.dot_color.r = 255;
 	}
 }
 
@@ -631,7 +458,7 @@ string Dot::Create_Dot_Name()
 
 void Dot::Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int carried_item_type)
 {
-	npc_dot_config.dot_carried_item = Carried_Multi_Tile(gRenderer, inventory_spritesheet, &dot_rect.x, &dot_rect.y, carried_item_type);
+	npc_dot_config.dot_carried_item = new Carried_Multi_Tile(gRenderer, inventory_spritesheet, &dot_rect.x, &dot_rect.y, carried_item_type);
 }
 
 void Dot::Create_Default_Dot_Priorities()
@@ -646,6 +473,8 @@ void Dot::Create_Default_Dot_Priorities()
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SANITY, { DOT_PRIORITY_SANITY, 100,0,50,100,0,100 }));
 }
 
+// CRAFTING COMMANDS
+
 void Dot::Check_Craftable_Items()
 {
 	npc_dot_config.craftable_items.clear();
@@ -658,6 +487,22 @@ void Dot::Check_Craftable_Items()
 			npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_vector[i].inventory_pointer,craftable_amount });
 		}
 	}
+}
+
+int Dot::Check_How_Much_Dot_Can_Craft_Of_Item(Multi_Tile_Type tile_type)
+{
+	int lowest_craftable_quantity = 99;
+
+	Building_Spec item_spec = tile_type.building_specs;
+
+	if (item_spec.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT) if ((Check_Inventory_For_Item(item_spec.Requirement_1.inventory_requirement) / item_spec.Requirement_1.requirement_quantity) < lowest_craftable_quantity) lowest_craftable_quantity = (Check_Inventory_For_Item(item_spec.Requirement_1.inventory_requirement) / item_spec.Requirement_1.requirement_quantity);
+	if (item_spec.Requirement_2.inventory_requirement != INVENTORY_EMPTY_SLOT) if ((Check_Inventory_For_Item(item_spec.Requirement_2.inventory_requirement) / item_spec.Requirement_2.requirement_quantity) < lowest_craftable_quantity) lowest_craftable_quantity = (Check_Inventory_For_Item(item_spec.Requirement_2.inventory_requirement) / item_spec.Requirement_2.requirement_quantity);
+	if (item_spec.Requirement_3.inventory_requirement != INVENTORY_EMPTY_SLOT) if ((Check_Inventory_For_Item(item_spec.Requirement_3.inventory_requirement) / item_spec.Requirement_3.requirement_quantity) < lowest_craftable_quantity) lowest_craftable_quantity = (Check_Inventory_For_Item(item_spec.Requirement_3.inventory_requirement) / item_spec.Requirement_3.requirement_quantity);
+	if (item_spec.Requirement_4.inventory_requirement != INVENTORY_EMPTY_SLOT) if ((Check_Inventory_For_Item(item_spec.Requirement_4.inventory_requirement) / item_spec.Requirement_4.requirement_quantity) < lowest_craftable_quantity) lowest_craftable_quantity = (Check_Inventory_For_Item(item_spec.Requirement_4.inventory_requirement) / item_spec.Requirement_4.requirement_quantity);
+	if (item_spec.Requirement_5.inventory_requirement != INVENTORY_EMPTY_SLOT) if ((Check_Inventory_For_Item(item_spec.Requirement_5.inventory_requirement) / item_spec.Requirement_5.requirement_quantity) < lowest_craftable_quantity) lowest_craftable_quantity = (Check_Inventory_For_Item(item_spec.Requirement_5.inventory_requirement) / item_spec.Requirement_5.requirement_quantity);
+	if (item_spec.Requirement_6.inventory_requirement != INVENTORY_EMPTY_SLOT) if ((Check_Inventory_For_Item(item_spec.Requirement_6.inventory_requirement) / item_spec.Requirement_6.requirement_quantity) < lowest_craftable_quantity) lowest_craftable_quantity = (Check_Inventory_For_Item(item_spec.Requirement_6.inventory_requirement) / item_spec.Requirement_6.requirement_quantity);
+
+	return lowest_craftable_quantity;
 }
 
 // INVENTORY_COMMANDS
@@ -720,29 +565,6 @@ bool Dot::Check_if_Dot_Has_All_Needed_Scaffold_Parts(Dot* dot, Multi_Tile_Type t
 	else if (tile_type.building_specs.Requirement_5.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_5.inventory_requirement) < tile_type.building_specs.Requirement_5.requirement_quantity) has_parts = false;
 	else if (tile_type.building_specs.Requirement_6.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_6.inventory_requirement) < tile_type.building_specs.Requirement_6.requirement_quantity) has_parts = false;
 	return has_parts;
-}
-
-int Dot::Check_How_Much_Dot_Can_Craft_Of_Item(Multi_Tile_Type tile_type)
-{
-	vector<int> craftable_quantity;
-	
-	if (tile_type.building_specs.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_1.inventory_requirement) / tile_type.building_specs.Requirement_1.requirement_quantity);
-	if (tile_type.building_specs.Requirement_2.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_2.inventory_requirement) / tile_type.building_specs.Requirement_2.requirement_quantity);
-	if (tile_type.building_specs.Requirement_3.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_3.inventory_requirement) / tile_type.building_specs.Requirement_3.requirement_quantity);
-	if (tile_type.building_specs.Requirement_4.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_4.inventory_requirement) / tile_type.building_specs.Requirement_4.requirement_quantity);
-	if (tile_type.building_specs.Requirement_5.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_5.inventory_requirement) / tile_type.building_specs.Requirement_5.requirement_quantity);
-	if (tile_type.building_specs.Requirement_6.inventory_requirement != INVENTORY_EMPTY_SLOT) craftable_quantity.push_back(Check_Inventory_For_Item(tile_type.building_specs.Requirement_6.inventory_requirement) / tile_type.building_specs.Requirement_6.requirement_quantity);
-
-	int lowest_craftable_quantity = 99;
-
-	for (int i = 0; i < craftable_quantity.size(); i++)
-	{
-		if (craftable_quantity[i] < lowest_craftable_quantity)
-		{
-			lowest_craftable_quantity = craftable_quantity[i];
-		}
-	}
-	return lowest_craftable_quantity;
 }
 
 void Dot::Check_if_Dot_Can_Pop_Tile_List_Items()
@@ -813,7 +635,7 @@ class Tile : public Dot
 {
 public:
 	//Initializes the variables
-	Tile(SDL_Renderer* gRenderer = NULL, LTexture* tile_texture = NULL, int x_coordinate = NULL, int y_coordinate = NULL, Multi_Tile_Type multi_config = Return_Tile_By_Name(TILE_GENERIC_TILE)) :Dot(gRenderer, tile_texture, x_coordinate, y_coordinate, 0)
+	Tile(SDL_Renderer* gRenderer = NULL, LTexture* tile_texture = NULL, int x_coordinate = NULL, int y_coordinate = NULL, Multi_Tile_Type multi_config = Return_Tile_By_Name(TILE_GENERIC_TILE)) :Dot(gRenderer, tile_texture, x_coordinate, y_coordinate)
 	{
 		multi_tile_config = multi_config;
 		dot_rect = { x_coordinate * TILE_WIDTH,y_coordinate * TILE_HEIGHT,TILE_WIDTH*multi_config.sprite_specs.rect_columns, TILE_HEIGHT*multi_config.sprite_specs.rect_rows };
@@ -940,7 +762,6 @@ bool Tile::is_onscreen(Camera* camera)
 
 void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 {
-
 	if (multi_tile_config.is_animated > 0) handle_animation();
 
 	dot_rect_camera.x = render_rect.x - camera->camera_box.x;
@@ -958,23 +779,15 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 	}
 	else
 	{
-		mTexture->setColor(255 - multi_tile_config.is_oxygenated * 10, 255 - multi_tile_config.is_oxygenated * 10, 255);
+		mTexture->setColor(npc_dot_config.dot_color.r - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.g - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.b);
 	}
 
 
 	SDL_Rect render_clip = { current_clip.x, current_clip.y + tile_orientation * SPRITESHEET_H, current_clip.w, current_clip.h };
 	if (multi_tile_config.tile_type == ITEM_TYPE_EMITTER) render_circle(gRenderer, camera, getTileX(), getTileY(), 5, 255, 0, 0, 50);
 
-
-
-	if (npc_dot_config.dot_is_highlighted)
-	{
-		mTexture->setColor(0, 255, 255);
-	}
-
 	SDL_Point rotate_angle{ 16,16 };
-
-
+	
 	if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >=1 ) && multi_tile_config.render_layer == render_layer) mTexture->render(gRenderer, &dot_rect_camera, &render_clip);
 	else
 	{
@@ -987,21 +800,22 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 	}
 
 	
-	if (npc_dot_config.dot_carried_item.carried_item.item_code != INVENTORY_EMPTY_SLOT)
+	if (npc_dot_config.dot_carried_item != NULL && npc_dot_config.dot_carried_item->carried_item.item_code != INVENTORY_EMPTY_SLOT)
 	{
-		npc_dot_config.dot_carried_item.render(gRenderer, camera);
+		npc_dot_config.dot_carried_item->render(gRenderer, camera);
 	}
 	
-	npc_dot_config.dot_is_highlighted = false;
-
 	if (npc_dot_config.dot_stat_health < 100) render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health);
 	if (npc_dot_config.production_current > 0) render_status_bar(gRenderer, camera, npc_dot_config.production_current);
 
 	mTexture->setAlpha(255);
 	mTexture->setColor(255, 255, 255);
+
+	// RESET CYCLICAL TILE PROPERTIES
 	multi_tile_config.leak_check = 0;
 	multi_tile_config.oxygenation_check = 0;
 	multi_tile_config.is_oxygenated = 0;
+	npc_dot_config.dot_color = { 255,255,255,255 };
 }
 
 void Tile::Set_Color(Uint8 R, Uint8 G, Uint8 B)
@@ -1305,51 +1119,31 @@ clip_and_rotation Tile::Create_Clip_And_Rotation(int base_sprite_x, int base_spr
 
 // PLAYER AND NPC DOTS
 
-class Player_Dot : public Dot
-{
-public:
-	Player_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos, int row_num) :Dot(gRenderer, dot_spritesheet, x_pos, y_pos, row_num)
-	{
-		dot_config[DOT_TYPE] = DOT_PLAYER;
-		npc_dot_config.dot_stat_speed = 10;
-		npc_dot_config.dot_last_name = Create_Name();
-		npc_dot_config.dot_first_name = Create_Name();
-		npc_dot_config.dot_full_name = npc_dot_config.dot_last_name + ", " + npc_dot_config.dot_first_name;
-
-		Create_Default_Dot_Priorities();
-
-		
-		dot_rect.w = TILE_WIDTH * 3 / 4;
-		dot_rect.h = TILE_HEIGHT * 3 / 4;
-	}
-
-	void set_velocity(bool x_or_y, int quantity);
-};
-
-void Player_Dot::set_velocity(bool x_or_y, int quantity)
-{
-	if (x_or_y)
-	{
-		mVelX = quantity;
-	}
-	else
-	{
-		mVelY = quantity;
-	}
-}
-
 class NPC_Dot : public Dot
 {
 public:
-	NPC_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos, int row_num) :Dot(gRenderer, dot_spritesheet, x_pos, y_pos, row_num)
+	NPC_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet_array[], int x_pos, int y_pos, dot_composite_config dot_makeup) :Dot(gRenderer, dot_spritesheet_array[0], x_pos, y_pos)
 	{
+		dot_spritesheet[0] = dot_spritesheet_array[0];
+		dot_spritesheet[1] = dot_spritesheet_array[1];
+		dot_spritesheet[2] = dot_spritesheet_array[2];
+		dot_spritesheet[3] = dot_spritesheet_array[3];
+		dot_spritesheet[4] = dot_spritesheet_array[4];
+		dot_spritesheet[5] = dot_spritesheet_array[5];
+
+		create_sprite(dot_makeup.leg_type,dot_makeup.arm_type,dot_makeup.torso_type, dot_makeup.head_type, dot_makeup.spacesuit_type);
+
+		change_sprite_direction(3);
+		
 		dot_config[DOT_TYPE] = DOT_NPC;
 		npc_dot_config.dot_last_name = Create_Name();
 		npc_dot_config.dot_first_name = Create_Name();
 		npc_dot_config.dot_full_name = npc_dot_config.dot_last_name + ", " + npc_dot_config.dot_first_name;
 
 		dot_rect.w = TILE_WIDTH * 3 / 4;
-		dot_rect.h = TILE_HEIGHT * 3 / 4;
+		dot_rect.h = TILE_HEIGHT * 2 / 4;
+		rect_offset_x = -5;
+		rect_offset_y = -20;
 
 		Create_Default_Dot_Priorities();
 
@@ -1359,43 +1153,14 @@ public:
 		}
 	}
 
-	Dot_Job dot_current_job;
-	Dot_Job dot_personal_ai;
-
-	void set_velocity(bool x_or_y, int quantity);
-
-};
-
-void NPC_Dot::set_velocity(bool x_or_y, int quantity)
-{
-	if (x_or_y)
-	{
-		mVelX = quantity;
-	}
-	else
-	{
-		mVelY = quantity;
-	}
-}
-
-class Multi_Dot :public Dot
-{
-public: 
-	Multi_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet_array[], int x_pos, int y_pos, int row_num):Dot(gRenderer, dot_spritesheet_array[0], x_pos, y_pos, row_num)
-	{
-		dot_spritesheet[0] = dot_spritesheet_array[0];
-		dot_spritesheet[1] = dot_spritesheet_array[1];
-		dot_spritesheet[2] = dot_spritesheet_array[2];
-		dot_spritesheet[3] = dot_spritesheet_array[3];
-		create_sprite();
-		change_sprite_direction(3);
-	}
-
 	void render(SDL_Renderer* gRenderer, Camera* camera);
 	void render_component(SDL_Renderer* gRenderer, Camera* camera, int component);
 	void increment_animation();
-	void create_sprite();
+	void create_sprite(int leg_type, int arm_type, int torso_type, int head_type, int spacesuit_type);
 	void change_sprite_direction(int direction);
+	void animate_movement(int previous_mPosX, int previous_mPosY);
+	void set_velocity();
+	void set_direction();
 
 	struct dot_multi_clip
 	{
@@ -1412,40 +1177,100 @@ public:
 
 	SDL_Rect clip_rect;
 	SDL_Rect render_rect;
+	int rect_offset_x;
+	int rect_offset_y;
 	unordered_map <int, dot_multi_clip> dot_composite;
 
+	Dot_Job dot_current_job;
+	Dot_Job dot_personal_ai;
+
+	void set_player_velocity(bool x_or_y, int quantity);
+	int texture_change_distance_x = 2;
+	int texture_change_distance_y = 2;
+
+	int bounce_delay = 0;
+	int max_bounce_delay = 2;
+	int bounce = 0;
+	int bounce_direction = 1;
+
+	int shadow_offset = 0;
+
 private:
-	LTexture* dot_spritesheet[4];
+	LTexture* dot_spritesheet[6];
+
 };
 
-void Multi_Dot::create_sprite()
+void NPC_Dot::set_player_velocity(bool x_or_y, int quantity)
 {
-	dot_composite.insert({ DOT_COMPOSITE_LEGS, { 0,0,5,0,{0,0,32,32},1,1,0,5 } });
-	dot_composite.insert({ DOT_COMPOSITE_ARMS,{ 0,0,5,0,{ 0,0,32,32 },1,1,0,5 } });
-	dot_composite.insert({ DOT_COMPOSITE_TORSO, { 0,0,1,0,{ 0,0,32,32 },1,1,0,5} });
-	dot_composite.insert({ DOT_COMPOSITE_HEAD,{ 0,1,1,0,{ 0,0,32,32 },1,1,0,5 } });
+	if (x_or_y)
+	{
+		mVelX = quantity;
+	}
+	else
+	{
+		mVelY = quantity;
+	}
 }
 
-void Multi_Dot::change_sprite_direction(int direction)
+void NPC_Dot::create_sprite(int leg_type, int arm_type, int torso_type, int head_type, int spacesuit_type)
+{
+	dot_composite.insert({ DOT_COMPOSITE_LEGS, { 0,leg_type*5,5,0,{0,0,32,32},1,1,0,5 } });
+	dot_composite.insert({ DOT_COMPOSITE_ARMS,{ 0,arm_type*5,5,0,{ 0,0,32,32 },1,1,0,5 } });
+	dot_composite.insert({ DOT_COMPOSITE_TORSO, { 0,torso_type,1,0,{ 0,0,32,32 },1,1,0,5} });
+	dot_composite.insert({ DOT_COMPOSITE_HEAD,{0,head_type,1,0,{ 0,0,32,32 },1,1,0,5 } });
+	dot_composite.insert({ DOT_COMPOSITE_SPACESUIT,{ 0,spacesuit_type*5,5,0,{ 0,0,32,32 },1,1,0,5 } });
+}
+
+void NPC_Dot::change_sprite_direction(int direction)
 {
 	dot_composite[DOT_COMPOSITE_LEGS].animation_row = direction;
 	dot_composite[DOT_COMPOSITE_ARMS].animation_row = direction;
 	dot_composite[DOT_COMPOSITE_TORSO].animation_row = direction;
 	dot_composite[DOT_COMPOSITE_HEAD].animation_row = direction;
+	dot_composite[DOT_COMPOSITE_SPACESUIT].animation_row = direction;
 }
 
-void Multi_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
+void NPC_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
 {
-	increment_animation();
+	dot_spritesheet[0]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
+	dot_spritesheet[1]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
+	dot_spritesheet[2]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
+	dot_spritesheet[3]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
+	dot_spritesheet[4]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
+	
+	dot_spritesheet[5]->render(gRenderer, new SDL_Rect{ dot_rect.x + rect_offset_x - camera->camera_box.x, dot_rect.y + rect_offset_y - camera->camera_box.y + bounce + shadow_offset, TILE_WIDTH, TILE_HEIGHT }, new SDL_Rect{ 0,0,32,32 });
 
-	render_component(gRenderer, camera, DOT_COMPOSITE_LEGS);
-	render_component(gRenderer, camera, DOT_COMPOSITE_TORSO);
-	render_component(gRenderer, camera, DOT_COMPOSITE_ARMS);
-	render_component(gRenderer, camera, DOT_COMPOSITE_HEAD);
+	if (npc_dot_config.dot_equipment_config.Spacesuit.item_number == 1) render_component(gRenderer, camera, DOT_COMPOSITE_SPACESUIT);
+	else
+	{
+		render_component(gRenderer, camera, DOT_COMPOSITE_LEGS);
+		render_component(gRenderer, camera, DOT_COMPOSITE_TORSO);
+		render_component(gRenderer, camera, DOT_COMPOSITE_ARMS);
+		render_component(gRenderer, camera, DOT_COMPOSITE_HEAD);
+	}
 
+	dot_spritesheet[0]->setColor(255, 255, 255);
+	dot_spritesheet[1]->setColor(255, 255, 255);
+	dot_spritesheet[2]->setColor(255, 255, 255);
+	dot_spritesheet[3]->setColor(255, 255, 255);
+	dot_spritesheet[4]->setColor(255, 255, 255);
+
+	Dot::render(gRenderer, camera);
+
+	if (npc_dot_config.bounce == 1)
+	{
+		bounce_delay++;
+		if (bounce_delay > max_bounce_delay) bounce_delay = 0;
+		if (bounce_delay == 0)
+		{
+			bounce += bounce_direction;
+			if (bounce > 3) bounce_direction = -1;
+			if (bounce < -3) bounce_direction = 1;
+		}
+	}
 }
 
-void Multi_Dot::render_component(SDL_Renderer* gRenderer, Camera* camera, int component)
+void NPC_Dot::render_component(SDL_Renderer* gRenderer, Camera* camera, int component)
 {
 	SDL_Rect sprite_specs = dot_composite[component].sprite_specs;
 	int current_frame = dot_composite[component].current_frame;
@@ -1453,11 +1278,11 @@ void Multi_Dot::render_component(SDL_Renderer* gRenderer, Camera* camera, int co
 	int animation_column = dot_composite[component].animation_column;
 
 	clip_rect = { sprite_specs.x + (animation_column + current_frame)*sprite_specs.w, sprite_specs.y + animation_row*sprite_specs.h, sprite_specs.w, sprite_specs.h };
-	render_rect = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, TILE_WIDTH, TILE_HEIGHT };
-	dot_spritesheet[component]->render(gRenderer, &render_rect, &clip_rect);
+	render_rect = { dot_rect.x + rect_offset_x - camera->camera_box.x, dot_rect.y + rect_offset_y- camera->camera_box.y + bounce, TILE_WIDTH, TILE_HEIGHT };
+	dot_spritesheet[component]->render(gRenderer, &render_rect, &clip_rect,npc_dot_config.dot_angle);
 }
 
-void Multi_Dot::increment_animation()
+void NPC_Dot::increment_animation()
 {
 	for (int i = 0; i < dot_composite.size(); i++)
 	{
@@ -1472,12 +1297,137 @@ void Multi_Dot::increment_animation()
 	}
 }
 
+void NPC_Dot::animate_movement(int previous_mPosX, int previous_mPosY)
+{
+	delta_x += (dot_rect.x - previous_mPosX);
+	delta_y += (dot_rect.y - previous_mPosY);
+
+	if (abs(delta_x) > abs(delta_y))
+	{
+		if (delta_x > 0)
+		{
+			change_sprite_direction(0);
+		}
+		if (delta_x < 0)
+		{
+			change_sprite_direction(1);
+		}
+	}
+
+	if (abs(delta_y) > abs(delta_x))
+	{
+		if (delta_y > 0)
+		{
+			change_sprite_direction(2);
+		}
+		if (delta_y < 0)
+		{
+			change_sprite_direction(3);
+		}
+	}
+
+	if (abs(delta_x) > texture_change_distance_x)
+	{
+		increment_animation();
+		delta_x = 0;
+	}
+
+	if (abs(delta_y) > texture_change_distance_y)
+	{
+		increment_animation();
+		delta_y = 0;
+	}
+}
+
+void NPC_Dot::set_velocity()
+{
+	distance_x = targetPosX - (dot_rect.x + dot_rect.w / 2);
+	distance_y = targetPosY - (dot_rect.y + dot_rect.h / 2);
+
+	if (distance_x == 0)
+	{
+		mVelX = 0;
+	}
+	else if (distance_x > 3)
+	{
+		mVelX = npc_dot_config.dot_stat_speed;
+	}
+	else if (distance_x < -3)
+	{
+		mVelX = -npc_dot_config.dot_stat_speed;
+	}
+	else if ((distance_x) < 3 && (distance_x) > 0)
+	{
+		mVelX = 1;
+	}
+	else if ((distance_x) > -3 && (distance_x) < 0)
+	{
+		mVelX = -1;
+	}
+	else if (distance_x)
+	{
+		mVelX = 0;
+	}
+
+	if (distance_y == 0)
+	{
+		mVelY = 0;
+	}
+	else if (distance_y > 3)
+	{
+		mVelY = npc_dot_config.dot_stat_speed;
+	}
+	else if (distance_y < -3)
+	{
+		mVelY = -npc_dot_config.dot_stat_speed;
+	}
+	else if ((distance_y) < 3 && (distance_y) > 0)
+	{
+		mVelY = 1;
+	}
+	else if ((distance_y) > -3 && (distance_y) < 0)
+	{
+		mVelY = -1;
+	}
+}
+
+void NPC_Dot::set_direction()
+{
+	distance_x = targetPosX - (dot_rect.x + dot_rect.w / 2);
+	distance_y = targetPosY - (dot_rect.y + dot_rect.h / 2);
+
+	if (abs(distance_x) > abs(distance_y))
+	{
+		if (distance_x >= 0)
+		{
+			change_sprite_direction(0);
+		}
+		else if (distance_x < 0)
+		{
+			change_sprite_direction(1);
+		}
+	}
+	else if (abs(distance_y) > abs(distance_x))
+	{
+		if (distance_y >= 0)
+		{
+			change_sprite_direction(2);
+		}
+		else if (distance_y < 0)
+		{
+			change_sprite_direction(3);
+		}
+	}
+}
+
+
+
 // CONTAINER DOTS
 
 class Container : public Dot
 {
 public: 
-	Container(SDL_Renderer* gRenderer, LTexture* container_spritesheet, int x_pos, int y_pos, int column_number, int row_number = 0) :Dot(gRenderer, container_spritesheet, x_pos, y_pos, row_number)
+	Container(SDL_Renderer* gRenderer, LTexture* container_spritesheet, int x_pos, int y_pos, int column_number, int row_number = 0) :Dot(gRenderer, container_spritesheet, x_pos, y_pos)
 	{
 		spritesheet = container_spritesheet;
 		current_clip = { 1+column_number*SPRITESHEET_W,1+row_number*SPRITESHEET_H,TILE_WIDTH, TILE_HEIGHT };
@@ -1519,7 +1469,7 @@ void Container::render(SDL_Renderer* gRenderer, Camera* camera, double angle, SD
 class Asteroid : public Dot
 {
 public:
-	Asteroid(SDL_Renderer* gRenderer, LTexture* asteroid_spritesheet, int x_pos, int y_pos, int row_num) :Dot(gRenderer, asteroid_spritesheet, x_pos, y_pos, row_num)
+	Asteroid(SDL_Renderer* gRenderer, LTexture* asteroid_spritesheet, int x_pos, int y_pos, int row_num) :Dot(gRenderer, asteroid_spritesheet, x_pos, y_pos)
 	{
 		spritesheet = asteroid_spritesheet;
 
@@ -1686,7 +1636,7 @@ void Ship_Dot::set_velocity()
 	{
 		mVelX = -1;
 	}
-	else if (distance_x)
+	else if (distance_x == 0)
 	{
 		mVelX = 0;
 	}
@@ -1740,11 +1690,11 @@ void Ship_Dot::turn_towards_target()
 class Bolt : public Dot 
 {
 public:
-	Bolt(SDL_Renderer* gRenderer, LTexture* texture, SDL_Rect* owners_dot_rect, int sprite_row, int start_location_x, int start_location_y, int projectile_speed, float projectile_angle, bool explosion = false) :Dot(gRenderer, texture, start_location_x, start_location_y)
+	Bolt(SDL_Renderer* gRenderer, LTexture* texture, int owners_faction, int sprite_row, int start_location_x, int start_location_y, int projectile_speed, float projectile_angle, bool explosion = false) :Dot(gRenderer, texture, start_location_x, start_location_y)
 	{
 		bolt_texture = texture;
 
-		owner_dot_rect = owners_dot_rect;
+		npc_dot_config.dot_stat_faction = owners_faction;
 
 		fire_angle = projectile_angle;
 		speed = projectile_speed;
@@ -1760,7 +1710,6 @@ public:
 	}
 
 	void render(SDL_Renderer* gRenderer, Camera* camera);
-	SDL_Rect* owner_dot_rect;
 
 	int mVelX, mVelY;
 

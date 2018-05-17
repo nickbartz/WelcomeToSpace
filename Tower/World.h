@@ -114,7 +114,7 @@ World::World(SDL_Renderer* gRenderer, LTexture textures[], SDL_Rect* tilesheet_c
 	world_renderer = gRenderer;
 
 	Create_Background();
-	Create_Test_Room(45,45);
+	Create_Test_Room(150,150);
 }
 
 void World::Create_Background()
@@ -135,14 +135,7 @@ void World::Create_Test_Room(int x_start, int y_start)
 	string room =
 
 
-		"F(B)FFFFFFF(X)FFF;\
-		 FFFFFFFFFFF;\
-		 FFFFFFFFFFF;\
-		 FFFFFFFFFFF;\
-		 FFFFFFFFFFFDFFFD;\
-		 FFFFFFFFFFF;\
-		 FF(O)FFFFF(P)FFFF;\
-		 FFFFFFF(Q)FFFF;";
+		"FFFFFFFFFFF(O);\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFFD;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;";
 
 	int column = x_start;
 	int row = y_start;
@@ -160,6 +153,7 @@ void World::Create_Test_Room(int x_start, int y_start)
 		else if (room[i] == 'B') Create_Tile(Return_Tile_By_Name(TILE_BED_1), column, row);
 		else if (room[i] == '(') column = column -2;
 		else if (room[i] == ')') column = column - 1;
+		else if (room[i] == '+') column = column++;
 
 		if (room[i] == ';')
 		{
