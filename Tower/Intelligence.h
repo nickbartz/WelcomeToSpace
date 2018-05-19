@@ -25,7 +25,7 @@ public:
 	int Check_if_Point_Inside_Rect(int point_x, int point_y, SDL_Rect target_rect);
 	int Check_Distance_Between_Dots(Dot* dot_one, Dot* dot_two);
 	int Check_Faction_Score_Between_Dots(Dot* dot_one, Dot* dot_two);
-
+	void Simple_Manage_Delay_Progress(int* pointer_to_increment, int max_delay);
 
 	// DOT COMMANDS
 	Tile* get_current_dot_tile(Dot* dot);
@@ -229,14 +229,14 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 
 	world->Create_Tile(Return_Tile_By_Name(TILE_LOCKER_1), 151, 150);
 
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		int random_head = rand() % 2;
 		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, (154 + i) * TILE_WIDTH, 151 * TILE_HEIGHT, { 0,0,0,1,0 }));
 		Add_Item_To_Dot_Inventory(npc_dot_array.back(), INVENTORY_SPACESUIT_1, 1);
 		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1, 1 };
 		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
-		npc_dot_array.back()->npc_dot_config.current_storage_tile = return_nearest_tile_by_type_or_name(npc_dot_array.back(), false, TILE_TYPE_STORAGE_TILE);
+		npc_dot_array.back()->npc_dot_config.functional_relationship_map.insert({ DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE, {return_nearest_tile_by_type_or_name(npc_dot_array.back(), false, TILE_TYPE_STORAGE_TILE),0} });
 	}
 
 	//for (int i = 0; i < 5; i++)
@@ -520,6 +520,12 @@ int Intelligence::Check_Faction_Score_Between_Dots(Dot* dot_one, Dot* dot_two)
 		}
 	}
 	return 0;
+}
+
+void Intelligence::Simple_Manage_Delay_Progress(int* pointer_to_increment, int max_delay)
+{
+	*pointer_to_increment++;
+	if (*pointer_to_increment >= max_delay) *pointer_to_increment = 0;
 }
 
 
@@ -962,23 +968,21 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		goal_complete = true;
 		break;
 	case ACTION_GROW_FRENZEL:
-		if (world->Find_tile_within_radius_of_dot(dot, ITEM_TYPE_EMITTER, 5, true))
+		if (dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CLOSEST_FRENZEL_EMITTER].functional_dot == NULL)
 		{
-			dot->npc_dot_config.frenzel_rhomb = dot->npc_dot_config.frenzel_rhomb + 1;
+			if (dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CLOSEST_FRENZEL_EMITTER].current_search_delay == 0)
+			{
+				dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CLOSEST_FRENZEL_EMITTER].functional_dot = world->Find_tile_within_radius_of_dot(dot, ITEM_TYPE_EMITTER, 5, true);
+				if (dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CLOSEST_FRENZEL_EMITTER].functional_dot == NULL) dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CLOSEST_FRENZEL_EMITTER].current_search_delay++;
+			}
+			else Simple_Manage_Delay_Progress(&dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CLOSEST_FRENZEL_EMITTER].current_search_delay, dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CLOSEST_FRENZEL_EMITTER].max_search_delay);
 		}
+		else dot->npc_dot_config.frenzel_rhomb = dot->npc_dot_config.frenzel_rhomb + 1;
+
 		if (dot->npc_dot_config.frenzel_rhomb >= 500)
 		{
 			world->Grow_Frenzel(dot->getTileX(), dot->getTileY(), current_frenzel_amount);
 			dot->npc_dot_config.frenzel_rhomb = 0;
-			bool frenzel_already_on_spot = false;
-			for (int i = 0; i < container_array.size(); i++)
-			{
-				if (container_array[i]->getTileX() == dot->getTileX() && container_array[i]->getTileY() == dot->getTileY()) frenzel_already_on_spot = true;
-			}
-			if (frenzel_already_on_spot == false)
-			{
-				Dot_Drop_Inventory(dot, dot->getPosX(), dot->getPosY());
-			}
 		}
 		goal_complete = true;
 		break;
@@ -2243,40 +2247,21 @@ void Intelligence::Update_World_Ai()
 	{
 		for (int i = 0; i < TILE_NUM_X; i++)
 		{
-			if (world->item_tiles[i][p] != NULL && world->item_tiles[i][p]->multi_tile_config.item_job_type != DOT_JOB_NO_ASSIGNED_JOB && world->item_tiles[i][p]->npc_dot_config.current_goal_list.size() == 0)
+			if (world->item_tiles[i][p] != NULL)
 			{
-				world->item_tiles[i][p]->item_job.Run_Job(world->item_tiles[i][p]);
+				if (world->item_tiles[i][p]->npc_dot_config.current_goal_list.size() == 0) world->item_tiles[i][p]->item_job.Run_Job(world->item_tiles[i][p]);
 				Process_Most_Recent_Dot_Goal(world->item_tiles[i][p]);
 				Check_If_Tile_Has_Needs(world->item_tiles[i][p]);
 
-				if (world->item_tiles[i][p]->multi_tile_config.current_health <= 0)
-				{
-					Dot_Drop_Inventory(world->item_tiles[i][p], world->item_tiles[i][p]->getPosX(), world->item_tiles[i][p]->getPosY());
-					world->Create_Tile(Return_Tile_By_Name(TILE_VACUUM), world->item_tiles[i][p]->getTileX(), world->item_tiles[i][p]->getTileY());
-				}
+				if (world->item_tiles[i][p]->npc_dot_config.dot_stat_health <= 0) Delete_Tile(world->item_tiles[i][p]);
 			}
 			if (world->world_tiles[i][p] != NULL && world->world_tiles[i][p]->multi_tile_config.tile_type != VACUUM)
 			{
-				world->world_tiles[i][p]->item_job.Run_Job(world->world_tiles[i][p]);
+				if (world->world_tiles[i][p]->npc_dot_config.current_goal_list.size() == 0) world->world_tiles[i][p]->item_job.Run_Job(world->world_tiles[i][p]);
 				Process_Most_Recent_Dot_Goal(world->world_tiles[i][p]);
 				Check_If_Tile_Has_Needs(world->world_tiles[i][p]);
-				
-				if (world->world_tiles[i][p]->multi_tile_config.current_health <= 0)
-				{
-					Dot_Drop_Inventory(world->world_tiles[i][p], world->world_tiles[i][p]->getPosX(), world->world_tiles[i][p]->getPosY());
-					world->Create_Tile(Return_Tile_By_Name(TILE_VACUUM), world->world_tiles[i][p]->getTileX(), world->world_tiles[i][p]->getTileY());
-				}
-			}
 
-			if (world->world_tiles[i][p] != NULL && world->world_tiles[i][p]->npc_dot_config.dot_stat_health <= 0)
-			{
-				//Dot_Drop_Inventory(world->world_tiles[i][p], world->world_tiles[i][p]->getPosX(), world->world_tiles[i][p]->getPosY());
-				Delete_Tile(world->world_tiles[i][p]);
-			}
-			if (world->item_tiles[i][p] != NULL && world->item_tiles[i][p]->npc_dot_config.dot_stat_health <= 0)
-			{
-				//Dot_Drop_Inventory(world->item_tiles[i][p], world->item_tiles[i][p]->getPosX(), world->item_tiles[i][p]->getPosY());
-				Delete_Tile(world->item_tiles[i][p]);
+				if (world->world_tiles[i][p]->npc_dot_config.dot_stat_health <= 0) Delete_Tile(world->world_tiles[i][p]);
 			}
 		}
 	}
@@ -2304,7 +2289,7 @@ void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
 	// IF THE TILE IS AN ITEM THAT NEEDS TO BE ACTIVATED, SEND OUT COMPILING REQUEST
 	if (tile->npc_dot_config.dot_produced_item.tile_name != TILE_NULL && tile->npc_dot_config.tile_parts_list.size() == 0 && tile->npc_dot_config.production_current < 100)
 	{
-		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_COMPILE_PROJECT, 1 , tile, NULL, null_tile, 1,100, &tile->npc_dot_config.production_current });
+		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_COMPILE_PROJECT, 1 , tile, NULL, null_tile, 1,256, &tile->npc_dot_config.production_current });
 	}
 
 	// IF THE TILE ISN'T BUILT, SEND OUT A BUILDING REQUEST

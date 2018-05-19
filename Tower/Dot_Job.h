@@ -139,19 +139,20 @@ void Dot_Job::Run_Job(Dot* dot)
 void Dot_Job::Routine_Move_Container_To_Storage(Dot* dot, Dot* container, Dot* storage_tile)
 {	
 	vector<Dot_Inventory_Slot> container_inventory = container->return_inventory_as_vector();
+	Dot* current_storage_tile = dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE].functional_dot;
 
 	if (container_inventory.size() > 0)
 	{
-		if (dot->npc_dot_config.current_storage_tile != NULL && dot->npc_dot_config.current_storage_tile->multi_tile_config.tile_type == TILE_TYPE_STORAGE_TILE)
+		if (current_storage_tile != NULL)
 		{
 			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
 			for (int i = 0; i < container_inventory.size(); i++)
 			{
-				dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,dot->npc_dot_config.current_storage_tile });
+				dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,current_storage_tile });
 			}
 
-			dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,dot->npc_dot_config.current_storage_tile });
-			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,dot->npc_dot_config.current_storage_tile });
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,current_storage_tile });
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,current_storage_tile });
 
 			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
 		}
@@ -240,9 +241,15 @@ void Dot_Job::Routine_Tile_Door(Dot* dot)
 void Dot_Job::Routine_Grow_Frenzel(Dot* dot)
 {
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_GROW_FRENZEL,0,0,0,0,null_tile,0,false,NULL });
-	if (dot->Check_Inventory_For_Item(INVENTORY_FRENZEL_1) <= 0)
+
+	if (dot->multi_tile_config.built_percent >= 100)
 	{
-		dot->npc_dot_config.current_goal_list.push_back({ ACTION_ADD_ITEM_TO_DOT_INVENTORY,0,0,0,0,Return_Tile_By_Inventory_Item(INVENTORY_FRENZEL_1),1,false,dot });
+		if (dot->npc_dot_config.dot_produced_item.tile_name == TILE_NULL)
+		{
+			dot->npc_dot_config.dot_produced_item = Return_Tile_By_Name(TILE_FRENZEL_2);
+			dot->Return_Parts_List(dot->npc_dot_config.dot_produced_item);
+		}
+		Subroutine_Manage_Item_Production(dot, dot->npc_dot_config.dot_produced_item);
 	}
 }
 

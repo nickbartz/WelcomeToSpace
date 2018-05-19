@@ -114,10 +114,17 @@ public:
 		int max_delay;
 	};
 
+	struct Functional_Dot_Relationship
+	{
+		Dot* functional_dot;
+		int current_search_delay;
+		int max_search_delay;
+	};
+
 	struct Dot_Relationship
 	{
-		Dot* related_dot;
-		string relationship_signifier;
+		Dot* related_dot = NULL;
+		int relationship_type;
 		int relationship_value;
 	};
 
@@ -142,14 +149,18 @@ public:
 		string dot_last_name = "";
 		string dot_first_name = "";
 		string dot_full_name = "";
+		
 		int dot_stat_health = 100;
 		int dot_stat_max_health = 100;
 		int dot_stat_speed = 3;
 		int dot_stat_faction = 0;
 		int dot_sprite_row = 1;
+		
 		vector<Dot_Relationship> dot_relationships;
 		vector<Dot_Inventory_Slot> dot_starting_inventory;
 		map <int, Dot_Priority> dot_priority_map;
+		unordered_map<int, Functional_Dot_Relationship> functional_relationship_map;
+		
 		int frenzel_rhomb = 0;
 		Mining_Laser_Config dot_mining_config;
 		NPC_Dot_Equipment_Struct dot_equipment_config;
