@@ -12,7 +12,15 @@ public:
 	// INPUT COMMANDS
 	void Handle_Non_Console_Click(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
 	void Handle_Non_Console_Click_And_Hold(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
-	void Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
+	void Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT)
+	{
+		switch (current_action)
+		{
+		case BUTTON_ACTION_MINING_LASER:
+			//Stop_Firing_Mining_Laser(player_dot);
+			break;
+		}
+	}
 	void Handle_Keyboard_Input(SDL_Event* e);
 	void Test_Cursor_Position(int mouse_pos_x, int mouse_pos_y, int tile_x, int tile_y);
 	Dot* Return_Clicked_Dot(int mouse_pos_x, int mouse_pos_y);
@@ -135,7 +143,7 @@ public:
 	void render();
 
 	// TEST OBJECTS
-	NPC_Dot* player_dot;
+	//NPC_Dot* player_dot;
 	NPC_Dot* lifepod;
 
 	int delay = 0;
@@ -153,14 +161,6 @@ private:
 	LTexture* texture_array[NUM_TILESHEETS];
 	LTexture* dot_spritesheet_array[6];
 
-	LTexture* bolt_sprites;
-	LTexture* dot_spritesheet;
-	LTexture* asteroid_spritesheet;
-	LTexture* enemy_ship_spritesheet;
-	LTexture* container_spritesheet;
-	LTexture* inventory_spritesheet;
-	LTexture* standard_tilesheet;
-
 	vector<string> console_alerts;
 
 	vector<Bolt*> bolt_array;
@@ -170,6 +170,9 @@ private:
 	vector<NPC_Dot*> npc_dot_array;
 	vector<Dot_Job> dot_job_array;
 	vector<dot_faction_relationship> faction_relationships;
+	vector<Dot_Star*> background_star_array;
+
+	Dot_Star* new_star;
 
 	int max_enemy_ships = 10;
 
@@ -189,14 +192,6 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 	dot_spritesheet_array[4] = texture_array[DOT_SPRITESHEET_EQUIPMENT];
 	dot_spritesheet_array[5] = texture_array[DOT_SPRITESHEET_MISC];
 
-	bolt_sprites = texture_array[BOLT_SPRITES];
-	dot_spritesheet = texture_array[DOT_SPRITESHEET];
-	asteroid_spritesheet = texture_array[ASTEROID_SPRITESHEET];
-	enemy_ship_spritesheet = texture_array[ENEMY_SHIP_SPRITESHEET];
-	container_spritesheet = texture_array[CONTAINER_SPRITESHEET];
-	inventory_spritesheet = texture_array[INVENTORY_SPRITESHEET];
-	standard_tilesheet = texture_array[TILESHEET];
-
 	camera = world_camera;
 
 	gRenderer = world_renderer;
@@ -207,20 +202,20 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 	faction_relationships.push_back({ DOT_FACTION_PLAYER,DOT_FACTION_ENEMY,-1 });
 	faction_relationships.push_back({ DOT_FACTION_ENEMY,DOT_FACTION_PLAYER,-1 });
 
-	player_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, 150 * TILE_WIDTH, 150 * TILE_HEIGHT, { 0,0,0,0 });
-	player_dot->dot_config[DOT_TYPE] = DOT_PLAYER;
-	player_dot->npc_dot_config.dot_stat_speed = 10;
-	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_SPACESUIT_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_OXYGEN_TANK, 1);
-	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_MINING_LASER_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_LASER_PISTOL_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_LOCKER_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_FRENZEL_1, 1);
-	Add_Item_To_Dot_Inventory(player_dot, INVENTORY_EMITTER_1, 1);
-	player_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
-	player_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
-	player_dot->npc_dot_config.dot_equipment_config.Mining_Laser = { INVENTORY_MINING_LASER_1,1 };
-	player_dot->Check_Craftable_Items();
+	//player_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, 150 * TILE_WIDTH, 150 * TILE_HEIGHT, { 0,0,0,0 });
+	//player_dot->dot_config[DOT_TYPE] = DOT_PLAYER;
+	//player_dot->npc_dot_config.dot_stat_speed = 10;
+	//Add_Item_To_Dot_Inventory(player_dot, INVENTORY_SPACESUIT_1, 1);
+	//Add_Item_To_Dot_Inventory(player_dot, INVENTORY_OXYGEN_TANK, 1);
+	//Add_Item_To_Dot_Inventory(player_dot, INVENTORY_MINING_LASER_1, 1);
+	//Add_Item_To_Dot_Inventory(player_dot, INVENTORY_LASER_PISTOL_1, 1);
+	//Add_Item_To_Dot_Inventory(player_dot, INVENTORY_LOCKER_1, 1);
+	//Add_Item_To_Dot_Inventory(player_dot, INVENTORY_FRENZEL_1, 1);
+	//Add_Item_To_Dot_Inventory(player_dot, INVENTORY_EMITTER_1, 1);
+	//player_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
+	//player_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
+	//player_dot->npc_dot_config.dot_equipment_config.Mining_Laser = { INVENTORY_MINING_LASER_1,1 };
+	//player_dot->Check_Craftable_Items();
 
 	lifepod = new NPC_Dot(gRenderer, dot_spritesheet_array, 155 * TILE_WIDTH, 155 * TILE_HEIGHT, { 0,0,0,0,1 });
 	lifepod->npc_dot_config.dot_equipment_config.Spacesuit.item_number = 1;
@@ -248,7 +243,13 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 	//	npc_dot_array.push_back(enemy_dot);
 	//}
 
-
+	for (int i = 0; i < 400; i++)
+	{
+		int screen_x = rand() % SCREEN_WIDTH*3/2;
+		int screen_y = rand() % SCREEN_HEIGHT*3/2;
+		int rand_depth = rand() % 11 + 10;
+		background_star_array.push_back(new Dot_Star(gRenderer, texture_array[TILESHEET], screen_x, screen_y, rand_depth, rand_depth/10 - 1));
+	}
 
 }
 
@@ -286,22 +287,22 @@ void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int 
 	case BUTTON_ACTION_REMOVE_TILE:world->Remove_Tile(x_tile, y_tile);
 		break;
 	case BUTTON_ACTION_ATTACK:
-		Fire_Weapon(player_dot,world->world_tiles[x_tile][y_tile], 0, 10, true, x, y);
+		//Fire_Weapon(player_dot,world->world_tiles[x_tile][y_tile], 0, 10, true, x, y);
 		break;
 	case BUTTON_ACTION_CREATE_ITEM:
 	case BUTTON_ACTION_PLACE_ITEM:
-		if (dot_has_item_in_inventory(player_dot, inventory_item_code) && world->Check_If_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
-		{
-			world->Create_Tile(Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
-			Remove_Item_From_Dot_Inventory(player_dot, inventory_item_code, 1);
-		}
+		//if (dot_has_item_in_inventory(player_dot, inventory_item_code) && world->Check_If_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
+		//{
+		//	world->Create_Tile(Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
+		//	Remove_Item_From_Dot_Inventory(player_dot, inventory_item_code, 1);
+		//}
 
 		break;
 	case BUTTON_ACTION_PLACE_SCAFFOLD:
-		if (world->Check_If_Scaffold_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
-		{
-			Create_Scaffolding(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
-		}
+		//if (world->Check_If_Scaffold_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
+		//{
+		//	Create_Scaffolding(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
+		//}
 		break;
 	}
 }
@@ -311,20 +312,10 @@ void Intelligence::Handle_Non_Console_Click_And_Hold(int current_action, int x_t
 	switch (current_action)
 	{
 	case BUTTON_ACTION_ATTACK:
-		if (player_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0) Fire_Weapon(player_dot, world->world_tiles[x_tile][y_tile], 0, 20, true, x, y);
+		//if (player_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0) Fire_Weapon(player_dot, world->world_tiles[x_tile][y_tile], 0, 20, true, x, y);
 		break;
 	case BUTTON_ACTION_MINING_LASER:
-		Fire_Mining_Laser(player_dot, world->world_tiles[x_tile][y_tile], true, x, y);
-		break;
-	}
-}
-
-void Intelligence::Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code)
-{
-	switch (current_action)
-	{
-	case BUTTON_ACTION_MINING_LASER:
-		Stop_Firing_Mining_Laser(player_dot);
+		//Fire_Mining_Laser(player_dot, world->world_tiles[x_tile][y_tile], true, x, y);
 		break;
 	}
 }
@@ -336,16 +327,16 @@ void Intelligence::Handle_Keyboard_Input(SDL_Event* e)
 		switch (e->key.keysym.sym)
 		{
 		case SDLK_a:
-			player_dot->set_player_velocity(true, -5);
+			camera->change_camera_velocity(true,-20);
 			break;
 		case SDLK_d:
-			player_dot->set_player_velocity(true, 5);
+			camera->change_camera_velocity(true, 20);
 			break;
 		case SDLK_w:
-			player_dot->set_player_velocity(false, -5);
+			camera->change_camera_velocity(false, -20);
 			break;
 		case SDLK_s:
-			player_dot->set_player_velocity(false, 5);
+			camera->change_camera_velocity(false, 20);
 			break;
 		}
 	}
@@ -354,16 +345,16 @@ void Intelligence::Handle_Keyboard_Input(SDL_Event* e)
 		switch (e->key.keysym.sym)
 		{
 		case SDLK_a:
-			player_dot->set_player_velocity(true, 0);
+			camera->change_camera_velocity(true, 0);
 			break;
 		case SDLK_d:
-			player_dot->set_player_velocity(true, 0);
+			camera->change_camera_velocity(true, 0);
 			break;
 		case SDLK_w:
-			player_dot->set_player_velocity(false, 0);
+			camera->change_camera_velocity(false, 0);
 			break;
 		case SDLK_s:
-			player_dot->set_player_velocity(false, 0);
+			camera->change_camera_velocity(false, 0);
 			break;
 		}
 	}
@@ -579,81 +570,7 @@ bool Intelligence::check_if_dot_and_tile_are_adjacent(Dot* dot, Dot* tile)
 	return adjacent;
 }
 
-void Intelligence::Spawn_Enemy_Ships()
-{
-	int ship_x;
-	int ship_y;
-	int quadrant = rand() % 4;
-	int edge_buffer = 100;
 
-	switch (quadrant)
-	{
-	case 0:
-		ship_x = edge_buffer + rand() % edge_buffer;
-		ship_y = rand() % LEVEL_HEIGHT;
-		break;
-	case 1:
-		ship_x = rand() % LEVEL_WIDTH;
-		ship_y = edge_buffer + rand() % edge_buffer;
-		break;
-	case 2:
-		ship_x = -edge_buffer + rand() % edge_buffer + (LEVEL_WIDTH - edge_buffer);
-		ship_y = rand() % LEVEL_HEIGHT;
-		break;
-	case 3:
-		ship_x = rand() % LEVEL_WIDTH;
-		ship_y = -edge_buffer + rand() % edge_buffer + (LEVEL_HEIGHT - edge_buffer);
-		break;
-	}
-
-	if (enemy_ship_array.size() < max_enemy_ships)
-	{
-		enemy_ship_array.push_back(new Ship_Dot(gRenderer, enemy_ship_spritesheet, ship_x, ship_y));
-	}
-
-
-
-}
-
-void Intelligence::Update_Enemy_Ship_AI(Ship_Dot* enemy_ship)
-{
-	set_dot_target(player_dot->dot_rect.x + player_dot->dot_rect.w / 2, player_dot->dot_rect.y + player_dot->dot_rect.h / 2, enemy_ship);
-	enemy_ship->turn_towards_target();
-	enemy_ship->set_velocity();
-	move_dot(enemy_ship, &enemy_ship->mVelX, &enemy_ship->mVelY);
-	if (enemy_ship->target_within_range())
-	{
-		if (enemy_ship->firing_cooldown == 0)
-		{
-			int fire_location_1_x = rotate_point_around_point(enemy_ship->dot_rect.x + 10, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), true);
-			int fire_location_1_y = rotate_point_around_point(enemy_ship->dot_rect.x + 10, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), false);
-			int fire_location_2_x = rotate_point_around_point(enemy_ship->dot_rect.x + 54, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), true);
-			int fire_location_2_y = rotate_point_around_point(enemy_ship->dot_rect.x + 54, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), false);
-
-			Create_Bolt(enemy_ship->npc_dot_config.dot_stat_faction, enemy_ship->targetPosX, enemy_ship->targetPosY, 2, fire_location_1_x, fire_location_1_y, enemy_ship->ship_projectile_speed);
-			Create_Bolt(enemy_ship->npc_dot_config.dot_stat_faction, enemy_ship->targetPosX, enemy_ship->targetPosY, 2, fire_location_2_x, fire_location_2_y, enemy_ship->ship_projectile_speed);
-
-			enemy_ship->firing_cooldown = 10;
-		}
-		else enemy_ship->firing_cooldown--;
-
-	}
-}
-
-void Intelligence::Update_All_Enemy_Ships_AI()
-{
-	for (int p = 0; p < enemy_ship_array.size(); ++p)
-	{
-		if (enemy_ship_array[p]->is_onscreen(camera, 100))
-		{
-			Update_Enemy_Ship_AI(enemy_ship_array[p]);
-			if (enemy_ship_array[p]->npc_dot_config.dot_stat_health <= 0)
-			{
-				enemy_ship_array.erase(enemy_ship_array.begin() + p);
-			}
-		}
-	}
-}
 
 // Dot inventory commands
 
@@ -745,8 +662,7 @@ void Intelligence::Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, int i
 {
 	if (dot->Check_Inventory_For_Item(inventory_item_code))
 	{
-		cout << dot->print_coords() << "/ " << x_pos << ", " << y_pos << endl;
-		Container* new_container = new Container(gRenderer, inventory_spritesheet, x_pos, y_pos, Fetch_Inventory(inventory_item_code).clip_rect_x, Fetch_Inventory(inventory_item_code).clip_rect_y);
+		Container* new_container = new Container(gRenderer, texture_array[INVENTORY_SPRITESHEET], x_pos, y_pos, Fetch_Inventory(inventory_item_code).clip_rect_x, Fetch_Inventory(inventory_item_code).clip_rect_y);
 		Add_Item_To_Dot_Inventory(new_container, inventory_item_code, quantity_dropped);
 		Remove_Item_From_Dot_Inventory(dot, inventory_item_code, quantity_dropped);
 		container_array.push_back(new_container);
@@ -755,7 +671,7 @@ void Intelligence::Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, int i
 
 void Intelligence::Dot_Drop_Inventory(Dot* dot, int x_pos, int y_pos)
 {
-	Container* new_container = new Container(gRenderer, inventory_spritesheet, x_pos, y_pos, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_x, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_y);
+	Container* new_container = new Container(gRenderer, texture_array[INVENTORY_SPRITESHEET], x_pos, y_pos, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_x, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_y);
 	
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++)
 	{
@@ -860,7 +776,7 @@ void Intelligence::update_player_dot_ai(NPC_Dot* dot)
 
 void Intelligence::Update_NPD_AI()
 {
-	player_dot->npc_dot_config.dot_stat_health = 100;
+	//player_dot->npc_dot_config.dot_stat_health = 100;
 	//Calculate_Individual_Job_Priorities();
 	total_job_priority = Calculate_Total_Job_Priority();
 
@@ -875,7 +791,7 @@ void Intelligence::Update_NPD_AI()
 		if (npc_dot_array[p]->npc_dot_config.current_goal_list.size() == 0)
 		{
 			npc_dot_array[p]->dot_current_job = Dot_Job{ DOT_JOB_NO_ASSIGNED_JOB };
-			npc_dot_array[p]->Set_Carried_item(gRenderer, inventory_spritesheet, INVENTORY_NULL_ITEM);
+			npc_dot_array[p]->Set_Carried_item(gRenderer, texture_array[INVENTORY_SPRITESHEET], INVENTORY_NULL_ITEM);
 			if (npc_dot_array[p]->npc_dot_config.dot_stat_faction == DOT_FACTION_PLAYER) Dot_Choose_Job(npc_dot_array[p]);
 			npc_dot_array[p]->dot_current_job.Run_Job(npc_dot_array[p]);
 		}
@@ -1015,7 +931,7 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		goal_complete = true;
 		break;
 	case ACTION_SET_DOT_TO_CARRY_ITEM:
-		current_dot_goal_pointer->Set_Carried_item(gRenderer, inventory_spritesheet, dot->npc_dot_config.current_goal_list.back().tile_type.inventory_pointer);
+		current_dot_goal_pointer->Set_Carried_item(gRenderer, texture_array[INVENTORY_SPRITESHEET], dot->npc_dot_config.current_goal_list.back().tile_type.inventory_pointer);
 		goal_complete = true;
 		break;
 	case ACTION_SET_DOT_TO_NOT_CARRY_ITEM:
@@ -1590,7 +1506,7 @@ vector<vector<Dot*>> Intelligence::Return_Array_of_Pointers_To_All_Dot_Vectors()
 	my_vector[DOT_BOLT] = { bolt_array.begin(),bolt_array.end() };
 	my_vector[DOT_ENEMY_SHIP] = { enemy_ship_array.begin(),enemy_ship_array.end() };
 	my_vector[DOT_TILE] = {};
-	my_vector[DOT_PLAYER].push_back(player_dot);
+	//my_vector[DOT_PLAYER].push_back(player_dot);
 
 	for (int p = 0; p < TILE_NUM_Y; p++)
 	{
@@ -1957,6 +1873,85 @@ vector<Dot*> Intelligence::return_chair_and_table_combo(Dot* dot)
 }
 
 
+// ENEMY SHIP COMMANDS
+
+void Intelligence::Spawn_Enemy_Ships()
+{
+	int ship_x;
+	int ship_y;
+	int quadrant = rand() % 4;
+	int edge_buffer = 100;
+
+	switch (quadrant)
+	{
+	case 0:
+		ship_x = edge_buffer + rand() % edge_buffer;
+		ship_y = rand() % LEVEL_HEIGHT;
+		break;
+	case 1:
+		ship_x = rand() % LEVEL_WIDTH;
+		ship_y = edge_buffer + rand() % edge_buffer;
+		break;
+	case 2:
+		ship_x = -edge_buffer + rand() % edge_buffer + (LEVEL_WIDTH - edge_buffer);
+		ship_y = rand() % LEVEL_HEIGHT;
+		break;
+	case 3:
+		ship_x = rand() % LEVEL_WIDTH;
+		ship_y = -edge_buffer + rand() % edge_buffer + (LEVEL_HEIGHT - edge_buffer);
+		break;
+	}
+
+	if (enemy_ship_array.size() < max_enemy_ships)
+	{
+		Ship_Dot* enemy_ship = new Ship_Dot(gRenderer, texture_array[ENEMY_SHIP_SPRITESHEET], SDL_Rect{ ship_x,ship_y, 64,64 }, SDL_Rect{ 0,64,64,64 }, 4);
+		enemy_ship->npc_dot_config.dot_stat_faction = DOT_FACTION_ENEMY;
+		Add_Item_To_Dot_Inventory(enemy_ship, INVENTORY_FRENZEL_1, 1);
+		enemy_ship_array.push_back(enemy_ship);
+	}
+
+}
+
+void Intelligence::Update_Enemy_Ship_AI(Ship_Dot* enemy_ship)
+{
+	//set_dot_target(player_dot->dot_rect.x + player_dot->dot_rect.w / 2, player_dot->dot_rect.y + player_dot->dot_rect.h / 2, enemy_ship);
+	enemy_ship->turn_towards_target();
+	enemy_ship->set_velocity();
+	move_dot(enemy_ship, &enemy_ship->mVelX, &enemy_ship->mVelY);
+	if (enemy_ship->target_within_range())
+	{
+		if (enemy_ship->firing_cooldown == 0)
+		{
+			int fire_location_1_x = rotate_point_around_point(enemy_ship->dot_rect.x + 10, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), true);
+			int fire_location_1_y = rotate_point_around_point(enemy_ship->dot_rect.x + 10, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), false);
+			int fire_location_2_x = rotate_point_around_point(enemy_ship->dot_rect.x + 54, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), true);
+			int fire_location_2_y = rotate_point_around_point(enemy_ship->dot_rect.x + 54, enemy_ship->dot_rect.y + 20, (enemy_ship->dot_rect.x + 32), (enemy_ship->dot_rect.y + 32), enemy_ship->get_angle(), false);
+
+			Create_Bolt(enemy_ship->npc_dot_config.dot_stat_faction, enemy_ship->targetPosX, enemy_ship->targetPosY, 2, fire_location_1_x, fire_location_1_y, enemy_ship->ship_projectile_speed);
+			Create_Bolt(enemy_ship->npc_dot_config.dot_stat_faction, enemy_ship->targetPosX, enemy_ship->targetPosY, 2, fire_location_2_x, fire_location_2_y, enemy_ship->ship_projectile_speed);
+
+			enemy_ship->firing_cooldown = 10;
+		}
+		else enemy_ship->firing_cooldown--;
+
+	}
+}
+
+void Intelligence::Update_All_Enemy_Ships_AI()
+{
+	for (int p = 0; p < enemy_ship_array.size(); ++p)
+	{
+		if (enemy_ship_array[p]->is_onscreen(camera, 100))
+		{
+			Update_Enemy_Ship_AI(enemy_ship_array[p]);
+			if (enemy_ship_array[p]->npc_dot_config.dot_stat_health <= 0)
+			{
+				Dot_Drop_Inventory(enemy_ship_array[p], enemy_ship_array[p]->getPosX(), enemy_ship_array[p]->getPosY());
+				enemy_ship_array.erase(enemy_ship_array.begin() + p);
+			}
+		}
+	}
+}
 
 
 // ASTEROID COMMANDS1
@@ -1973,7 +1968,7 @@ void Intelligence::Distribute_Asteroids()
 			{
 				if (world->world_tiles[i][p]->multi_tile_config.tile_type == VACUUM)
 				{
-					asteroid_array.push_back(new Asteroid(gRenderer, asteroid_spritesheet, i*TILE_WIDTH, p*TILE_WIDTH, 0));
+					asteroid_array.push_back(new Asteroid(gRenderer, texture_array[ASTEROID_SPRITESHEET], i*TILE_WIDTH, p*TILE_WIDTH, 0));
 				}
 			}
 		}
@@ -1994,7 +1989,7 @@ void Intelligence::Spawn_Asteroids()
 
 		if (world->world_tiles[asteroid_x / TILE_WIDTH][asteroid_y / TILE_HEIGHT] != NULL && world->world_tiles[asteroid_x / TILE_WIDTH][asteroid_y / TILE_HEIGHT]->multi_tile_config.tile_type == VACUUM)
 		{
-			asteroid_array.push_back(new Asteroid(gRenderer, asteroid_spritesheet, asteroid_x, asteroid_y, 0));
+			asteroid_array.push_back(new Asteroid(gRenderer, texture_array[ASTEROID_SPRITESHEET], asteroid_x, asteroid_y, 0));
 		}
 
 	}
@@ -2006,7 +2001,7 @@ void Intelligence::Despawn_Asteroids()
 	{
 		if (p < asteroid_array.size())
 		{
-			if (abs(player_dot->dot_rect.x - asteroid_array[p]->dot_rect.x) > ASTEROID_DESPAWN_RADIUS && abs(player_dot->dot_rect.y - asteroid_array[p]->dot_rect.y) > ASTEROID_DESPAWN_RADIUS)
+			if (abs(camera->camera_box.x - asteroid_array[p]->dot_rect.x) > ASTEROID_DESPAWN_RADIUS && abs(camera->camera_box.y - asteroid_array[p]->dot_rect.y) > ASTEROID_DESPAWN_RADIUS)
 			{
 				delete asteroid_array[p];
 				asteroid_array.erase(asteroid_array.begin() + p);
@@ -2101,7 +2096,7 @@ void Intelligence::Create_Bolt(int owners_faction, int target_x, int target_y, i
 
 		angle = angle / (180.0 / 3.141592653589793238463);
 
-		bolt_array.push_back(new Bolt(gRenderer, bolt_sprites, owners_faction, sprite_row, start_location_x - TILE_WIDTH / 2, start_location_y - TILE_HEIGHT / 2, speed, angle, is_explosion));
+		bolt_array.push_back(new Bolt(gRenderer, texture_array[BOLT_SPRITES], owners_faction, sprite_row, start_location_x - TILE_WIDTH / 2, start_location_y - TILE_HEIGHT / 2, speed, angle, is_explosion));
 	}
 
 }
@@ -2472,13 +2467,13 @@ bool Intelligence::check_global_collisions(Dot* dot)
 	}
 
 	// LOOK FOR COLLISIONS WITH PLAYER
-	if (check_dot_collision(object, &player_dot->dot_rect))
-	{
-		if (dot->dot_config[DOT_TYPE] != DOT_NPC || dot->npc_dot_config.dot_stat_faction != player_dot->npc_dot_config.dot_stat_faction)
-		{
-			collision = true;
-		}
-	}
+	//if (check_dot_collision(object, &player_dot->dot_rect))
+	//{
+	//	if (dot->dot_config[DOT_TYPE] != DOT_NPC || dot->npc_dot_config.dot_stat_faction != player_dot->npc_dot_config.dot_stat_faction)
+	//	{
+	//		collision = true;
+	//	}
+	//}
 
 	return collision;
 }
@@ -2490,7 +2485,7 @@ void Intelligence::damage_nearby_dots(Dot* dot_doing_damage, int damage_radius, 
 	int x_tile = (dot_doing_damage_rect->x + (dot_doing_damage_rect->w/2)) / TILE_WIDTH;
 	int y_tile = (dot_doing_damage_rect->y + (dot_doing_damage_rect->h/2)) / TILE_HEIGHT;
 
-	if (player_dot->npc_dot_config.dot_stat_faction != dot_doing_damage->npc_dot_config.dot_stat_faction) test_dot_for_damage(player_dot, dot_doing_damage_rect, damage_radius, weapon_damage);
+	//if (player_dot->npc_dot_config.dot_stat_faction != dot_doing_damage->npc_dot_config.dot_stat_faction) test_dot_for_damage(player_dot, dot_doing_damage_rect, damage_radius, weapon_damage);
 
 	for (int p = -damage_radius / TILE_HEIGHT; p < damage_radius / TILE_HEIGHT + 1; p++)
 	{
@@ -2565,15 +2560,15 @@ void Intelligence::Advance_Time(float avgFPS)
 	Update_Container_AI();
 
 	if (ai_debug) cout << "updating asteroid ai" << endl;
-	Despawn_Asteroids();
-	Spawn_Asteroids();
-	Update_Asteroid_AI();
+	//Despawn_Asteroids();
+	//Spawn_Asteroids();
+	//Update_Asteroid_AI();
 
 	if (ai_debug) cout << "updating NPD ai" << endl;
 	Update_NPD_AI();
 	
 	if (ai_debug) cout << "updating player dot ai" << endl;
-	update_player_dot_ai(player_dot);
+	//update_player_dot_ai(player_dot);
 
 	if (ai_debug) cout << "Spawn Enemy Ships" << endl;
 	Spawn_Enemy_Ships();
@@ -2591,7 +2586,7 @@ void Intelligence::Advance_Time(float avgFPS)
 		delay = 0;
 	}
 
-	player_dot->dot_config[FPS] = avgFPS;
+	//player_dot->dot_config[FPS] = avgFPS;
 
 }
 
@@ -2603,6 +2598,8 @@ void Intelligence::render()
 	int p_max = (camera->camera_box.y + camera->camera_box.h) / TILE_HEIGHT + 1;
 	int i_min = camera->camera_box.x / TILE_WIDTH;
 	int i_max = (camera->camera_box.x + camera->camera_box.w) / TILE_WIDTH + 1;
+
+	for (int p = 0; p < background_star_array.size(); p++) background_star_array[p]->render(gRenderer, camera);
 
 	for (int p = p_min; p < p_max ; ++p)
 	{
@@ -2623,16 +2620,13 @@ void Intelligence::render()
 		}
 	}
 
-	player_dot->render(gRenderer, camera);
+	//player_dot->render(gRenderer, camera);
 	lifepod->render(gRenderer, camera);
 
 	for (int p = 0; p < npc_dot_array.size(); p++) if (npc_dot_array[p]->is_onscreen(camera)) npc_dot_array[p]->render(gRenderer, camera);
 
-	for (int p = 0; p < asteroid_array.size(); p++) if (asteroid_array[p]->is_onscreen(camera))
-	{
-		asteroid_array[p]->render(gRenderer, camera);
-	}
-
+	for (int p = 0; p < asteroid_array.size(); p++) if (asteroid_array[p]->is_onscreen(camera)) asteroid_array[p]->render(gRenderer, camera);
+ 
 	for (int p = 0; p < container_array.size(); p++) if (container_array[p]->is_onscreen(camera)) container_array[p]->render(gRenderer, camera);
 
 	for (int p = 0; p < bolt_array.size(); p++) bolt_array[p]->render(gRenderer, camera);
@@ -2641,11 +2635,13 @@ void Intelligence::render()
 
 	//world->Render(camera, RENDER_ROOF);
 
+
+
 }
 
 void Intelligence::free()
 {
-	delete player_dot;
+	//delete player_dot;
 
 	for (int i = 0; i < npc_dot_array.size(); i++) delete npc_dot_array[i];
 	npc_dot_array.erase(npc_dot_array.begin(), npc_dot_array.begin() + npc_dot_array.size());

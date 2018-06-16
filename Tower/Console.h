@@ -724,19 +724,19 @@ Console::Console(SDL_Renderer* gRenderer, TTF_Font* gFont, Intelligence* intelli
 	current_selected_inventory_item = INVENTORY_EMPTY_SLOT;
 	
 	current_intelligence = intelligence;
-	currently_selected_dot = intelligence->player_dot;
+	currently_selected_dot = intelligence->lifepod;
 
 	dot_focus_window_rect = { 0,25,8*TILE_WIDTH,6*TILE_HEIGHT + 3 * TILE_HEIGHT / 4 };
 	Console_Window dot_focus_window = Console_Window{ WINDOW_DOT_DIAGNOSTIC, gRenderer, currently_selected_dot, inventory_spritesheet, gFont, dot_focus_window_rect,false };
 	dot_focus_window.Create_Dot_Diagnostic_Window(currently_selected_dot);
 	console_windows.insert(pair <int, Console_Window>(WINDOW_DOT_DIAGNOSTIC, dot_focus_window));
 
-	player_focus_window_rect = { 0,SCREEN_HEIGHT-6*TILE_HEIGHT - 3*TILE_HEIGHT/4,8 * TILE_WIDTH,6 * TILE_HEIGHT + 3* TILE_HEIGHT/4};
-	Console_Window player_focus_window = Console_Window{ WINDOW_PLAYER_DIAGNOSTIC, gRenderer, intelligence->player_dot, inventory_spritesheet, gFont, player_focus_window_rect };
-	player_focus_window.Create_Player_Diagnostic_Window(intelligence->player_dot, PANEL_DOT_DIAGNOSTIC);
-	console_windows.insert(pair <int, Console_Window>(WINDOW_PLAYER_DIAGNOSTIC, player_focus_window));
+	//player_focus_window_rect = { 0,SCREEN_HEIGHT-6*TILE_HEIGHT - 3*TILE_HEIGHT/4,8 * TILE_WIDTH,6 * TILE_HEIGHT + 3* TILE_HEIGHT/4};
+	//Console_Window player_focus_window = Console_Window{ WINDOW_PLAYER_DIAGNOSTIC, gRenderer, intelligence->player_dot, inventory_spritesheet, gFont, player_focus_window_rect };
+	//player_focus_window.Create_Player_Diagnostic_Window(intelligence->player_dot, PANEL_DOT_DIAGNOSTIC);
+	//console_windows.insert(pair <int, Console_Window>(WINDOW_PLAYER_DIAGNOSTIC, player_focus_window));
 
-	fps_diagnostic = Console_Diagnostic(gRenderer, 0, 0, console_font, &intelligence->player_dot->dot_config[FPS], false);
+	//fps_diagnostic = Console_Diagnostic(gRenderer, 0, 0, console_font, &intelligence->player_dot->dot_config[FPS], false);
 
 	options_window_rect = { SCREEN_WIDTH / 3, SCREEN_HEIGHT / 3,10 * TILE_WIDTH, 4* TILE_HEIGHT };
 	Console_Window options_window = Console_Window{ WINDOW_OPTIONS,gRenderer, NULL, NULL, console_font, options_window_rect,false };
@@ -750,7 +750,7 @@ void Console::free()
 
 void Console::render(SDL_Renderer* gRenderer)
 {
-	fps_diagnostic.render(gRenderer, new SDL_Rect{ SCREEN_WIDTH - TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT });
+	//fps_diagnostic.render(gRenderer, new SDL_Rect{ SCREEN_WIDTH - TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT });
 	for (int i = 0; i < console_windows.size(); i++)
 	{
 		if (console_windows[i].console_window_active == true) console_windows[i].render(gRenderer);
@@ -805,7 +805,7 @@ void Console::Handle_Console_Clicks()
 		case PANEL_CRAFTABLE_ITEMS:
 			if (last_clicked_button->button_action == BUTTON_ACTION_CRAFT_ITEM)
 			{
-				current_intelligence->Dot_Craft_Item(current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
+				//current_intelligence->Dot_Craft_Item(current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
 			}
 			break;
 		case PANEL_DOT_INVENTORY:
@@ -838,9 +838,9 @@ void Console::Handle_Console_Clicks()
 			{
 				if (current_action == BUTTON_ACTION_PLACE_ITEM)
 				{
-					current_intelligence->Dot_Give_Inventory_To_Another_Dot(current_intelligence->player_dot, currently_selected_dot, current_selected_inventory_item, 1);
+					//current_intelligence->Dot_Give_Inventory_To_Another_Dot(current_intelligence->player_dot, currently_selected_dot, current_selected_inventory_item, 1);
 				}
-				else current_intelligence->Dot_Give_Inventory_To_Another_Dot(currently_selected_dot, current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
+				//else current_intelligence->Dot_Give_Inventory_To_Another_Dot(currently_selected_dot, current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
 			}
 			break;
 		case PANEL_CRAFTABLE_ITEMS:
@@ -879,8 +879,8 @@ void Console::Change_Current_Focus_Dot(SDL_Renderer* gRenderer, Dot* new_focus_d
 
 void Console::Update_Console(SDL_Renderer* gRenderer)
 {
-	current_intelligence->player_dot->Check_Craftable_Items();
-	console_windows[WINDOW_PLAYER_DIAGNOSTIC].Update_Dot_Crafting_Window(inventory_spritesheet,console_font,gRenderer,current_intelligence->player_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Craft");
+	//current_intelligence->player_dot->Check_Craftable_Items();
+	//console_windows[WINDOW_PLAYER_DIAGNOSTIC].Update_Dot_Crafting_Window(inventory_spritesheet,console_font,gRenderer,current_intelligence->player_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Craft");
 }
 
 #endif

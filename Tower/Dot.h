@@ -44,11 +44,19 @@ public:
 	Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos);
 	void free();
 
+	struct Simple_Dot_Animation_Struct
+	{
+		int current_delay;
+		int max_delay;
+		int current_frame;
+		int max_frames;
+	};
+
 	//Shows the dot on the screen
 	virtual void Dot::render(SDL_Renderer* gRenderer, Camera* camera, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
 	void render_status_bar(SDL_Renderer* gRenderer, Camera* camera, int quantity_of_interest);
 	void render_circle(SDL_Renderer* gRenderer, Camera* camera, int tile_x, int tile_y, int radius, int R, int G, int B, int alpha);
-
+	void Simple_Increment_Animation(Simple_Dot_Animation_Struct* animation_struct);
 	bool is_onscreen(Camera* camera, int buffer = 0);
 
 	//Accessors
@@ -85,6 +93,8 @@ public:
 	void Dot::toggle_highlight(bool on_or_off);
 
 	// Structs
+
+
 	struct Dot_Goal
 	{
 		int goal_action = ACTION_NONE;
@@ -339,6 +349,27 @@ void Dot::toggle_highlight(bool on_or_off)
 		npc_dot_config.dot_color.g = 255;
 		npc_dot_config.dot_color.r = 255;
 	}
+}
+
+void Dot::Simple_Increment_Animation(Simple_Dot_Animation_Struct* animation_struct)
+{
+	if (animation_struct->current_delay == 0)
+	{
+		animation_struct->current_frame++;
+	}
+
+	if (animation_struct->current_frame >= animation_struct->max_frames)
+	{
+		animation_struct->current_frame = 0;
+	}
+
+	animation_struct->current_delay++;
+
+	if (animation_struct->current_delay >= animation_struct->max_delay)
+	{
+		animation_struct->current_delay = 0;
+	}
+
 }
 
 int Dot::getPosX()
@@ -671,6 +702,8 @@ public:
 		if (multi_config.built_percent < 100) Return_Parts_List(multi_config);
 
 		if (multi_tile_config.is_smooth == 1) handle_smooth_tiles(2, 2, 2, 2, 2, 2, 2, 2);
+
+		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID) multi_tile_config.sprite_specs.sprite_row = rand() % 8;
 
 	}
 
@@ -1432,6 +1465,40 @@ void NPC_Dot::set_direction()
 }
 
 
+// ALIEN DOTS (i.e. Dots without Animation but no Directionality) 
+
+class Alien_Dot : public Dot {
+public:
+	Alien_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet, int x_pos, int y_pos, int row) :Dot(gRenderer, dot_spritesheet, x_pos, y_pos)
+	{
+		spritesheet = dot_spritesheet;
+		spritesheet_row = row;
+
+		alien_animation.max_delay = 3;
+		alien_animation.max_frames = 8;
+	}
+
+	void render(SDL_Renderer* gRenderer, Camera* camera);
+
+	Simple_Dot_Animation_Struct alien_animation;
+
+private:
+	LTexture* spritesheet;
+	int spritesheet_row;
+};
+
+void Alien_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
+{
+	Dot::Simple_Increment_Animation(&alien_animation);
+	
+	SDL_Rect render_rect = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, dot_rect.w, dot_rect.h };
+	SDL_Rect clip_rect = { alien_animation.current_frame*SPRITESHEET_W ,spritesheet_row * SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H };
+
+	spritesheet->render(gRenderer, &render_rect, &clip_rect);
+	
+	Dot::render(gRenderer, camera);
+}
+
 
 // CONTAINER DOTS
 
@@ -1562,12 +1629,15 @@ void Asteroid::render(SDL_Renderer* gRenderer, Camera* camera)
 class Ship_Dot: public Dot
 {
 public:
-	Ship_Dot(SDL_Renderer* gRenderer, LTexture* enemy_ship_spritesheet, int x_pos, int y_pos) :Dot(gRenderer, enemy_ship_spritesheet, x_pos, y_pos)
+	Ship_Dot(SDL_Renderer* gRenderer, LTexture* enemy_ship_spritesheet, SDL_Rect ship_dot_rect, SDL_Rect ship_clip_rect, int num_frames) :Dot(gRenderer, enemy_ship_spritesheet, ship_dot_rect.x, ship_dot_rect.y)
 	{
 		spritesheet = enemy_ship_spritesheet;
-		dot_rect = { x_pos, y_pos, 64,64 };
-		ship_clip = { 0,0,64,64 };
+		dot_rect = { ship_dot_rect.x, ship_dot_rect.y, ship_dot_rect.w,ship_dot_rect.h };
+		ship_clip = { ship_clip_rect.x,ship_clip_rect.y,ship_clip_rect.w,ship_clip_rect.h };
 		dot_config[DOT_TYPE] = DOT_ENEMY_SHIP;
+
+		ship_animation.max_delay = 10;
+		ship_animation.max_frames = num_frames;
 	}
 	void render(SDL_Renderer* gRenderer, Camera* camera);
 
@@ -1575,7 +1645,9 @@ public:
 	void turn_towards_target();
 	void set_velocity();
 	double get_angle();
+
 	SDL_Rect ship_clip;
+	Simple_Dot_Animation_Struct ship_animation;
 
 	int ship_max_velocity = 2;
 	int ship_projectile_speed = 10;
@@ -1592,6 +1664,15 @@ private:
 
 };
 
+void Ship_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
+{
+	SDL_Rect offset_rect = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, dot_rect.w, dot_rect.h };
+	SDL_Rect clip_rect = {ship_clip.x + ship_animation.current_frame*ship_clip.w,ship_clip.y, ship_clip.w, ship_clip.h };
+	spritesheet->render(gRenderer, &offset_rect, &clip_rect, angle);
+
+	Dot::render(gRenderer, camera);
+}
+
 bool Ship_Dot::target_within_range()
 {
 	if (pow(distance_x, 2.0) + pow(distance_y, 2.0) <= pow(engagement_distance, 2.0)) return true;
@@ -1603,83 +1684,58 @@ double Ship_Dot::get_angle()
 	return angle;
 }
 
-void Ship_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
-{
-	SDL_Rect offset_rect = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, dot_rect.w, dot_rect.h };
-	SDL_Rect frame_clip = { frame/4*64,0, dot_rect.w, dot_rect.h };
-	spritesheet->render(gRenderer, &offset_rect, &frame_clip, angle);
-
-	if (moving == true)
-	{
-		frame++;
-		if (frame > 12) frame = 5;
-	}
-	else frame = 0;
-
-	if (npc_dot_config.dot_stat_health < npc_dot_config.dot_stat_max_health)
-	{
-		render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health);
-	}
-}
-
 void Ship_Dot::set_velocity()
 {
 	distance_x = targetPosX - (dot_rect.x + dot_rect.w / 2);
 	distance_y = targetPosY - (dot_rect.y + dot_rect.h / 2);
 
-	if (distance_x == 0)
-	{
-		mVelX = 0;
-	}
-	else if (distance_x > 3)
-	{
-		mVelX = ship_max_velocity;
-	}
-	else if (distance_x < -3)
-	{
-		mVelX = -ship_max_velocity;
-	}
-	else if ((distance_x) < 3 && (distance_x) > 0)
-	{
-		mVelX = 1;
-	}
-	else if ((distance_x) > -3 && (distance_x) < 0)
-	{
-		mVelX = -1;
-	}
-	else if (distance_x == 0)
-	{
-		mVelX = 0;
-	}
-
-	if (distance_y == 0)
-	{
-		mVelY = 0;
-	}
-	else if (distance_y > 3)
-	{
-		mVelY = ship_max_velocity;
-	}
-	else if (distance_y < -3)
-	{
-		mVelY = -ship_max_velocity;
-	}
-	else if ((distance_y) < 3 && (distance_y) > 0)
-	{
-		mVelY = 1;
-	}
-	else if ((distance_y) > -3 && (distance_y) < 0)
-	{
-		mVelY = -1;
-	}
-
 	if (target_within_range()) {
 		mVelX = 0;
 		mVelY = 0;
 	}
+	else
+	{
+		if (distance_x > 3*TILE_WIDTH)
+		{
+			mVelX = ship_max_velocity;
+			Dot::Simple_Increment_Animation(&ship_animation);
+			Dot::Simple_Increment_Animation(&ship_animation);
+		}
+		else if (distance_x < -3*TILE_WIDTH)
+		{
+			mVelX = -ship_max_velocity;
+			Dot::Simple_Increment_Animation(&ship_animation);
+			Dot::Simple_Increment_Animation(&ship_animation);
+		}
+		else if ((distance_x) < 3 * TILE_WIDTH && (distance_x) > 0)
+		{
+			mVelX = 1;
+			Dot::Simple_Increment_Animation(&ship_animation);
+		}
+		else if ((distance_x) > 3 * TILE_WIDTH && (distance_x) < 0)
+		{
+			mVelX = -1;
+			Dot::Simple_Increment_Animation(&ship_animation);
+		}
 
-	if (mVelY > 0 || mVelX > 0) moving = true;
-	else(moving = false);
+		if (distance_y > 3 * TILE_HEIGHT)
+		{
+			mVelY = ship_max_velocity;
+		}
+		else if (distance_y < -3*TILE_HEIGHT)
+		{
+			mVelY = -ship_max_velocity;
+		}
+		else if ((distance_y) < 3*TILE_HEIGHT && (distance_y) > 0)
+		{
+			mVelY = 1;
+		}
+		else if ((distance_y) > -3*TILE_HEIGHT && (distance_y) < 0)
+		{
+			mVelY = -1;
+		}
+	}
+
 }
 
 void Ship_Dot::turn_towards_target()
@@ -1763,6 +1819,32 @@ void Bolt::render(SDL_Renderer* gRenderer, Camera* camera)
 		}
 		animation_delay = 0;
 	}
+}
+
+// STAR DOTS
+class Dot_Star :public Dot {
+public: 
+	Dot_Star(SDL_Renderer* gRenderer, LTexture* texture, int start_location_x, int start_location_y, int rand_depth, int star_type) :Dot(gRenderer, texture, start_location_x, start_location_y)
+	{
+		star_rect = { start_location_x, start_location_y, TILE_WIDTH, TILE_HEIGHT };
+		star_clip = { 0,18*SPRITESHEET_H,TILE_WIDTH,TILE_HEIGHT };
+		star_texture = texture;
+		depth = rand_depth;
+	}
+
+	SDL_Rect star_rect;
+	SDL_Rect star_clip;
+	LTexture* star_texture;
+	int depth;
+
+	void render(SDL_Renderer* gRenderer, Camera* camera);
+};
+
+void Dot_Star::render(SDL_Renderer* gRenderer, Camera* camera)
+{
+	int star_depth = depth;
+	SDL_Rect camera_rect = { star_rect.x - camera->camera_box.x/star_depth, star_rect.y - camera->camera_box.y/star_depth, TILE_WIDTH, TILE_HEIGHT };
+	star_texture->render(gRenderer, &camera_rect, &star_clip);
 }
 
 #endif

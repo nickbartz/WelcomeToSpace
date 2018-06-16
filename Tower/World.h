@@ -44,6 +44,8 @@ public:
 	
 	// Create Commands
 	void Create_Background();
+	void Populate_Asteroids();
+	void Create_Asteroid_Cluster(int start_x, int start_y, int size);
 	void Create_Test_Room(int x_start, int y_start);
 	bool Check_If_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile);
 	bool Check_If_Scaffold_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile);
@@ -114,6 +116,7 @@ World::World(SDL_Renderer* gRenderer, LTexture textures[], SDL_Rect* tilesheet_c
 	world_renderer = gRenderer;
 
 	Create_Background();
+	Populate_Asteroids();
 	Create_Test_Room(150,150);
 }
 
@@ -123,11 +126,37 @@ void World::Create_Background()
 	{
 		for (int i = 0; i < TILE_NUM_Y; i++)
 		{
-			if (rand() % 100 < 95) Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
-			else  Create_Tile(Return_Tile_By_Name(TILE_VACUUM_2), i, p);
+			Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
 		}
 	}
+}
 
+void World::Populate_Asteroids()
+{
+	for (int p = 0; p < TILE_NUM_X; p++)
+	{
+		for (int i = 0; i < TILE_NUM_Y; i++)
+		{
+			int asteroid_cluster_chance = rand() % 1000;
+			int asteroid_cluster_size = rand() % 10;
+			if (asteroid_cluster_chance >= 999) Create_Asteroid_Cluster(i, p, asteroid_cluster_size);
+		}
+	}
+}
+
+void World::Create_Asteroid_Cluster(int start_x, int start_y, int size)
+{
+	for (int p = start_y; p < min(TILE_NUM_Y,start_y + size); p++)
+	{
+		for (int i = start_x; i < min(TILE_NUM_X,start_x + size); i++)
+		{
+			int asteroid_type = rand() % 100;
+
+			if (asteroid_type >= 95) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_NICKEL), i, p);
+			else if (asteroid_type >= 90) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_COBALT), i, p);
+			else if (asteroid_type >= 75) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_IRON), i, p);
+		}
+	}
 }
 
 void World::Create_Test_Room(int x_start, int y_start)

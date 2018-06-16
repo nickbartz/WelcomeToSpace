@@ -118,7 +118,7 @@ bool init()
 			else
 			{
 				//Initialize renderer color
-				SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+				SDL_SetRenderDrawColor(gRenderer, 0x0, 0x0, 0x0, 0x0);
 
 				//Initialize PNG loading
 				int imgFlags = IMG_INIT_PNG;
@@ -402,6 +402,8 @@ int main(int argc, char* args[])
 		//Create the world
 		if (debug) cout << "Loading Camera" << endl;
 		Camera camera;
+		camera.camera_box.x = 150 * TILE_WIDTH;
+		camera.camera_box.y = 150 * TILE_HEIGHT;
 
 		if (debug) cout << "Loading World" << endl;
 		World world(gRenderer, texture_array, tilesheet_clips, new_game);
@@ -475,11 +477,11 @@ int main(int argc, char* args[])
 			if (debug) cout << "updating camera" << endl;
 			
 			// Update Camera
-			camera.updatecamera(intelligence.player_dot->getCamera_x(), intelligence.player_dot->getCamera_y());
+			camera.updatecamera();
 
 			//Clear screen
 			if (debug) cout << "clearing screen" << endl;
-			SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+			SDL_SetRenderDrawColor(gRenderer, 0x0, 0x0, 0x0, 0x0);
 			SDL_RenderClear(gRenderer);
 
 			//Render Objects
@@ -497,11 +499,11 @@ int main(int argc, char* args[])
 			if (!pause)
 			{
 				intelligence.Advance_Time(avgFPS);
-				if (intelligence.player_dot->npc_dot_config.dot_stat_health <= 0)
-				{
-					pause = true;
-					console.Pull_Up_Restart_Screen();
-				}
+				//if (intelligence.player_dot->npc_dot_config.dot_stat_health <= 0)
+				//{
+				//	pause = true;
+				//	console.Pull_Up_Restart_Screen();
+				//}
 			}
 
 			console.Update_Console(gRenderer);

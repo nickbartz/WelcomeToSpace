@@ -7,7 +7,11 @@ public:
 	
 	SDL_Rect camera_box;
 
-	void updatecamera(int dot_x, int dot_y);
+	void updatecamera();
+	void change_camera_velocity(bool is_x, int magnitude);
+
+	int camera_vel_x = 0;
+	int camera_vel_y = 0;
 
 private:
 
@@ -21,11 +25,11 @@ Camera::Camera()
 	camera_box.h = SCREEN_HEIGHT;
 }
 
-void Camera::updatecamera(int dot_x, int dot_y)
+void Camera::updatecamera()
 {
 	//Center the camera over the dot
-	camera_box.x = dot_x;
-	camera_box.y = dot_y;
+	camera_box.x += camera_vel_x;
+	camera_box.y += camera_vel_y;
 
 	//Keep the camera in bounds
 	if (camera_box.x < 0)
@@ -44,6 +48,12 @@ void Camera::updatecamera(int dot_x, int dot_y)
 	{
 		camera_box.y = LEVEL_HEIGHT - SCREEN_HEIGHT;
 	}
+}
+
+void Camera::change_camera_velocity(bool is_x, int magnitude)
+{
+	if (is_x) camera_vel_x = magnitude;
+	else camera_vel_y = magnitude;
 }
 
 #endif
