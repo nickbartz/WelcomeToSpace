@@ -31,19 +31,18 @@ public:
 	void Routine_Move_Container_To_Storage(Dot* dot, Dot* container, Dot* storage_tile);
 	void Routine_Put_Container_Items_In_Inventory(Dot* dot, Dot* container);
 	void Routine_Take_Items_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity);
-	void Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project);
+	void Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project, bool tile_built = true);
 	void Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab);
 	void Routine_Eliminate_Dot(Dot* dot, Dot* dot_to_eliminate, int attack_range);
+	void Routine_Mine_Asteroid(Dot* dot, Dot* asteroid);
 
 	// ITEM ROUTINES
 	void Routine_Oxygenate(Dot* dot);
 	void Routine_Tile_Door(Dot* dot);
 	void Routine_Grow_Frenzel(Dot* dot);
-	void Routine_Create_Soylent(Dot* dot);
-	void Routine_Create_Soylent_Meal(Dot* dot);
-
-	void Subroutine_Manage_Item_Production(Dot* dot, Multi_Tile_Type tile_type);
-	
+	void Routine_Manage_Item_Production(Dot* dot);
+	void Subroutine_Manage_Item_Production(Dot* dot, int production_slot =0);
+		
 	bool debug = true;
 };
 
@@ -107,7 +106,7 @@ void Dot_Job::Run_Job(Dot* dot)
 		Routine_Take_Items_To_Dot(dot, second_dot, third_dot, first_item, first_quantity);
 		break;
 	case SPECIFIC_DOT_JOB_BUILD_SCAFFOLD:
-		Routine_Run_Project(dot, second_dot, first_quantity_pointer, first_quantity, second_quantity, false);
+		Routine_Run_Project(dot, second_dot, first_quantity_pointer, first_quantity, second_quantity, false, false);
 		break;
 	case SPECIFIC_DOT_JOB_COMPILE_PROJECT:
 		Routine_Run_Project(dot, second_dot, first_quantity_pointer, first_quantity, second_quantity, false);
@@ -115,6 +114,8 @@ void Dot_Job::Run_Job(Dot* dot)
 	case SPECIFIC_DOT_JOB_TAKE_ITEM_FROM_DOT:
 		Routine_Take_Items_From_Dot(dot, second_dot, first_item, first_quantity);
 		break;
+	case SPECIFIC_DOT_JOB_MINE_ASTEROID:
+		Routine_Mine_Asteroid(dot, second_dot);
 	case ITEM_JOB_OXYGENATE:
 		Routine_Oxygenate(dot);
 		break;
@@ -124,13 +125,21 @@ void Dot_Job::Run_Job(Dot* dot)
 	case ITEM_JOB_GROW_FRENZEL:
 		Routine_Grow_Frenzel(dot);
 		break;
-	case ITEM_JOB_CREATE_SOYLENT:
-		Routine_Create_Soylent(dot);
-		break;
-	case ITEM_JOB_CREATE_SOYLENT_MEAL:
-		Routine_Create_Soylent_Meal(dot);
+	case ITEM_JOB_PRODUCE_ITEM:
+		Routine_Manage_Item_Production(dot);
 		break;
 	}
+}
+
+// ACTION ROUTINES
+
+void Dot_Job::Routine_Mine_Asteroid(Dot* dot, Dot* asteroid)
+{
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_STOP_FIRING_LASER_AT_DOT,								0,0,0,0,null_tile,1,true,asteroid });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_FIRE_LASER_AT_DOT,										0,0,0,0,null_tile,1,true,asteroid });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_STOP_MOVING,											0,0,0,0,null_tile,0,true,asteroid });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_IN_RANGE_OF_SPECIFIC_DOT,				0,0,0,0,null_tile,150,true,asteroid });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,5,true,asteroid });
 }
 
 
@@ -183,24 +192,25 @@ void Dot_Job::Routine_Take_Items_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_wit
 {	
 	dot->npc_dot_config.tile_parts_list.erase(dot->npc_dot_config.tile_parts_list.begin(), dot->npc_dot_config.tile_parts_list.begin() + dot->npc_dot_config.tile_parts_list.size());
 
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM,							0,0,0,0,item_to_grab,0,false,project_dot });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM,							0,0,0,0,item_to_grab,0,false,dot });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT,						0,0,0,0,item_to_grab,quantity,false,project_dot });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,				0,0,0,0,null_tile,0,true,project_dot });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,0,false,project_dot });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM,								0,0,0,0,item_to_grab,0,false,project_dot });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT,						0,0,0,0,item_to_grab,quantity,false,dot_with_item });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM,								0,0,0,0,item_to_grab,0,true,dot });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT,						0,0,0,0,item_to_grab,quantity,true,dot_with_item });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,				0,0,0,0,null_tile,0,true,dot_with_item });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,0,false,dot_with_item });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,0,true,dot_with_item });
 }
 
-void Dot_Job::Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project)
+void Dot_Job::Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project, bool tile_built)
 {
 	dot->npc_dot_config.current_dot_focus = project_dot;
-	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_OUT_OF_ANOTHER_DOT,0,0,0,0,null_tile,increment,true,dot->npc_dot_config.current_dot_focus });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHANGE_DOT_QUANTITY,0,0,0,0,null_tile,increment,true,dot->npc_dot_config.current_dot_focus, dot_quantity_pointer, finished_quantity });
-	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_INSIDE_ANOTHER_DOT,0,0,0,0,null_tile,increment,true,dot->npc_dot_config.current_dot_focus });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,true,dot->npc_dot_config.current_dot_focus });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,0,0,0,0,null_tile,0,true,dot->npc_dot_config.current_dot_focus });
+	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_OUT_OF_ANOTHER_DOT,0,0,0,0,null_tile,increment,tile_built,dot->npc_dot_config.current_dot_focus });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHANGE_DOT_QUANTITY,0,0,0,0,null_tile,increment,tile_built,dot->npc_dot_config.current_dot_focus, dot_quantity_pointer, finished_quantity });
+	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_INSIDE_ANOTHER_DOT,0,0,0,0,null_tile,increment,tile_built,dot->npc_dot_config.current_dot_focus });
+	
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,tile_built,dot->npc_dot_config.current_dot_focus });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,0,0,0,0,null_tile,0,tile_built,dot->npc_dot_config.current_dot_focus });
 }
 
 void Dot_Job::Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab)
@@ -241,53 +251,47 @@ void Dot_Job::Routine_Tile_Door(Dot* dot)
 void Dot_Job::Routine_Grow_Frenzel(Dot* dot)
 {
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_GROW_FRENZEL,0,0,0,0,null_tile,0,false,NULL });
-
-	if (dot->multi_tile_config.built_percent >= 100)
-	{
-		if (dot->npc_dot_config.dot_produced_item.tile_name == TILE_NULL)
-		{
-			dot->npc_dot_config.dot_produced_item = Return_Tile_By_Name(TILE_FRENZEL_2);
-			dot->Return_Parts_List(dot->npc_dot_config.dot_produced_item);
-		}
-		Subroutine_Manage_Item_Production(dot, dot->npc_dot_config.dot_produced_item);
-	}
+	Routine_Manage_Item_Production(dot);
 }
 
-void Dot_Job::Routine_Create_Soylent(Dot* dot)
+void Dot_Job::Routine_Manage_Item_Production(Dot* dot)
 {
-	if (dot->multi_tile_config.built_percent >= 100)
-	{
-		if (dot->npc_dot_config.dot_produced_item.tile_name == TILE_NULL)
-		{
-			dot->npc_dot_config.dot_produced_item = Return_Tile_By_Name(TILE_SOYLENT_1);
-			dot->Return_Parts_List(dot->npc_dot_config.dot_produced_item);
-		}
-		Subroutine_Manage_Item_Production(dot, dot->npc_dot_config.dot_produced_item);
-	}
-}
+	dot->npc_dot_config.tile_parts_list.clear();
 
-void Dot_Job::Routine_Create_Soylent_Meal(Dot* dot)
-{
-	if (dot->multi_tile_config.built_percent >= 100)
+	for (int i = 0; i < 6; i++)
 	{
-		if (dot->npc_dot_config.dot_produced_item.tile_name == TILE_NULL)
+		if (dot->npc_dot_config.production_status_array[i].slot_requests > 0)
 		{
-			dot->npc_dot_config.dot_produced_item = Return_Tile_By_Name(TILE_SOYLENT_MEAL_1);
-			dot->Return_Parts_List(dot->npc_dot_config.dot_produced_item);
+			Subroutine_Manage_Item_Production(dot, i);
 		}
-		Subroutine_Manage_Item_Production(dot, dot->npc_dot_config.dot_produced_item);
 	}
-}
 
-void Dot_Job::Subroutine_Manage_Item_Production(Dot* dot, Multi_Tile_Type tile_type)
-{
 	dot->Check_if_Dot_Can_Pop_Tile_List_Items();
-	if (dot->npc_dot_config.production_current >= tile_type.built_percent)
+}
+
+void Dot_Job::Subroutine_Manage_Item_Production(Dot* dot, int production_slot)
+{
+	Multi_Tile_Type tile_type = Return_Tile_By_Name(dot->npc_dot_config.production_status_array[production_slot].slot_tile_name);
+	
+	if (!dot->Check_If_Tile_Needs_Parts(tile_type))
 	{
-		dot->npc_dot_config.current_goal_list.push_back({ ACTION_DROP_ALL_INVENTORY_ITEM_OF_TYPE,0,0,0,0,tile_type,0,false,NULL });
-		dot->npc_dot_config.current_goal_list.push_back({ ACTION_REMOVE_BUILDING_ITEMS_FROM_DOT_INVENTORY,0,0,0,0,tile_type,1,false,NULL });
-		dot->npc_dot_config.current_goal_list.push_back({ ACTION_ADD_ITEM_TO_DOT_INVENTORY,0,0,0,0,tile_type,1,false,dot });
-		dot->npc_dot_config.production_current = 0;
+		if (dot->npc_dot_config.production_status_array[production_slot].slot_production_current < tile_type.built_percent)
+		{
+			dot->npc_dot_config.production_status_array[production_slot].slot_production_current++;
+		}
+		else
+		{
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_DROP_ALL_INVENTORY_ITEM_OF_TYPE,0,0,0,0,tile_type,0,false,NULL });
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_REMOVE_BUILDING_ITEMS_FROM_DOT_INVENTORY,0,0,0,0,tile_type,1,false,NULL });
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_ADD_ITEM_TO_DOT_INVENTORY,0,0,0,0,tile_type,1,false,dot });
+			dot->npc_dot_config.production_status_array[production_slot].slot_production_current = 0;
+			dot->npc_dot_config.production_status_array[production_slot].slot_requests--;
+		}
+	}
+	else
+	{
 		dot->Return_Parts_List(tile_type);
 	}
 }
+
+

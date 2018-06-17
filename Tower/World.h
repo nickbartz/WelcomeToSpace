@@ -225,10 +225,7 @@ bool World::Check_If_Scaffold_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, i
 	{
 		if (item_tiles[x_tile][y_tile] == NULL)
 		{
-			if (world_tiles[x_tile][y_tile]->multi_tile_config.tile_type == FLOOR_TILE_1)
-			{
-				can_be_placed = true;
-			}
+			can_be_placed = true;
 		}
 	}
 	return can_be_placed;

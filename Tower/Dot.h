@@ -154,6 +154,13 @@ public:
 		Dot_Inventory_Slot Mining_Laser = { INVENTORY_EMPTY_SLOT,0 };
 	};
 
+	struct Item_Production_Status
+	{
+		int slot_tile_name = TILE_GENERIC_TILE;
+		int slot_requests = 0;
+		int slot_production_current = 0;
+	};
+
 	struct NPC_Dot_Config_Struct
 	{
 		string dot_last_name = "";
@@ -183,18 +190,21 @@ public:
 		vector<Dot_Inventory_Slot> craftable_items;
 		int bounce = 0;
 		int search_radius = 10;
+		int marked_for_mining = 0;
 
 		// EVENTUALLY WANT TO SPLIT THESE OUT INTO THEIR OWN STRUCT
+
+		// dummy's for the console, have no function other than reporting
+		int current_dot_job = DOT_JOB_NO_ASSIGNED_JOB;
+		int current_dot_goal = ACTION_NONE;
+		int current_dot_focus_type = DOT_GENERIC;
+
 		Dot* current_dot_focus;
 		vector<Tile_Queue> current_goal_path;
 		vector<Dot_Goal> current_goal_list;
 		vector<Dot_Inventory_Slot> tile_parts_list;
-		Multi_Tile_Type dot_produced_item;
-		int production_current;
 		int number_of_jobs_requested = 0;
-
-
-
+		Item_Production_Status production_status_array[6];
 	};
 
 	//Set Dot Configuration
@@ -204,7 +214,6 @@ public:
 	Multi_Tile_Type multi_tile_config;
 
 	// Dot Job 
-
 	void dot_wipe_goals();
 	void dot_wipe_current_path();
 	void dot_wipe_all_job_tasks();
@@ -523,10 +532,13 @@ void Dot::Check_Craftable_Items()
 	
 	for (int i = 0; i < tile_vector.size(); i++)
 	{
-		int craftable_amount = Check_How_Much_Dot_Can_Craft_Of_Item(tile_vector[i]);
-		if (craftable_amount > 0)
+		if (tile_vector[i].can_be_scaffold == 1)
 		{
-			npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_vector[i].inventory_pointer,craftable_amount });
+			int craftable_amount = Check_How_Much_Dot_Can_Craft_Of_Item(tile_vector[i]);
+			if (craftable_amount > 0)
+			{
+				npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_vector[i].inventory_pointer,craftable_amount });
+			}
 		}
 	}
 }
@@ -586,7 +598,6 @@ void Dot::Return_Parts_List(Multi_Tile_Type tile_type)
 
 bool Dot::Check_If_Tile_Needs_Parts(Multi_Tile_Type tile_type)
 {
-	
 	bool needs_parts = false;
 	if (tile_type.building_specs.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_1.inventory_requirement) < tile_type.building_specs.Requirement_1.requirement_quantity) needs_parts = true;
 	else if (tile_type.building_specs.Requirement_2.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_2.inventory_requirement) < tile_type.building_specs.Requirement_2.requirement_quantity) needs_parts = true;
@@ -689,6 +700,9 @@ public:
 		if (multi_config.sprite_specs.sprite_rows < 0)  render_offset_y = multi_config.sprite_specs.sprite_rows/2;
 		if (multi_config.sprite_specs.sprite_columns < 0)  render_offset_x = multi_config.sprite_specs.sprite_columns/2;
 
+		if (multi_tile_config.is_smooth == 1) handle_smooth_tiles(2, 2, 2, 2, 2, 2, 2, 2);
+		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID) multi_tile_config.sprite_specs.sprite_column = rand() % 8;
+
 		render_rect =  { (x_coordinate + render_offset_x)*TILE_WIDTH,(y_coordinate + render_offset_y)*TILE_HEIGHT, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };
 		current_clip = { (1 + multi_tile_config.sprite_specs.sprite_column*SPRITESHEET_W),(1 + multi_tile_config.sprite_specs.sprite_row*SPRITESHEET_H) + SPRITESHEET_H * tile_orientation, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };
 		
@@ -701,9 +715,9 @@ public:
 
 		if (multi_config.built_percent < 100) Return_Parts_List(multi_config);
 
-		if (multi_tile_config.is_smooth == 1) handle_smooth_tiles(2, 2, 2, 2, 2, 2, 2, 2);
+		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID) populate_tile_inventory();
 
-		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID) multi_tile_config.sprite_specs.sprite_row = rand() % 8;
+		populate_tile_production_config();
 
 	}
 
@@ -719,6 +733,8 @@ public:
 	void Tile::handle_wall_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge);
 	void Tile::handle_door_orientation(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge);
 	void Tile::handle_frenzel_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge);
+	void Tile::populate_tile_inventory();
+	void Tile::populate_tile_production_config();
 	
 	void Tile::Set_Color(Uint8 R, Uint8 G, Uint8 B);
 
@@ -821,6 +837,10 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 		mTexture->setColor(0, 255, 200);
 		render_status_bar(gRenderer, camera, multi_tile_config.built_percent);
 	}
+	else if (npc_dot_config.marked_for_mining == 1)
+	{
+		mTexture->setColor(255, 150, 150);
+	}
 	else
 	{
 		mTexture->setColor(npc_dot_config.dot_color.r - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.g - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.b);
@@ -850,7 +870,7 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 	}
 	
 	if (npc_dot_config.dot_stat_health < 100) render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health);
-	if (npc_dot_config.production_current > 0) render_status_bar(gRenderer, camera, npc_dot_config.production_current);
+	//if (npc_dot_config.production_current > 0) render_status_bar(gRenderer, camera, npc_dot_config.production_current);
 
 	mTexture->setAlpha(255);
 	mTexture->setColor(255, 255, 255);
@@ -1158,6 +1178,22 @@ clip_and_rotation Tile::Create_Clip_And_Rotation(int base_sprite_x, int base_spr
 {
 	clip_and_rotation new_clip_rotate = { {dot_rect.x + offset_tile_x*TILE_WIDTH,dot_rect.y + offset_tile_y*TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT}, {base_sprite_x*SPRITESHEET_W + component_x*SPRITESHEET_W + 1, base_sprite_y*SPRITESHEET_H + component_y*SPRITESHEET_H + 1,TILE_WIDTH,TILE_HEIGHT}, rotation, flip,render_layer };
 	return new_clip_rotate;
+}
+
+void Tile::populate_tile_inventory()
+{
+	npc_dot_config.inventory_slots[0].inventory_item_code = multi_tile_config.inventory_pointer;
+	npc_dot_config.inventory_slots[0].item_number = 1;
+}
+
+void Tile::populate_tile_production_config()
+{
+	if (multi_tile_config.dot_produced_items.tile_name_1 != TILE_NULL) npc_dot_config.production_status_array[0].slot_tile_name = multi_tile_config.dot_produced_items.tile_name_1;
+	if (multi_tile_config.dot_produced_items.tile_name_2 != TILE_NULL) npc_dot_config.production_status_array[1].slot_tile_name = multi_tile_config.dot_produced_items.tile_name_2;
+	if (multi_tile_config.dot_produced_items.tile_name_3 != TILE_NULL) npc_dot_config.production_status_array[2].slot_tile_name = multi_tile_config.dot_produced_items.tile_name_3;
+	if (multi_tile_config.dot_produced_items.tile_name_4 != TILE_NULL) npc_dot_config.production_status_array[3].slot_tile_name = multi_tile_config.dot_produced_items.tile_name_4;
+	if (multi_tile_config.dot_produced_items.tile_name_5 != TILE_NULL) npc_dot_config.production_status_array[4].slot_tile_name = multi_tile_config.dot_produced_items.tile_name_5;
+	if (multi_tile_config.dot_produced_items.tile_name_6 != TILE_NULL) npc_dot_config.production_status_array[5].slot_tile_name = multi_tile_config.dot_produced_items.tile_name_6;
 }
 
 

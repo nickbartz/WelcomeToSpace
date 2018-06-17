@@ -163,7 +163,7 @@ void Console_Sprite::render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect)
 
 class Button {
 public:
-	Button::Button(SDL_Renderer* gRenderer = NULL, int action = BUTTON_ACTION_DO_NOTHING, SDL_Rect button_rect = { 0,0,0,0 }, bool button_background = false, int panel_name = PANEL_NO_PANEL);
+	Button::Button(SDL_Renderer* gRenderer = NULL, int action = BUTTON_ACTION_DO_NOTHING, SDL_Rect button_rect = { 0,0,0,0 }, bool button_background = false, int panel_name = PANEL_NO_PANEL, int button_config = 0);
 	
 	void free();
 	void render(SDL_Renderer* gRenderer);
@@ -179,6 +179,7 @@ public:
 	
 	int button_action;
 	int button_group;
+	int button_config_num;
 
 	SDL_Rect button_rect;
 	SDL_Rect button_clip;
@@ -207,13 +208,14 @@ public:
 private:
 };
 
-Button::Button(SDL_Renderer* gRenderer, int action, SDL_Rect pos_rect, bool button_background, int button_set)
+Button::Button(SDL_Renderer* gRenderer, int action, SDL_Rect pos_rect, bool button_background, int button_set, int button_config)
 {
 	button_action = action;
 	button_rect = pos_rect;
 	button_clip = { 0,0,button_rect.w,button_rect.h };
 
 	button_group = button_set;
+	button_config_num = button_config;
 
 	button_has_label = false;
 	button_has_sprite = false;
@@ -328,12 +330,16 @@ public:
 	Button Create_Label(SDL_Renderer* gRenderer, TTF_Font* gFont, string Label, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name, int button_action = BUTTON_ACTION_DO_NOTHING, bool filled = false);
 	Button Create_String_Diagnostic(SDL_Renderer* gRenderer, TTF_Font* gFont, string label, string* string_pointer, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name);
 	Button Create_Number_Diagnostic(SDL_Renderer* gRenderer, TTF_Font* gFont, string label, int* value_pointer, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name, bool stat_bar = false);
+	Button Create_Simple_Linked_Number(SDL_Renderer* gRenderer, TTF_Font* gFont, int* value_pointer, SDL_Rect* ref_rect, SDL_Rect offset, int panel_name);
 
-	void Create_Dot_Inventory(SDL_Renderer* gRenderer, Dot* focus_dot, LTexture* spritesheet, TTF_Font* gFont, int offset_x, int offset_y, int columns, int rows, int panel_name);
+	void Create_Dot_Inventory(SDL_Renderer* gRenderer, Dot* focus_dot, LTexture* spritesheet, TTF_Font* gFont, int offset_x, int offset_y, int columns, int rows, int panel_name, string panel_label = "Inventory");
 	void Create_Dot_Diagnostic(SDL_Renderer* gRenderer, Dot* focus_dot, int dot_type, int offset_x, int offset_y, TTF_Font* gFont, int panel_name);
 	void Create_Dot_Equipment_Loadout(LTexture* spritesheet, TTF_Font* console_font, SDL_Renderer* gRenderer, Dot* focus_dot, int panel_name);
 	void Create_Dot_Crafting_Window(LTexture* spritesheet, TTF_Font* console_font, SDL_Renderer* gRenderer, Dot* focus_dot, int panel_name, int offset_x, int offset_y, int rows, int columns, string window_name);
 	void Update_Dot_Crafting_Window(LTexture* spritesheet, TTF_Font* console_font, SDL_Renderer* gRenderer, Dot* focus_dot, int panel_name, int offset_x, int offset_y, int rows, int columns, string window_name);
+	void Create_Item_Production_Window(LTexture* spritesheet, TTF_Font* console_font, SDL_Renderer* gRenderer, Dot* focus_dot, int panel_name);
+	void Create_Dot_Job_Window(TTF_Font* console_font, SDL_Renderer* gRenderer, Dot* focus_dot, int panel_name);
+
 	void Create_Options_Restart_Window(SDL_Rect* reference_rect);
 	void Create_Panel_Button(string button_name, int panel_name, int offset_x, int offset_y);
 	void Adjust_Panel_Button_Size();
@@ -343,10 +349,12 @@ public:
 	Button* Check_For_Click(int mouse_x_pos, int mouse_y_pos);
 	void Create_Dot_Diagnostic_Window(Dot* new_focus_dot);
 	void Create_Player_Diagnostic_Window(Dot* player_dot, int panel_name);
+	void Create_Action_Button_Window(SDL_Rect* reference_rect, LTexture* spritesheet);
 	
 	int console_window_name;
 	bool console_window_active;
 	int active_panel = PANEL_NO_PANEL;
+	Dot* focus_dot;
 
 	SDL_Rect base_window_rect;
 	SDL_Color base_window_tint;
@@ -381,7 +389,7 @@ Button Console_Window::Create_Dot_Inventory_Slot(SDL_Renderer* gRenderer, SDL_Re
 
 Button Console_Window::Create_Crafting_Button(SDL_Renderer* gRenderer, SDL_Rect pos_rect, LTexture* spritesheet, TTF_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name)
 {
-	Button new_crafting_button = Button(gRenderer, BUTTON_ACTION_CRAFT_ITEM, pos_rect, true, panel_name);
+	Button new_crafting_button = Button(gRenderer, BUTTON_ACTION_PLACE_SCAFFOLD, pos_rect, true, panel_name);
 	new_crafting_button.slot_item_pointer = slot_pointer;
 	new_crafting_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont, &slot_pointer->item_number, true);
 	new_crafting_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_x * SPRITESHEET_W, Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
@@ -417,9 +425,19 @@ Button Console_Window::Create_Number_Diagnostic(SDL_Renderer* gRenderer, TTF_Fon
 	return new_button;
 }
 
+Button Console_Window::Create_Simple_Linked_Number(SDL_Renderer* gRenderer, TTF_Font* gFont, int* value_pointer, SDL_Rect* ref_rect, SDL_Rect offset, int panel_name)
+{
+	SDL_Rect pos_rect = { ref_rect->x + offset.x, ref_rect->y + offset.y, offset.w,offset.h };
+	Button new_button = Button(gRenderer, BUTTON_ACTION_DO_NOTHING, pos_rect, true, panel_name);
+	
+	new_button.Add_Button_Diagnostic(gRenderer, offset.w/3, offset.h/3, gFont, value_pointer);
+	
+	return new_button;
+}
+
 // PANEL CREATING TOOLS
 
-void Console_Window::Create_Dot_Inventory(SDL_Renderer* gRenderer, Dot* focus_dot, LTexture* spritesheet, TTF_Font* gFont, int offset_x, int offset_y, int columns, int rows, int panel_name)
+void Console_Window::Create_Dot_Inventory(SDL_Renderer* gRenderer, Dot* focus_dot, LTexture* spritesheet, TTF_Font* gFont, int offset_x, int offset_y, int columns, int rows, int panel_name, string panel_label)
 {
 	int slot_num = 0;
 
@@ -437,7 +455,7 @@ void Console_Window::Create_Dot_Inventory(SDL_Renderer* gRenderer, Dot* focus_do
 	}
 	console_window_panels.insert(pair <int, vector<Button>>(panel_name, panel_buttons));
 
-	Create_Panel_Button("Inventory", PANEL_DOT_INVENTORY, 0, -25);
+	Create_Panel_Button(panel_label, PANEL_DOT_INVENTORY, 0, -25);
 }
 
 void Console_Window::Create_Dot_Diagnostic(SDL_Renderer* gRenderer, Dot* focus_dot, int dot_type, int offset_x, int offset_y, TTF_Font* gFont, int panel_name)
@@ -480,7 +498,6 @@ void Console_Window::Create_Dot_Diagnostic(SDL_Renderer* gRenderer, Dot* focus_d
 		num_diagnostics++;
 		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Y Coord", &focus_dot->y_tile, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, false));
 		num_diagnostics++;
-		if (focus_dot->multi_tile_config.tile_type != VACUUM) panel_buttons.push_back(Create_Label(gRenderer, gFont, "Delete Tile", &base_window_rect,0, diagnostic_spacer*num_diagnostics, panel_name, BUTTON_ACTION_DELETE_TILE,true));
 	}
 
 	console_window_panels.insert(pair <int, vector<Button>>(panel_name, panel_buttons));
@@ -549,6 +566,80 @@ void Console_Window::Update_Dot_Crafting_Window(LTexture* spritesheet, TTF_Font*
 	}
 }
 
+void Console_Window::Create_Item_Production_Window(LTexture* spritesheet, TTF_Font* console_font, SDL_Renderer* gRenderer, Dot* focus_dot, int panel_name)
+{
+	vector<Button> panel_buttons;
+
+	SDL_Rect production_item_1_rect = { base_window_rect.x, base_window_rect.y, TILE_WIDTH, TILE_HEIGHT };
+	Inventory_Item production_1_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[0].slot_tile_name).inventory_pointer);
+	Button production_item_1 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_1_rect,true, PANEL_PRODUCTION_ORDERS,0 };
+	production_item_1.Add_Button_Sprite(spritesheet, { production_1_item.clip_rect_x*SPRITESHEET_W,production_1_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W },0,0);
+	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[0].slot_requests, &production_item_1_rect, { TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT },panel_name));
+
+	SDL_Rect production_item_2_rect = { base_window_rect.x, base_window_rect.y+TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
+	Inventory_Item production_2_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[1].slot_tile_name).inventory_pointer);
+	Button production_item_2 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_2_rect,true, PANEL_PRODUCTION_ORDERS,1 };
+	production_item_2.Add_Button_Sprite(spritesheet, { production_2_item.clip_rect_x*SPRITESHEET_W,production_2_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[1].slot_requests, &production_item_1_rect, { TILE_WIDTH,TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
+
+	SDL_Rect production_item_3_rect = { base_window_rect.x, base_window_rect.y+2*TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
+	Inventory_Item production_3_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[2].slot_tile_name).inventory_pointer);
+	Button production_item_3 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_3_rect,true, PANEL_PRODUCTION_ORDERS,2 };
+	production_item_3.Add_Button_Sprite(spritesheet, { production_3_item.clip_rect_x*SPRITESHEET_W,production_3_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[2].slot_requests, &production_item_1_rect, { TILE_WIDTH,2*TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
+
+	SDL_Rect production_item_4_rect = { base_window_rect.x, base_window_rect.y + 3 * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
+	Inventory_Item production_4_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[3].slot_tile_name).inventory_pointer);
+	Button production_item_4 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_4_rect,true, PANEL_PRODUCTION_ORDERS,3 };
+	production_item_4.Add_Button_Sprite(spritesheet, { production_4_item.clip_rect_x*SPRITESHEET_W,production_4_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[3].slot_requests, &production_item_1_rect, { TILE_WIDTH,3 * TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
+
+	SDL_Rect production_item_5_rect = { base_window_rect.x, base_window_rect.y + 4 * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
+	Inventory_Item production_5_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[4].slot_tile_name).inventory_pointer);
+	Button production_item_5 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_5_rect,true, PANEL_PRODUCTION_ORDERS,4 };
+	production_item_5.Add_Button_Sprite(spritesheet, { production_5_item.clip_rect_x*SPRITESHEET_W,production_5_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[4].slot_requests, &production_item_1_rect, { TILE_WIDTH,4 * TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
+
+	SDL_Rect production_item_6_rect = { base_window_rect.x, base_window_rect.y + 5 * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
+	Inventory_Item production_6_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[5].slot_tile_name).inventory_pointer);
+	Button production_item_6 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_6_rect,true, PANEL_PRODUCTION_ORDERS,5 };
+	production_item_6.Add_Button_Sprite(spritesheet, { production_6_item.clip_rect_x*SPRITESHEET_W,production_6_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[5].slot_requests, &production_item_1_rect, { TILE_WIDTH,5 * TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
+
+	panel_buttons.push_back(production_item_1);
+	panel_buttons.push_back(production_item_2);
+	panel_buttons.push_back(production_item_3);
+	panel_buttons.push_back(production_item_4);
+	panel_buttons.push_back(production_item_5);
+	panel_buttons.push_back(production_item_6);
+
+	console_window_panels.insert(pair <int, vector<Button>>(panel_name, panel_buttons));
+	Create_Panel_Button("Production", PANEL_PRODUCTION_ORDERS, 0, -25);
+}
+
+void Console_Window::Create_Dot_Job_Window(TTF_Font* console_font, SDL_Renderer* gRenderer, Dot* focus_dot, int panel_name)
+{
+	int num_diagnostics = 0;
+	int diagnostic_spacer = TILE_HEIGHT * 3 / 4;
+
+	vector<Button> panel_buttons;
+
+	if (focus_dot->dot_config[DOT_TYPE] == DOT_NPC)
+	{
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, console_font, "Job Type", &focus_dot->npc_dot_config.current_dot_job, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, false));
+		num_diagnostics++;
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, console_font, "Goal Action", &focus_dot->npc_dot_config.current_dot_goal, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, false));
+		num_diagnostics++;
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, console_font, "Dot Focus Type", &focus_dot->npc_dot_config.current_dot_focus_type, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, false));
+		num_diagnostics++;
+	}
+
+	panel_buttons.push_back(Create_Label(gRenderer, console_font, "Clear Goals", &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, BUTTON_ACTION_CLEAR_DOT_GOALS, true));
+
+	console_window_panels.insert(pair <int, vector<Button>>(panel_name, panel_buttons));
+	Create_Panel_Button("Jobs", PANEL_JOB_DIAGNOSTIC, 0, -25);
+}
+
 void Console_Window::Create_Panel_Button(string button_name, int panel_name, int offset_x, int offset_y)
 {
 	SDL_Rect panel_button_rect = { base_window_rect.x + offset_x, base_window_rect.y + offset_y, 15, 25};
@@ -574,12 +665,14 @@ void Console_Window::Adjust_Panel_Button_Size()
 
 void Console_Window::Create_Dot_Diagnostic_Window(Dot* new_focus_dot)
 {
+	focus_dot = new_focus_dot;
 	console_window_panels.clear();
 	console_window_buttons.clear();
 	Create_Dot_Inventory(gRenderer, new_focus_dot, spritesheet, console_font, 0, 0, 8, 3, PANEL_DOT_INVENTORY);
 	Create_Dot_Diagnostic(gRenderer, new_focus_dot, DOT_PLAYER, 0, 0, console_font, PANEL_DOT_DIAGNOSTIC);
-	Create_Dot_Equipment_Loadout(spritesheet, console_font, gRenderer, new_focus_dot, PANEL_EQUIPMENT_LOADOUT);
-	Create_Dot_Crafting_Window(spritesheet, console_font, gRenderer, new_focus_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Build");
+	if (new_focus_dot->dot_config[DOT_TYPE] == DOT_NPC) Create_Dot_Equipment_Loadout(spritesheet, console_font, gRenderer, new_focus_dot, PANEL_EQUIPMENT_LOADOUT);
+	if (new_focus_dot->dot_config[DOT_TYPE] == DOT_NPC) Create_Dot_Job_Window(console_font, gRenderer, new_focus_dot, PANEL_JOB_DIAGNOSTIC);
+	if (new_focus_dot->dot_config[DOT_TYPE] == DOT_TILE) Create_Item_Production_Window(spritesheet, console_font, gRenderer, new_focus_dot, PANEL_PRODUCTION_ORDERS);
 	active_panel = PANEL_DOT_DIAGNOSTIC;
 }
 
@@ -587,10 +680,8 @@ void Console_Window::Create_Player_Diagnostic_Window(Dot* player_dot, int panel_
 {
 	console_window_panels.clear();
 	console_window_buttons.clear();
-	Create_Dot_Inventory(gRenderer, player_dot, spritesheet, console_font, 0, 0, 8, 3, PANEL_DOT_INVENTORY);
-	Create_Dot_Diagnostic(gRenderer, player_dot, DOT_PLAYER, 0, 0, console_font, PANEL_DOT_DIAGNOSTIC);
-	Create_Dot_Equipment_Loadout(spritesheet, console_font, gRenderer, player_dot, PANEL_EQUIPMENT_LOADOUT);
-	Create_Dot_Crafting_Window(spritesheet, console_font, gRenderer, player_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Craft");
+	Create_Dot_Inventory(gRenderer, player_dot, spritesheet, console_font, 0, 0, 8, 3, PANEL_DOT_INVENTORY, "Storage");
+	Create_Dot_Crafting_Window(spritesheet, console_font, gRenderer, player_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Buildable Items");
 	active_panel = panel_name;
 }
 
@@ -615,6 +706,31 @@ void Console_Window::Create_Options_Restart_Window(SDL_Rect* reference_rect)
 	panel_buttons.push_back(quit_button);
 
 	console_window_panels.insert(pair <int, vector<Button>>(PANEL_OPTIONS_RESTART, panel_buttons));
+}
+
+void Console_Window::Create_Action_Button_Window(SDL_Rect* reference_rect, LTexture* spritesheet)
+{
+	vector<Button> panel_buttons;
+
+	SDL_Rect mark_for_mining_rect = { reference_rect->x, reference_rect->y, TILE_WIDTH, TILE_HEIGHT };
+	Button mark_for_mining_button = { gRenderer, BUTTON_ACTION_MINE_ASTEROID, mark_for_mining_rect,true, PANEL_ACTION_BUTTONS };
+	mark_for_mining_button.Add_Button_Sprite(spritesheet, { 2 * SPRITESHEET_W, 2 * SPRITESHEET_H,SPRITESHEET_W,SPRITESHEET_H }, 0, 0);
+
+	SDL_Rect inspect_rect = { reference_rect->x + TILE_WIDTH, reference_rect->y, TILE_WIDTH, TILE_HEIGHT };
+	Button inspect_button = { gRenderer, BUTTON_ACTION_INSPECT, inspect_rect,true, PANEL_ACTION_BUTTONS };
+	inspect_button.Add_Button_Sprite(spritesheet, { 3 * SPRITESHEET_W, 3 * SPRITESHEET_H,SPRITESHEET_W,SPRITESHEET_H }, 0, 0);
+
+	SDL_Rect delete_rect = { reference_rect->x + 2*TILE_WIDTH, reference_rect->y, TILE_WIDTH, TILE_HEIGHT };
+	Button delete_button = { gRenderer, BUTTON_ACTION_REMOVE_TILE, delete_rect,true, PANEL_ACTION_BUTTONS };
+	delete_button.Add_Button_Sprite(spritesheet, { 2 * SPRITESHEET_W, 1 * SPRITESHEET_H,SPRITESHEET_W,SPRITESHEET_H }, 0, 0);
+
+	panel_buttons.push_back(mark_for_mining_button);
+	panel_buttons.push_back(inspect_button);
+	panel_buttons.push_back(delete_button);
+
+	console_window_panels.insert(pair <int, vector<Button>>(PANEL_ACTION_BUTTONS, panel_buttons));
+
+	active_panel = PANEL_ACTION_BUTTONS;
 }
 
 // MAIN FUNCTIONS
@@ -675,7 +791,7 @@ public:
 	void Pull_Up_Restart_Screen();
 	void Update_Console(SDL_Renderer* gRenderer);
 
-	int current_action = BUTTON_ACTION_ATTACK;
+	int current_action = BUTTON_ACTION_MINE_ASTEROID;
 	int current_selected_inventory_item;
 
 	Intelligence* current_intelligence;
@@ -691,6 +807,7 @@ public:
 	SDL_Rect dot_focus_window_rect;
 	SDL_Rect player_focus_window_rect;
 	SDL_Rect options_window_rect;
+	SDL_Rect action_buttons_window_rect;
 
 	Console_Diagnostic fps_diagnostic;
 
@@ -731,12 +848,17 @@ Console::Console(SDL_Renderer* gRenderer, TTF_Font* gFont, Intelligence* intelli
 	dot_focus_window.Create_Dot_Diagnostic_Window(currently_selected_dot);
 	console_windows.insert(pair <int, Console_Window>(WINDOW_DOT_DIAGNOSTIC, dot_focus_window));
 
-	//player_focus_window_rect = { 0,SCREEN_HEIGHT-6*TILE_HEIGHT - 3*TILE_HEIGHT/4,8 * TILE_WIDTH,6 * TILE_HEIGHT + 3* TILE_HEIGHT/4};
-	//Console_Window player_focus_window = Console_Window{ WINDOW_PLAYER_DIAGNOSTIC, gRenderer, intelligence->player_dot, inventory_spritesheet, gFont, player_focus_window_rect };
-	//player_focus_window.Create_Player_Diagnostic_Window(intelligence->player_dot, PANEL_DOT_DIAGNOSTIC);
-	//console_windows.insert(pair <int, Console_Window>(WINDOW_PLAYER_DIAGNOSTIC, player_focus_window));
+	player_focus_window_rect = { 0,SCREEN_HEIGHT-6*TILE_HEIGHT - 3*TILE_HEIGHT/4,8 * TILE_WIDTH,6 * TILE_HEIGHT + 3* TILE_HEIGHT/4};
+	Console_Window player_focus_window = Console_Window{ WINDOW_PLAYER_DIAGNOSTIC, gRenderer, intelligence->player_dot, inventory_spritesheet, gFont, player_focus_window_rect };
+	player_focus_window.Create_Player_Diagnostic_Window(intelligence->player_dot, PANEL_DOT_INVENTORY);
+	console_windows.insert(pair <int, Console_Window>(WINDOW_PLAYER_DIAGNOSTIC, player_focus_window));
 
-	//fps_diagnostic = Console_Diagnostic(gRenderer, 0, 0, console_font, &intelligence->player_dot->dot_config[FPS], false);
+	fps_diagnostic = Console_Diagnostic(gRenderer, 0, 0, console_font, &intelligence->player_dot->dot_config[FPS], false);
+
+	action_buttons_window_rect = { 8*TILE_WIDTH,SCREEN_HEIGHT - TILE_HEIGHT,TILE_WIDTH*4,TILE_HEIGHT };
+	Console_Window action_button_window = Console_Window{ WINDOW_ACTION_BUTTONS, gRenderer, intelligence->player_dot, inventory_spritesheet, gFont, action_buttons_window_rect };
+	action_button_window.Create_Action_Button_Window(&action_buttons_window_rect,inventory_spritesheet);
+	console_windows.insert(pair <int, Console_Window>(WINDOW_ACTION_BUTTONS, action_button_window));
 
 	options_window_rect = { SCREEN_WIDTH / 3, SCREEN_HEIGHT / 3,10 * TILE_WIDTH, 4* TILE_HEIGHT };
 	Console_Window options_window = Console_Window{ WINDOW_OPTIONS,gRenderer, NULL, NULL, console_font, options_window_rect,false };
@@ -750,7 +872,7 @@ void Console::free()
 
 void Console::render(SDL_Renderer* gRenderer)
 {
-	//fps_diagnostic.render(gRenderer, new SDL_Rect{ SCREEN_WIDTH - TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT });
+	fps_diagnostic.render(gRenderer, new SDL_Rect{ SCREEN_WIDTH - TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT });
 	for (int i = 0; i < console_windows.size(); i++)
 	{
 		if (console_windows[i].console_window_active == true) console_windows[i].render(gRenderer);
@@ -799,13 +921,22 @@ void Console::Handle_Console_Clicks()
 {
 	switch (last_clicked_window)
 	{
+	case WINDOW_ACTION_BUTTONS:
+		switch (last_clicked_button->button_group)
+		{
+		case PANEL_ACTION_BUTTONS:
+			current_action = last_clicked_button->button_action;
+			break;
+		}
+		break;
 	case WINDOW_PLAYER_DIAGNOSTIC:
 		switch (last_clicked_button->button_group)
 		{
 		case PANEL_CRAFTABLE_ITEMS:
-			if (last_clicked_button->button_action == BUTTON_ACTION_CRAFT_ITEM)
+			if (last_clicked_button->button_action == BUTTON_ACTION_PLACE_SCAFFOLD)
 			{
-				//current_intelligence->Dot_Craft_Item(current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
+				current_selected_inventory_item = last_clicked_button->slot_item_pointer->inventory_item_code;
+				current_action = BUTTON_ACTION_PLACE_SCAFFOLD;
 			}
 			break;
 		case PANEL_DOT_INVENTORY:
@@ -815,19 +946,19 @@ void Console::Handle_Console_Clicks()
 				current_action = BUTTON_ACTION_PLACE_ITEM;
 			}
 			break;
-		case PANEL_EQUIPMENT_LOADOUT:
-			if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
-			{
-				if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->inventory_item_code).tile_type == ITEM_TYPE_MINING_LASER)
-				{
-					current_action = BUTTON_ACTION_MINING_LASER;
-				}
-				else if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->inventory_item_code).tile_type == ITEM_TYPE_WEAPON)
-				{
-					current_action = BUTTON_ACTION_ATTACK;
-				}
-			}
-			break;
+		//case PANEL_EQUIPMENT_LOADOUT:
+		//	if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
+		//	{
+		//		if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->inventory_item_code).tile_type == ITEM_TYPE_MINING_LASER)
+		//		{
+		//			current_action = BUTTON_ACTION_MINING_LASER;
+		//		}
+		//		else if (Return_Tile_By_Inventory_Item(last_clicked_button->slot_item_pointer->inventory_item_code).tile_type == ITEM_TYPE_WEAPON)
+		//		{
+		//			current_action = BUTTON_ACTION_ATTACK;
+		//		}
+		//	}
+		//	break;
 		}
 		break;
 	case WINDOW_DOT_DIAGNOSTIC:
@@ -851,11 +982,21 @@ void Console::Handle_Console_Clicks()
 			}
 			break;
 		case PANEL_DOT_DIAGNOSTIC:
-			if (last_clicked_button->button_action == BUTTON_ACTION_DELETE_TILE)
+			break;
+		case PANEL_PRODUCTION_ORDERS:
+			if (last_clicked_button->button_action == BUTTON_ACTION_CREATE_PRODUCTION_ORDER)
 			{
-				current_intelligence->Delete_Tile(currently_selected_dot);
+				if (console_windows[last_clicked_window].focus_dot->npc_dot_config.production_status_array[last_clicked_button->button_config_num].slot_tile_name != TILE_GENERIC_TILE)
+				{
+					console_windows[last_clicked_window].focus_dot->npc_dot_config.production_status_array[last_clicked_button->button_config_num].slot_requests++;
+				}
 			}
 			break;
+		case PANEL_JOB_DIAGNOSTIC:
+			if (last_clicked_button->button_action == BUTTON_ACTION_CLEAR_DOT_GOALS)
+			{
+				console_windows[last_clicked_window].focus_dot->dot_wipe_all_job_tasks();
+			}
 		}
 		break;
 	}
@@ -879,8 +1020,8 @@ void Console::Change_Current_Focus_Dot(SDL_Renderer* gRenderer, Dot* new_focus_d
 
 void Console::Update_Console(SDL_Renderer* gRenderer)
 {
-	//current_intelligence->player_dot->Check_Craftable_Items();
-	//console_windows[WINDOW_PLAYER_DIAGNOSTIC].Update_Dot_Crafting_Window(inventory_spritesheet,console_font,gRenderer,current_intelligence->player_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Craft");
+	current_intelligence->player_dot->Check_Craftable_Items();
+	console_windows[WINDOW_PLAYER_DIAGNOSTIC].Update_Dot_Crafting_Window(inventory_spritesheet,console_font,gRenderer,current_intelligence->player_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Craft");
 }
 
 #endif
