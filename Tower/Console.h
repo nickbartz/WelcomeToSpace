@@ -67,20 +67,22 @@ void Console_Diagnostic::free()
 class Console_Stat_Bar
 {
 public:
-	Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer = NULL, int x_offset = 0, int y_offset = 0, TTF_Font* gFont = NULL, int* diagnostic_value = NULL);
+	Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer = NULL, int x_offset = 0, int y_offset = 0, TTF_Font* gFont = NULL, int* diagnostic_value = NULL, int* diagnostic_value_max = NULL);
 	void free();
 	void render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect);
 
 private:
 	int* linked_value;
+	int* linked_value_max;
 	SDL_Color bar_color;
 
 	SDL_Rect offset_rect;
 };
 
-Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer, int x_offset, int y_offset, TTF_Font* gFont, int* diagnostic_value)
+Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer, int x_offset, int y_offset, TTF_Font* gFont, int* diagnostic_value, int* diagnostic_value_max)
 {
 	linked_value = diagnostic_value;
+	linked_value_max = diagnostic_value_max;
 	offset_rect = { x_offset, y_offset, 0, 0 };
 	bar_color = { 255,0,0,200 };
 }
@@ -92,7 +94,10 @@ void Console_Stat_Bar::free()
 
 void Console_Stat_Bar::render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect)
 {
-	SDL_Rect bar_rect = { pos_rect->x + offset_rect.x, pos_rect->y + offset_rect.y, *linked_value,15 };
+	int max_value = 100;
+	if (linked_value_max != NULL) max_value = *linked_value_max;
+	
+	SDL_Rect bar_rect = { pos_rect->x + offset_rect.x, pos_rect->y + offset_rect.y, (*linked_value)*(pos_rect->w-offset_rect.x -3)/(*linked_value_max),15 };
 	
 	SDL_SetRenderDrawBlendMode(gRenderer, SDL_BLENDMODE_BLEND);
 	SDL_SetRenderDrawColor(gRenderer, bar_color.r, bar_color.g, bar_color.b, bar_color.a);
@@ -171,7 +176,7 @@ public:
 	void Add_Button_Sprite(LTexture* spritesheet, SDL_Rect spritesheet_clip,  int offset_x, int offset_y);
 	void Add_Button_Label(string button_label_text, TTF_Font* gFont, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
 	void Add_Button_Diagnostic(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, bool dont_render_if_zero = false);
-	void Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value);
+	void Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, int* diagnostic_value_max = NULL);
 	void Add_Button_String_Diagnostic(TTF_Font* gFont, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
 	void Change_Slot_Tint(SDL_Color new_tint_color);
 	void Change_Slot_Highlight(SDL_Color new_highlight_color);
@@ -280,9 +285,9 @@ void Button::Add_Button_Diagnostic(SDL_Renderer* gRenderer, int offset_x, int of
 	button_has_diagnostic = true;
 }
 
-void Button::Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value)
+void Button::Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, int* diagnostic_value_max)
 {
-	button_stat_bar = Console_Stat_Bar(gRenderer, offset_x, offset_y, gFont, diagnostic_value);
+	button_stat_bar = Console_Stat_Bar(gRenderer, offset_x, offset_y, gFont, diagnostic_value, diagnostic_value_max);
 	button_has_stat_bar = true;
 }
 
@@ -329,7 +334,7 @@ public:
 	Button Create_Crafting_Button(SDL_Renderer* gRenderer, SDL_Rect pos_rect, LTexture* spritesheet, TTF_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name);
 	Button Create_Label(SDL_Renderer* gRenderer, TTF_Font* gFont, string Label, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name, int button_action = BUTTON_ACTION_DO_NOTHING, bool filled = false);
 	Button Create_String_Diagnostic(SDL_Renderer* gRenderer, TTF_Font* gFont, string label, string* string_pointer, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name);
-	Button Create_Number_Diagnostic(SDL_Renderer* gRenderer, TTF_Font* gFont, string label, int* value_pointer, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name, bool stat_bar = false);
+	Button Create_Number_Diagnostic(SDL_Renderer* gRenderer, TTF_Font* gFont, string label, int* value_pointer, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name, bool stat_bar = false, int* value_pointer_max = NULL);
 	Button Create_Simple_Linked_Number(SDL_Renderer* gRenderer, TTF_Font* gFont, int* value_pointer, SDL_Rect* ref_rect, SDL_Rect offset, int panel_name);
 
 	void Create_Dot_Inventory(SDL_Renderer* gRenderer, Dot* focus_dot, LTexture* spritesheet, TTF_Font* gFont, int offset_x, int offset_y, int columns, int rows, int panel_name, string panel_label = "Inventory");
@@ -413,14 +418,14 @@ Button Console_Window::Create_String_Diagnostic(SDL_Renderer* gRenderer, TTF_Fon
 	return new_button;
 }
 
-Button Console_Window::Create_Number_Diagnostic(SDL_Renderer* gRenderer, TTF_Font* gFont, string label, int* value_pointer, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name, bool stat_bar)
+Button Console_Window::Create_Number_Diagnostic(SDL_Renderer* gRenderer, TTF_Font* gFont, string label, int* value_pointer, SDL_Rect* ref_rect, int x_offset, int y_offset, int panel_name, bool stat_bar, int* value_pointer_max)
 {
 	SDL_Rect pos_rect = { ref_rect->x + x_offset, ref_rect->y + y_offset, ref_rect->w,TILE_HEIGHT * 3 / 4 };
 	Button new_button = Button(gRenderer, BUTTON_ACTION_DO_NOTHING, pos_rect, true, panel_name);
 	new_button.Add_Button_Label(label, gFont, false, NULL, { 255,255,255,255 }, 5, 5);
 	
 	if (stat_bar == false) new_button.Add_Button_Diagnostic(gRenderer, 100, 5, gFont, value_pointer);
-	else new_button.Add_Button_Stat_Bar(gRenderer, 100, 5, gFont, value_pointer);
+	else new_button.Add_Button_Stat_Bar(gRenderer, 100, 5, gFont, value_pointer, value_pointer_max);
 
 	return new_button;
 }
@@ -471,19 +476,19 @@ void Console_Window::Create_Dot_Diagnostic(SDL_Renderer* gRenderer, Dot* focus_d
 		num_diagnostics++;
 		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Dot Health", &focus_dot->npc_dot_config.dot_stat_health, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, false));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Oxygen Need", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Oxygen Need", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_OXYGEN_NEED].max_level));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Hunger", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Hunger", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].max_level));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Tiredness", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SLEEP_NEED].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Tiredness", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SLEEP_NEED].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SLEEP_NEED].max_level));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Ennui", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_ENNUI].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Ennui", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_ENNUI].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_ENNUI].max_level));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Happiness", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HAPPINESS].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Happiness", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HAPPINESS].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HAPPINESS].max_level));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Sanity", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SANITY].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Sanity", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SANITY].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SANITY].max_level));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Suit Oxygen", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Suit Oxygen", &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].current_level, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].max_level));
 		num_diagnostics++;
 	}
 	else if (focus_dot->dot_config[DOT_TYPE] == DOT_TILE)
@@ -492,7 +497,7 @@ void Console_Window::Create_Dot_Diagnostic(SDL_Renderer* gRenderer, Dot* focus_d
 		num_diagnostics++;
 		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Tile Name", &focus_dot->multi_tile_config.tile_name, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name));
 		num_diagnostics++;
-		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Current Health", &focus_dot->multi_tile_config.current_health, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true));
+		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "Current Health", &focus_dot->multi_tile_config.current_health, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, true, &focus_dot->multi_tile_config.max_health));
 		num_diagnostics++;
 		panel_buttons.push_back(Create_Number_Diagnostic(gRenderer, gFont, "X Coord", &focus_dot->x_tile, &base_window_rect, 0, diagnostic_spacer*num_diagnostics, panel_name, false));
 		num_diagnostics++;
@@ -780,7 +785,7 @@ void Console_Window::render(SDL_Renderer* gRenderer)
 class Console {
 public:
 	Console::Console(SDL_Renderer* gRenderer, TTF_Font* gFont, Intelligence* intelligence, LTexture textures[]);
-	void render(SDL_Renderer* gRenderer);
+	void render(SDL_Renderer* gRenderer, Camera* camera);
 	void free();
 	void Change_Current_Focus_Dot(SDL_Renderer* gRenderer, Dot* new_focus_dot);
 
@@ -810,6 +815,8 @@ public:
 	SDL_Rect action_buttons_window_rect;
 
 	Console_Diagnostic fps_diagnostic;
+
+	bool debug = false;
 
 
 private:
@@ -870,13 +877,48 @@ void Console::free()
 {
 }
 
-void Console::render(SDL_Renderer* gRenderer)
+void Console::render(SDL_Renderer* gRenderer, Camera* camera)
 {
 	fps_diagnostic.render(gRenderer, new SDL_Rect{ SCREEN_WIDTH - TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT });
 	for (int i = 0; i < console_windows.size(); i++)
 	{
 		if (console_windows[i].console_window_active == true) console_windows[i].render(gRenderer);
 		
+	}
+
+	// ADVANCED DIAGNOSTICS
+	if (debug)
+	{
+
+		if (currently_selected_dot != NULL)
+		{
+			SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 50);
+			
+			// RENDER DOTS CURRENT PATH
+			for (int i = 0; i < currently_selected_dot->npc_dot_config.current_goal_path.size(); i++)
+			{
+				SDL_Rect path_box = {	currently_selected_dot->npc_dot_config.current_goal_path[i].x_tile*TILE_WIDTH - camera->camera_box.x,
+										currently_selected_dot->npc_dot_config.current_goal_path[i].y_tile*TILE_WIDTH - camera->camera_box.y, 
+										TILE_WIDTH,
+										TILE_HEIGHT };
+
+				SDL_RenderFillRect(gRenderer, &path_box);
+			}
+
+			// RENDER A LINE TO DOTS CURRENT TARGET
+
+			SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 255);
+			if (currently_selected_dot->npc_dot_config.current_goal_list.size() != 0 && currently_selected_dot->npc_dot_config.current_goal_list.back().pointer_to_dot_pointer != NULL)
+			{
+				Dot* current_focus = currently_selected_dot->npc_dot_config.current_goal_list.back().pointer_to_dot_pointer;
+				int x1 = currently_selected_dot->dot_rect.x + currently_selected_dot->dot_rect.w / 2 - camera->camera_box.x;
+				int y1 = currently_selected_dot->dot_rect.y + currently_selected_dot->dot_rect.h / 2 - camera->camera_box.y;
+				int x2 = current_focus->dot_rect.x + currently_selected_dot->dot_rect.w / 2 - camera->camera_box.x;
+				int y2 = current_focus->dot_rect.y + currently_selected_dot->dot_rect.h / 2 - camera->camera_box.y;
+
+				SDL_RenderDrawLine(gRenderer, x1, y1, x2, y2);
+			}
+		}
 	}
 }
 
@@ -1013,9 +1055,12 @@ Button* Console::return_clicked_button(int mouse_x_pos, int mouse_y_pos)
 
 void Console::Change_Current_Focus_Dot(SDL_Renderer* gRenderer, Dot* new_focus_dot)
 {
-	currently_selected_dot = new_focus_dot;
-	console_windows[WINDOW_DOT_DIAGNOSTIC].console_window_active = true;
-	console_windows[WINDOW_DOT_DIAGNOSTIC].Create_Dot_Diagnostic_Window(new_focus_dot);
+	if (new_focus_dot->multi_tile_config.tile_type != VACUUM)
+	{
+		currently_selected_dot = new_focus_dot;
+		console_windows[WINDOW_DOT_DIAGNOSTIC].console_window_active = true;
+		console_windows[WINDOW_DOT_DIAGNOSTIC].Create_Dot_Diagnostic_Window(new_focus_dot);
+	}
 }
 
 void Console::Update_Console(SDL_Renderer* gRenderer)

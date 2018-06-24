@@ -46,12 +46,14 @@ public:
 	void Create_Background();
 	void Populate_Asteroids();
 	void Create_Asteroid_Cluster(int start_x, int start_y, int size);
-	void Create_Test_Room(int x_start, int y_start);
+	void Create_Test_Room(int x_start, int y_start, int faction);
 	bool Check_If_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile);
 	bool Check_If_Scaffold_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile);
-	bool World::Tile_Is_Accessible(int x_tile, int y_tile);
-	Tile* World::Find_Accessible_Adjacent_Tile(Dot* tile);
-	void Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile);
+	bool Tile_Is_Accessible(int x_tile, int y_tile);
+	Tile* Find_Accessible_Adjacent_Tile(Dot* tile);
+	Tile* Find_Random_Accessible_Surrounding_Tile(Dot* tile);
+	Tile* Find_Accessible_Tile_Away_From_Dot(Dot* dot_to_move, Dot* dot_to_move_away_from);
+	void Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction = DOT_FACTION_NO_FACTION);
 
 
 	// Check Commands
@@ -78,7 +80,7 @@ public:
 	void Update_Tile_Texture_Clip(int x_tile, int y_tile, int tile_clip_x, int tile_clip_y, bool tile_or_item);
 
 	// Tile Specific Commands
-	void Remove_Tile(int i, int p);
+	void Remove_Tile(int i, int p, bool is_item);
 	void Grow_Frenzel(int i, int p, int current_frenzel_amount);
 
 	// Aggregate Commands
@@ -116,8 +118,10 @@ World::World(SDL_Renderer* gRenderer, LTexture textures[], SDL_Rect* tilesheet_c
 	world_renderer = gRenderer;
 
 	Create_Background();
+	
+	Create_Test_Room(150,150, DOT_FACTION_PLAYER);
+	Create_Test_Room(150,130, DOT_FACTION_ENEMY);
 	Populate_Asteroids();
-	Create_Test_Room(150,150);
 }
 
 void World::Create_Background()
@@ -139,7 +143,7 @@ void World::Populate_Asteroids()
 		{
 			int asteroid_cluster_chance = rand() % 1000;
 			int asteroid_cluster_size = rand() % 10;
-			if (asteroid_cluster_chance >= 999) Create_Asteroid_Cluster(i, p, asteroid_cluster_size);
+			if (asteroid_cluster_chance >= 995) Create_Asteroid_Cluster(i, p, asteroid_cluster_size);
 		}
 	}
 }
@@ -150,36 +154,39 @@ void World::Create_Asteroid_Cluster(int start_x, int start_y, int size)
 	{
 		for (int i = start_x; i < min(TILE_NUM_X,start_x + size); i++)
 		{
-			int asteroid_type = rand() % 100;
+			if (world_tiles[i][p]->multi_tile_config.tile_type != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
+			{
+				int asteroid_type = rand() % 100;
 
-			if (asteroid_type >= 95) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_NICKEL), i, p);
-			else if (asteroid_type >= 90) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_COBALT), i, p);
-			else if (asteroid_type >= 75) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_IRON), i, p);
+				if (asteroid_type >= 99) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_NICKEL), i, p);
+				else if (asteroid_type >= 95) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_COBALT), i, p);
+				else if (asteroid_type >= 55) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_IRON), i, p);
+			}
+
 		}
 	}
 }
 
-void World::Create_Test_Room(int x_start, int y_start)
+void World::Create_Test_Room(int x_start, int y_start, int faction)
 {
 	string room =
 
-
-		"FFFFFFFFFFF(O);\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFFD;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;";
+		"FFFFFFFFFFF;\FFFFFFFFFFFD;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;";
 
 	int column = x_start;
 	int row = y_start;
 
 	for (int i = 0; i < room.size(); i++)
 	{
-		if (room[i] == 'F') Create_Tile(Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_FLOOR_1), column, row);
-		else if (room[i] == 'W') Create_Tile(Return_Tile_By_Name(TILE_WALL_TILE_2), column, row);
-		else if (room[i] == 'D') Create_Tile(Return_Tile_By_Name(TILE_DOOR_1), column, row);
-		else if (room[i] == 'S') Create_Tile(Return_Tile_By_Name(TILE_STORAGE_TILE_1), column, row);
-		else if (room[i] == 'X') Create_Tile(Return_Tile_By_Name(TILE_LOCKER_1), column, row);
-		else if (room[i] == 'O') Create_Tile(Return_Tile_By_Name(TILE_OXYGEN_MACHINE), column, row);
-		else if (room[i] == 'P') Create_Tile(Return_Tile_By_Name(TILE_TABLE_1), column, row);
-		else if (room[i] == 'Q') Create_Tile(Return_Tile_By_Name(TILE_CHAIR_1), column, row);
-		else if (room[i] == 'B') Create_Tile(Return_Tile_By_Name(TILE_BED_1), column, row);
+		if (room[i] == 'F') Create_Tile(Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_FLOOR_1), column, row, faction);
+		else if (room[i] == 'W') Create_Tile(Return_Tile_By_Name(TILE_WALL_TILE_2), column, row, faction);
+		else if (room[i] == 'D') Create_Tile(Return_Tile_By_Name(TILE_DOOR_1), column, row, faction);
+		else if (room[i] == 'S') Create_Tile(Return_Tile_By_Name(TILE_STORAGE_TILE_1), column, row, faction);
+		else if (room[i] == 'X') Create_Tile(Return_Tile_By_Name(TILE_LOCKER_1), column, row, faction);
+		else if (room[i] == 'O') Create_Tile(Return_Tile_By_Name(TILE_OXYGEN_MACHINE), column, row, faction);
+		else if (room[i] == 'P') Create_Tile(Return_Tile_By_Name(TILE_TABLE_1), column, row, faction);
+		else if (room[i] == 'Q') Create_Tile(Return_Tile_By_Name(TILE_CHAIR_1), column, row, faction);
+		else if (room[i] == 'B') Create_Tile(Return_Tile_By_Name(TILE_BED_1), column, row, faction);
 		else if (room[i] == '(') column = column -2;
 		else if (room[i] == ')') column = column - 1;
 		else if (room[i] == '+') column = column++;
@@ -243,7 +250,7 @@ Tile* World::Find_Accessible_Adjacent_Tile(Dot* tile)
 {
 	int x_tile = tile->getTileX();
 	int y_tile = tile->getTileY();
-	
+
 	if (Tile_Is_Accessible(x_tile - 1, y_tile)) return world_tiles[x_tile - 1][y_tile];
 	else if (Tile_Is_Accessible(x_tile + 1, y_tile)) return world_tiles[x_tile + 1][y_tile];
 	else if (Tile_Is_Accessible(x_tile, y_tile - 1)) return world_tiles[x_tile][y_tile - 1];
@@ -255,12 +262,89 @@ Tile* World::Find_Accessible_Adjacent_Tile(Dot* tile)
 	}
 }
 
-void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile)
+Tile* World::Find_Random_Accessible_Surrounding_Tile(Dot* tile)
+{
+	int x_tile = tile->getTileX();
+	int y_tile = tile->getTileY();
+	
+	for (int i = 0; i < 9; i++)
+	{
+		int x_offset = rand() % 4 - 2;
+		int y_offset = rand() % 4 - 2;
+
+		if (!(x_offset == 0 && y_offset == 0) && (Tile_Is_Accessible(x_tile - x_offset, y_tile - y_offset))) return world_tiles[x_tile - x_offset][y_tile - y_offset];
+	}
+	
+	cout << "found no accessible random surrounding tile" << endl;
+	return NULL;
+	
+}
+
+Tile* World::Find_Accessible_Tile_Away_From_Dot(Dot* dot_to_move, Dot* dot_to_move_away_from)
+{
+	int x_tile = dot_to_move->getTileX();
+	int y_tile = dot_to_move->getTileY();
+	int x_difference = dot_to_move_away_from->getTileX() - x_tile;
+	int y_difference = dot_to_move_away_from->getTileY() - y_tile;
+	int direction = 0; // 0-7 clockwise from top left hand corner
+
+	if (abs(x_difference) > abs(y_difference))
+	{
+		if (x_difference >= 0) direction = 7;
+		else direction = 3;
+	}
+	else if (abs(y_difference) > abs(x_difference))
+	{
+		if (y_difference >= 0) direction = 1;
+		else direction = 5;
+	}
+	else if (abs(x_difference) == abs(y_difference))
+	{
+		if (x_difference > 0 && y_difference > 0) direction = 0;
+		else if (x_difference > 0 && y_difference < 0) direction = 6;
+		else if (x_difference < 0 && y_difference > 0) direction = 2;
+		else if (x_difference < 0 && y_difference < 0) direction = 4;
+	}
+
+	switch (direction)
+	{
+	case 0:
+		return world_tiles[x_tile-1][y_tile-1];
+		break;
+	case 1:
+		return world_tiles[x_tile ][y_tile - 1];
+		break;
+	case 2:
+		return world_tiles[x_tile+1][y_tile - 1];
+		break;
+	case 3:
+		return world_tiles[x_tile + 1][y_tile];
+		break;
+	case 4:
+		return world_tiles[x_tile + 1][y_tile + 1];
+		break;
+	case 5: 
+		return world_tiles[x_tile][y_tile + 1];
+		break;
+	case 6: 
+		return world_tiles[x_tile-1][y_tile + 1];
+		break;
+	case 7: 
+		return world_tiles[x_tile - 1][y_tile];
+		break;
+	}
+
+	cout << "found no accessible tile away from dot" << endl;
+	return NULL;
+}
+
+void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction)
 {
 	if (tile.tile_or_item == 0)
 	{
 		//if (world_tiles[x_tile][y_tile] != NULL && world_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete world_tiles[x_tile][y_tile];
 		world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
+		world_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
 
 		if (tile.is_smooth == 1)
 		{
@@ -275,8 +359,12 @@ void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile)
 	}
 	else if (tile.tile_or_item == 1)
 	{
-		if (item_tiles[x_tile][y_tile] != NULL && item_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete item_tiles[x_tile][y_tile];
-		item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
+		if (world_tiles[x_tile][y_tile]->multi_tile_config.tile_type != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			if (item_tiles[x_tile][y_tile] != NULL && item_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete item_tiles[x_tile][y_tile];
+			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
+			item_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
+		}
 	}
 }
 
@@ -575,21 +663,17 @@ void World::Fix_Smooth_Tile(Tile* tile)
 
 // Tile Action Commands
 
-void World::Remove_Tile(int i, int p)
+void World::Remove_Tile(int i, int p, bool is_item)
 {
-	if (item_tiles[i][p] != NULL && item_tiles[i][p]->multi_tile_config.tile_type != 4)
+	if (is_item & item_tiles[i][p] != NULL)
 	{
 		delete item_tiles[i][p];
 		item_tiles[i][p] = NULL;
 	}
-	if (world_tiles[i][p]->multi_tile_config.tile_type != VACUUM)
+	else if (world_tiles[i][p]->multi_tile_config.tile_type != VACUUM)
 	{
-		if (world_tiles[i][p]->multi_tile_config.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || world_tiles[i][p]->multi_tile_config.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
-		{
-			Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
-			Update_Surrounding_Tiles(world_tiles[i][p]);
-		}
-		else Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
+		Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
+		Update_Surrounding_Tiles(world_tiles[i][p]);
 	}
 }
 

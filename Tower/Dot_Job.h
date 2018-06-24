@@ -35,6 +35,7 @@ public:
 	void Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab);
 	void Routine_Eliminate_Dot(Dot* dot, Dot* dot_to_eliminate, int attack_range);
 	void Routine_Mine_Asteroid(Dot* dot, Dot* asteroid);
+	void Routine_Flee_To_Safety(Dot*);
 
 	// ITEM ROUTINES
 	void Routine_Oxygenate(Dot* dot);
@@ -70,6 +71,10 @@ void Dot_Job::Run_Job(Dot* dot)
 	switch (job_type)
 	{
 	case DOT_JOB_NO_ASSIGNED_JOB:
+		break;
+	case DOT_HEALTH_MOVE_AWAY_FROM_DANGER:
+		dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_IN_RANGE_OF_SPECIFIC_DOT,0,0,0,0,null_tile,TILE_WIDTH*2,false,second_dot });
+		dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT, 0,0,0,0,null_tile,1,false,second_dot });
 		break;
 	case DOT_HEALTH_JOB_GO_FIND_OXYGENATED_TILE:
 		dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ON_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,second_dot });
@@ -148,7 +153,7 @@ void Dot_Job::Routine_Mine_Asteroid(Dot* dot, Dot* asteroid)
 void Dot_Job::Routine_Move_Container_To_Storage(Dot* dot, Dot* container, Dot* storage_tile)
 {	
 	vector<Dot_Inventory_Slot> container_inventory = container->return_inventory_as_vector();
-	Dot* current_storage_tile = dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE].functional_dot;
+	Dot* current_storage_tile = dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE].related_dot;
 
 	if (container_inventory.size() > 0)
 	{
@@ -224,7 +229,11 @@ void Dot_Job::Routine_Eliminate_Dot(Dot* dot, Dot* dot_to_eliminate, int attack_
 {
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_FIRE_AT_ANOTHER_DOT,									0,0,0,0,null_tile,attack_range,true,dot_to_eliminate });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_IN_RANGE_OF_SPECIFIC_DOT,				0,0,0,0,null_tile,attack_range,true,dot_to_eliminate });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,attack_range,true,dot_to_eliminate });
+}
+
+void Dot_Job::Routine_Flee_To_Safety(Dot*)
+{
+	// EVERY DOT SHOULD HAVE A FUNCTIONAL RELATIONSHIP THAT IS IT'S DESIGNATED SHELTER POINT
 }
 
 

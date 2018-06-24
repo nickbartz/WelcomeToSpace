@@ -73,10 +73,11 @@ public:
 	int Dot::getCamera_x();
 	int Dot::getCamera_y();
 	string Dot::print_coords();
-	void Dot::respond_to_collision();
+	void Dot::respond_to_collision(Dot* colliding_dot);
 
 	// DOT BASIC PLACEMENT AND MOVEMENT
 	SDL_Rect dot_rect;
+	double angle = 0;
 
 	//Movement trackers
 	int delta_x, delta_y;
@@ -124,18 +125,13 @@ public:
 		int max_delay;
 	};
 
-	struct Functional_Dot_Relationship
-	{
-		Dot* functional_dot;
-		int current_search_delay;
-		int max_search_delay;
-	};
-
 	struct Dot_Relationship
 	{
 		Dot* related_dot = NULL;
 		int relationship_type;
 		int relationship_value;
+		int current_search_delay = 0;
+		int max_search_delay = 0;
 	};
 
 	struct Mining_Laser_Config
@@ -176,7 +172,7 @@ public:
 		vector<Dot_Relationship> dot_relationships;
 		vector<Dot_Inventory_Slot> dot_starting_inventory;
 		map <int, Dot_Priority> dot_priority_map;
-		unordered_map<int, Functional_Dot_Relationship> functional_relationship_map;
+		unordered_map<int, Dot_Relationship> functional_relationship_map;
 		
 		int frenzel_rhomb = 0;
 		Mining_Laser_Config dot_mining_config;
@@ -189,8 +185,9 @@ public:
 		Dot_Inventory_Slot inventory_slots[MAX_DOT_INVENTORY];
 		vector<Dot_Inventory_Slot> craftable_items;
 		int bounce = 0;
-		int search_radius = 10;
+		int search_radius = 20;
 		int marked_for_mining = 0;
+		int hit_by_bolt = 0;
 
 		// EVENTUALLY WANT TO SPLIT THESE OUT INTO THEIR OWN STRUCT
 
@@ -302,14 +299,19 @@ void Dot::render(SDL_Renderer* gRenderer, Camera* camera, double angle, SDL_Poin
 
 	if (npc_dot_config.dot_stat_health < npc_dot_config.dot_stat_max_health) 
 	{
-		render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health);
+		render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health*TILE_WIDTH/npc_dot_config.dot_stat_max_health);
+	}
+
+	if (multi_tile_config.built_percent < 100)
+	{
+		render_status_bar(gRenderer, camera, multi_tile_config.built_percent*TILE_WIDTH/100);
 	}
 
 }
 
 void Dot::render_status_bar(SDL_Renderer* gRenderer, Camera* camera, int quantity_of_interest)
 {
-	SDL_Rect status_bar = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y -5, quantity_of_interest * TILE_WIDTH / 100, 2 };
+	SDL_Rect status_bar = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y -5, quantity_of_interest, 2 };
 	SDL_SetRenderDrawColor(gRenderer, 0xFF, 0x00, 0x00, 0xFF);
 	SDL_RenderFillRect(gRenderer, &status_bar);
 }
@@ -438,11 +440,17 @@ string Dot::print_coords()
 	return coords;
 }
 
-void Dot::respond_to_collision()
+void Dot::respond_to_collision(Dot* colliding_dot)
 {
 	// MANAGE DOOR COLLISIONS
 	if (multi_tile_config.door_state == 2) multi_tile_config.door_state = 1;
 	else if (multi_tile_config.door_state == 1) multi_tile_config.door_open_length = 0;
+
+	if (colliding_dot->dot_config[DOT_TYPE] == DOT_BOLT && dot_config[DOT_TYPE] == DOT_NPC)
+	{
+		npc_dot_config.hit_by_bolt = 1;
+		npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_MOST_RECENT_ATTACKER].related_dot = colliding_dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_FIRING_DOT].related_dot;
+	}
 }
 
 
@@ -515,7 +523,7 @@ void Dot::Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesh
 void Dot::Create_Default_Dot_Priorities()
 {
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_WEAPON_COOLDOWN, { DOT_PRIORITY_WEAPON_COOLDOWN,0,0,0,1,0,20 }));
-	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_OXYGEN_NEED, { DOT_PRIORITY_OXYGEN_NEED, 0,0,50,100,0,1 }));
+	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_OXYGEN_NEED, { DOT_PRIORITY_OXYGEN_NEED, 0,0,1,100,0,1 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SLEEP_NEED, { DOT_PRIORITY_SLEEP_NEED, 0,0,50,100,0,300 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HUNGER_NEED, { DOT_PRIORITY_HUNGER_NEED, 0,0,50,100,0,200 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SPACESUIT_OXYGEN, { DOT_PRIORITY_SPACESUIT_OXYGEN, 100,0,50,100,0,100 }));
@@ -701,12 +709,19 @@ public:
 		if (multi_config.sprite_specs.sprite_columns < 0)  render_offset_x = multi_config.sprite_specs.sprite_columns/2;
 
 		if (multi_tile_config.is_smooth == 1) handle_smooth_tiles(2, 2, 2, 2, 2, 2, 2, 2);
-		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID) multi_tile_config.sprite_specs.sprite_column = rand() % 8;
+		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID)
+		{
+			multi_tile_config.sprite_specs.sprite_column = rand() % 8;
+			populate_tile_inventory();
+		}
 
 		render_rect =  { (x_coordinate + render_offset_x)*TILE_WIDTH,(y_coordinate + render_offset_y)*TILE_HEIGHT, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };
 		current_clip = { (1 + multi_tile_config.sprite_specs.sprite_column*SPRITESHEET_W),(1 + multi_tile_config.sprite_specs.sprite_row*SPRITESHEET_H) + SPRITESHEET_H * tile_orientation, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };
 		
 		dot_config[DOT_TYPE] = DOT_TILE;
+		npc_dot_config.dot_stat_health = multi_config.max_health;
+		npc_dot_config.dot_stat_max_health = multi_config.max_health;
+
 		item_job_type = multi_config.item_job_type;
 		item_job = Dot_Job{ item_job_type };
 
@@ -714,9 +729,6 @@ public:
 		y_tile = getTileY();
 
 		if (multi_config.built_percent < 100) Return_Parts_List(multi_config);
-
-		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID) populate_tile_inventory();
-
 		populate_tile_production_config();
 
 	}
@@ -831,13 +843,7 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 
 	//Render to screen
 
-	if (multi_tile_config.built_percent < 100)
-	{
-		mTexture->setAlpha(50);
-		mTexture->setColor(0, 255, 200);
-		render_status_bar(gRenderer, camera, multi_tile_config.built_percent);
-	}
-	else if (npc_dot_config.marked_for_mining == 1)
+	if (npc_dot_config.marked_for_mining == 1)
 	{
 		mTexture->setColor(255, 150, 150);
 	}
@@ -846,13 +852,15 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 		mTexture->setColor(npc_dot_config.dot_color.r - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.g - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.b);
 	}
 
+	if (multi_tile_config.built_percent < 100) mTexture->setAlpha(100);
+
 
 	SDL_Rect render_clip = { current_clip.x, current_clip.y + tile_orientation * SPRITESHEET_H, current_clip.w, current_clip.h };
 	if (multi_tile_config.tile_type == ITEM_TYPE_EMITTER) render_circle(gRenderer, camera, getTileX(), getTileY(), 5, 255, 0, 0, 50);
 
 	SDL_Point rotate_angle{ 16,16 };
 	
-	if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >=1 ) && multi_tile_config.render_layer == render_layer) mTexture->render(gRenderer, &dot_rect_camera, &render_clip);
+	if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >=1 ) && multi_tile_config.render_layer == render_layer) mTexture->render(gRenderer, &dot_rect_camera, &render_clip, angle);
 	else
 	{
 
@@ -864,12 +872,7 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 	}
 
 	
-	if (npc_dot_config.dot_carried_item != NULL && npc_dot_config.dot_carried_item->carried_item.item_code != INVENTORY_EMPTY_SLOT)
-	{
-		npc_dot_config.dot_carried_item->render(gRenderer, camera);
-	}
-	
-	if (npc_dot_config.dot_stat_health < 100) render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health);
+	Dot::render(gRenderer, camera);
 	//if (npc_dot_config.production_current > 0) render_status_bar(gRenderer, camera, npc_dot_config.production_current);
 
 	mTexture->setAlpha(255);
@@ -1202,8 +1205,8 @@ void Tile::populate_tile_production_config()
 class NPC_Dot : public Dot
 {
 public:
-	NPC_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet_array[], int x_pos, int y_pos, dot_composite_config dot_makeup) :Dot(gRenderer, dot_spritesheet_array[0], x_pos, y_pos)
-	{
+	NPC_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet_array[], TTF_Font* gFont_small, int x_pos, int y_pos, dot_composite_config dot_makeup) :Dot(gRenderer, dot_spritesheet_array[0], x_pos, y_pos)
+	{		
 		dot_spritesheet[0] = dot_spritesheet_array[0];
 		dot_spritesheet[1] = dot_spritesheet_array[1];
 		dot_spritesheet[2] = dot_spritesheet_array[2];
@@ -1227,20 +1230,20 @@ public:
 
 		Create_Default_Dot_Priorities();
 
-		for (int i = 0; i < tile_vector.size(); i++)
-		{
-			npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_vector[i].inventory_pointer,1 });
-		}
+		for (int i = 0; i < tile_vector.size(); i++) npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_vector[i].inventory_pointer,1 });
 	}
 
-	void render(SDL_Renderer* gRenderer, Camera* camera);
+	void set_dot_render_color(SDL_Color color);
+	void render(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship);
 	void render_component(SDL_Renderer* gRenderer, Camera* camera, int component);
+	void render_name(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship);
 	void increment_animation();
 	void create_sprite(int leg_type, int arm_type, int torso_type, int head_type, int spacesuit_type);
 	void change_sprite_direction(int direction);
 	void animate_movement(int previous_mPosX, int previous_mPosY);
 	void set_velocity();
 	void set_direction();
+	void increment_bounce();
 
 	struct dot_multi_clip
 	{
@@ -1277,6 +1280,7 @@ public:
 
 private:
 	LTexture* dot_spritesheet[6];
+	LTexture dot_name;
 
 };
 
@@ -1310,17 +1314,23 @@ void NPC_Dot::change_sprite_direction(int direction)
 	dot_composite[DOT_COMPOSITE_SPACESUIT].animation_row = direction;
 }
 
-void NPC_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
+void NPC_Dot::set_dot_render_color(SDL_Color color)
 {
-	dot_spritesheet[0]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
-	dot_spritesheet[1]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
-	dot_spritesheet[2]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
-	dot_spritesheet[3]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
-	dot_spritesheet[4]->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
-	
-	dot_spritesheet[5]->render(gRenderer, new SDL_Rect{ dot_rect.x + rect_offset_x - camera->camera_box.x, dot_rect.y + rect_offset_y - camera->camera_box.y + bounce + shadow_offset, TILE_WIDTH, TILE_HEIGHT }, new SDL_Rect{ 0,0,32,32 });
+	for (int i = 0; i < 5; i++)
+	{
+		dot_spritesheet[i]->setColor(color.r, color.g, color.b);
+	}
+}
 
-	if (npc_dot_config.dot_equipment_config.Spacesuit.item_number == 1) render_component(gRenderer, camera, DOT_COMPOSITE_SPACESUIT);
+void NPC_Dot::render(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship)
+{
+	set_dot_render_color(npc_dot_config.dot_color);
+	
+	// RENDER SHADOW
+	dot_spritesheet[DOT_COMPOSITE_SHADOW]->render(gRenderer, new SDL_Rect{ dot_rect.x + rect_offset_x - camera->camera_box.x, dot_rect.y + rect_offset_y - camera->camera_box.y + bounce + shadow_offset, TILE_WIDTH, TILE_HEIGHT }, new SDL_Rect{ 0,0,32,32 });
+
+	// IF WEARING A SPACESUIT, RENDER SPACESUIT, IF NOT RENDER COMPONENTS
+	if (npc_dot_config.dot_equipment_config.Spacesuit.item_number == 1) NPC_Dot::render_component(gRenderer, camera, DOT_COMPOSITE_SPACESUIT);
 	else
 	{
 		render_component(gRenderer, camera, DOT_COMPOSITE_LEGS);
@@ -1329,25 +1339,13 @@ void NPC_Dot::render(SDL_Renderer* gRenderer, Camera* camera)
 		render_component(gRenderer, camera, DOT_COMPOSITE_HEAD);
 	}
 
-	dot_spritesheet[0]->setColor(255, 255, 255);
-	dot_spritesheet[1]->setColor(255, 255, 255);
-	dot_spritesheet[2]->setColor(255, 255, 255);
-	dot_spritesheet[3]->setColor(255, 255, 255);
-	dot_spritesheet[4]->setColor(255, 255, 255);
+	set_dot_render_color({ 255,255,255,255 });
+
+	NPC_Dot::render_name(gRenderer, camera, gFont_small, faction_relationship);
 
 	Dot::render(gRenderer, camera);
 
-	if (npc_dot_config.bounce == 1)
-	{
-		bounce_delay++;
-		if (bounce_delay > max_bounce_delay) bounce_delay = 0;
-		if (bounce_delay == 0)
-		{
-			bounce += bounce_direction;
-			if (bounce > 3) bounce_direction = -1;
-			if (bounce < -3) bounce_direction = 1;
-		}
-	}
+	if (npc_dot_config.bounce == 1) increment_bounce();
 }
 
 void NPC_Dot::render_component(SDL_Renderer* gRenderer, Camera* camera, int component)
@@ -1360,6 +1358,20 @@ void NPC_Dot::render_component(SDL_Renderer* gRenderer, Camera* camera, int comp
 	clip_rect = { sprite_specs.x + (animation_column + current_frame)*sprite_specs.w, sprite_specs.y + animation_row*sprite_specs.h, sprite_specs.w, sprite_specs.h };
 	render_rect = { dot_rect.x + rect_offset_x - camera->camera_box.x, dot_rect.y + rect_offset_y- camera->camera_box.y + bounce, TILE_WIDTH, TILE_HEIGHT };
 	dot_spritesheet[component]->render(gRenderer, &render_rect, &clip_rect,npc_dot_config.dot_angle);
+}
+
+void NPC_Dot::render_name(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship)
+{
+	SDL_Color faction_color = { 0,0,0,255 };
+	if (npc_dot_config.dot_stat_faction == DOT_FACTION_PLAYER) faction_color = { 255,255,255,255 };
+	else if (faction_relationship < 0) faction_color.r = 255;
+	else if (faction_relationship > 0) faction_color.g = 255;
+	else if (faction_relationship == 0) faction_color.b = 255;
+	dot_name.loadFromRenderedText(npc_dot_config.dot_first_name, faction_color, gFont_small, gRenderer);
+
+	SDL_Rect dot_name_rect = { dot_rect.x - camera->camera_box.x + dot_rect.w / 2 - dot_name.getWidth() / 2,dot_rect.y - camera->camera_box.y + dot_rect.h,dot_name.getWidth(),dot_name.getHeight() };
+	SDL_Rect dot_name_clip = { 0,0,dot_name.getWidth(),dot_name.getHeight() };
+	dot_name.render(gRenderer, &dot_name_rect, &dot_name_clip);
 }
 
 void NPC_Dot::increment_animation()
@@ -1416,6 +1428,18 @@ void NPC_Dot::animate_movement(int previous_mPosX, int previous_mPosY)
 	{
 		increment_animation();
 		delta_y = 0;
+	}
+}
+
+void NPC_Dot::increment_bounce()
+{
+	bounce_delay++;
+	if (bounce_delay > max_bounce_delay) bounce_delay = 0;
+	if (bounce_delay == 0)
+	{
+		bounce += bounce_direction;
+		if (bounce > 3) bounce_direction = -1;
+		if (bounce < -3) bounce_direction = 1;
 	}
 }
 
@@ -1793,11 +1817,11 @@ void Ship_Dot::turn_towards_target()
 class Bolt : public Dot 
 {
 public:
-	Bolt(SDL_Renderer* gRenderer, LTexture* texture, int owners_faction, int sprite_row, int start_location_x, int start_location_y, int projectile_speed, float projectile_angle, bool explosion = false) :Dot(gRenderer, texture, start_location_x, start_location_y)
+	Bolt(Dot* firing_dot, SDL_Renderer* gRenderer, LTexture* texture, int sprite_row, int start_location_x, int start_location_y, int projectile_speed, float projectile_angle, bool explosion = false) :Dot(gRenderer, texture, start_location_x, start_location_y)
 	{
 		bolt_texture = texture;
 
-		npc_dot_config.dot_stat_faction = owners_faction;
+		npc_dot_config.dot_stat_faction = firing_dot->npc_dot_config.dot_stat_faction;
 
 		fire_angle = projectile_angle;
 		speed = projectile_speed;
@@ -1808,8 +1832,13 @@ public:
 		mVelY = cos(fire_angle) * speed;
 
 		dot_config[DOT_TYPE] = DOT_BOLT;
-		
+
 		is_explosion = explosion;
+
+		dot_rect.w = TILE_WIDTH/3;
+		dot_rect.h = TILE_HEIGHT/3;
+
+		npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_FIRING_DOT].related_dot = firing_dot;
 	}
 
 	void render(SDL_Renderer* gRenderer, Camera* camera);
@@ -1840,7 +1869,7 @@ private:
 void Bolt::render(SDL_Renderer* gRenderer, Camera* camera)
 {
 	animation_clip.x = 1 + frame*(TILE_WIDTH + 2);
-	SDL_Rect renderQuad = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, dot_rect.w, dot_rect.h };
+	SDL_Rect renderQuad = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, SPRITESHEET_W, SPRITESHEET_H };
 
 	bolt_texture->render(gRenderer, &renderQuad, &animation_clip, fire_angle*(180.0 / 3.141592653589793238463) + 90);
 

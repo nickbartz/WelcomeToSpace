@@ -70,6 +70,7 @@ int current_mouse_pos_y;
 
 //Globally used font and font scene texture
 TTF_Font* gFont = NULL;
+TTF_Font* gFont_small = NULL;
 
 bool new_game;
 bool debug = false;
@@ -239,11 +240,9 @@ void load_textures()
 
 	//Open the font
 	gFont = TTF_OpenFont("lazy.ttf", 12);
-	if (gFont == NULL)
-	{
-		printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
-	}
-
+	if (gFont == NULL) printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
+	gFont_small = TTF_OpenFont("lazy.ttf", 9);
+	if (gFont_small == NULL) printf("Failed to load small lazy font! SDL_ttf Error: %s\n", TTF_GetError());
 }
 
 void unload_textures()
@@ -402,14 +401,14 @@ int main(int argc, char* args[])
 		//Create the world
 		if (debug) cout << "Loading Camera" << endl;
 		Camera camera;
-		camera.camera_box.x = 150 * TILE_WIDTH;
-		camera.camera_box.y = 150 * TILE_HEIGHT;
+		camera.camera_box.x = 130 * TILE_WIDTH;
+		camera.camera_box.y = 130 * TILE_HEIGHT;
 
 		if (debug) cout << "Loading World" << endl;
 		World world(gRenderer, texture_array, tilesheet_clips, new_game);
 
 		if (debug) cout << "Loading Intelligence" << endl;
-		Intelligence intelligence(&world, gRenderer, &camera, texture_array, new_game);
+		Intelligence intelligence(&world, gRenderer, &camera, gFont_small, texture_array, new_game);
 
 		if (debug) cout << "Loading Cursor" << endl;
 		Cursor cursor(gRenderer,&texture_array[TILESHEET]);
@@ -488,7 +487,7 @@ int main(int argc, char* args[])
 			if (debug) cout << "rendering objects" << endl;
 			intelligence.render();
 			if (console.current_action == BUTTON_ACTION_PLACE_ITEM || BUTTON_ACTION_REMOVE_TILE || BUTTON_ACTION_CREATE_ITEM) cursor.Render(gRenderer, &camera);
-			console.render(gRenderer);
+			console.render(gRenderer, &camera);
 
 			if (debug) cout << "updating screen" << endl;
 			//Update screen
