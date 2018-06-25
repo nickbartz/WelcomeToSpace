@@ -54,7 +54,7 @@ public:
 
 	//Shows the dot on the screen
 	virtual void Dot::render(SDL_Renderer* gRenderer, Camera* camera, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
-	void render_status_bar(SDL_Renderer* gRenderer, Camera* camera, int quantity_of_interest);
+	void render_status_bar(SDL_Renderer* gRenderer, Camera* camera, int quantity_of_interest, SDL_Color bar_color = { 255,0,0,255 });
 	void render_circle(SDL_Renderer* gRenderer, Camera* camera, int tile_x, int tile_y, int radius, int R, int G, int B, int alpha);
 	void Simple_Increment_Animation(Simple_Dot_Animation_Struct* animation_struct);
 	bool is_onscreen(Camera* camera, int buffer = 0);
@@ -163,6 +163,7 @@ public:
 		string dot_first_name = "";
 		string dot_full_name = "";
 		
+		int tile_built_level = 100;
 		int dot_stat_health = 100;
 		int dot_stat_max_health = 100;
 		int dot_stat_speed = 3;
@@ -302,17 +303,17 @@ void Dot::render(SDL_Renderer* gRenderer, Camera* camera, double angle, SDL_Poin
 		render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health*TILE_WIDTH/npc_dot_config.dot_stat_max_health);
 	}
 
-	if (multi_tile_config.built_percent < 100)
+	if (npc_dot_config.tile_built_level < multi_tile_config.build_time)
 	{
-		render_status_bar(gRenderer, camera, multi_tile_config.built_percent*TILE_WIDTH/100);
+		render_status_bar(gRenderer, camera, npc_dot_config.tile_built_level*TILE_WIDTH / multi_tile_config.build_time, { 0,0,255,255 });
 	}
 
 }
 
-void Dot::render_status_bar(SDL_Renderer* gRenderer, Camera* camera, int quantity_of_interest)
+void Dot::render_status_bar(SDL_Renderer* gRenderer, Camera* camera, int quantity_of_interest, SDL_Color bar_color)
 {
 	SDL_Rect status_bar = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y -5, quantity_of_interest, 2 };
-	SDL_SetRenderDrawColor(gRenderer, 0xFF, 0x00, 0x00, 0xFF);
+	SDL_SetRenderDrawColor(gRenderer, bar_color.r, bar_color.g, bar_color.b, bar_color.a);
 	SDL_RenderFillRect(gRenderer, &status_bar);
 }
 
@@ -696,7 +697,7 @@ class Tile : public Dot
 {
 public:
 	//Initializes the variables
-	Tile(SDL_Renderer* gRenderer = NULL, LTexture* tile_texture = NULL, int x_coordinate = NULL, int y_coordinate = NULL, Multi_Tile_Type multi_config = Return_Tile_By_Name(TILE_GENERIC_TILE)) :Dot(gRenderer, tile_texture, x_coordinate, y_coordinate)
+	Tile(SDL_Renderer* gRenderer = NULL, LTexture* tile_texture = NULL, int x_coordinate = NULL, int y_coordinate = NULL, Multi_Tile_Type multi_config = Return_Tile_By_Name(TILE_GENERIC_TILE), int tile_built_level = 0) :Dot(gRenderer, tile_texture, x_coordinate, y_coordinate)
 	{
 		multi_tile_config = multi_config;
 		dot_rect = { x_coordinate * TILE_WIDTH,y_coordinate * TILE_HEIGHT,TILE_WIDTH*multi_config.sprite_specs.rect_columns, TILE_HEIGHT*multi_config.sprite_specs.rect_rows };
@@ -728,8 +729,12 @@ public:
 		x_tile = getTileX();
 		y_tile = getTileY();
 
-		if (multi_config.built_percent < 100) Return_Parts_List(multi_config);
+		npc_dot_config.tile_built_level = tile_built_level;
+
+		if (npc_dot_config.tile_built_level < multi_config.build_time) Return_Parts_List(multi_config);
+
 		populate_tile_production_config();
+
 
 	}
 
@@ -762,7 +767,6 @@ public:
 	SDL_Rect status_bar;
 	SDL_Rect construction_bar;
 
-
 	// set initially not as an animated item
 	int animation_ticker = 0;
 	int max_animation_ticker = 32;
@@ -772,7 +776,8 @@ public:
 	int item_job_type;
 	Dot_Job item_job;
 
-
+	// Scaffold
+	Tile* scaffold_on_tile = NULL;
 
 private:
 
@@ -843,16 +848,12 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 
 	//Render to screen
 
-	if (npc_dot_config.marked_for_mining == 1)
-	{
-		mTexture->setColor(255, 150, 150);
-	}
-	else
-	{
-		mTexture->setColor(npc_dot_config.dot_color.r - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.g - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.b);
-	}
+	// Change the color if the tile is "marked" at this point just for mining
+	if (npc_dot_config.marked_for_mining == 1) mTexture->setColor(255, 150, 150);
+	else mTexture->setColor(npc_dot_config.dot_color.r - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.g - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.b);
 
-	if (multi_tile_config.built_percent < 100) mTexture->setAlpha(100);
+	// Change the alpha if the tile isn't built yet
+	if (npc_dot_config.tile_built_level < multi_tile_config.build_time) mTexture->setAlpha(100), mTexture->setColor(200, 200, 255);
 
 
 	SDL_Rect render_clip = { current_clip.x, current_clip.y + tile_orientation * SPRITESHEET_H, current_clip.w, current_clip.h };
@@ -863,7 +864,6 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 	if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >=1 ) && multi_tile_config.render_layer == render_layer) mTexture->render(gRenderer, &dot_rect_camera, &render_clip, angle);
 	else
 	{
-
 		for (int i = 0; i < multi_clip.size(); i++)
 		{
 			SDL_Rect draw_rect = { multi_clip[i].rect.x - camera->camera_box.x ,multi_clip[i].rect.y - camera->camera_box.y ,TILE_WIDTH,TILE_HEIGHT };
@@ -871,6 +871,7 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 		}
 	}
 
+	if (scaffold_on_tile != NULL) scaffold_on_tile->render(gRenderer, camera, render_layer);
 	
 	Dot::render(gRenderer, camera);
 	//if (npc_dot_config.production_current > 0) render_status_bar(gRenderer, camera, npc_dot_config.production_current);

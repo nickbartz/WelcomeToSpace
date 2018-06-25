@@ -54,6 +54,7 @@ public:
 	Tile* Find_Random_Accessible_Surrounding_Tile(Dot* tile);
 	Tile* Find_Accessible_Tile_Away_From_Dot(Dot* dot_to_move, Dot* dot_to_move_away_from);
 	void Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction = DOT_FACTION_NO_FACTION);
+	void Add_Scaffold_To_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction);
 
 
 	// Check Commands
@@ -120,7 +121,6 @@ World::World(SDL_Renderer* gRenderer, LTexture textures[], SDL_Rect* tilesheet_c
 	Create_Background();
 	
 	Create_Test_Room(150,150, DOT_FACTION_PLAYER);
-	Create_Test_Room(150,130, DOT_FACTION_ENEMY);
 	Populate_Asteroids();
 }
 
@@ -171,7 +171,7 @@ void World::Create_Test_Room(int x_start, int y_start, int faction)
 {
 	string room =
 
-		"FFFFFFFFFFF;\FFFFFFFFFFFD;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;";
+		"FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFFD;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;";
 
 	int column = x_start;
 	int row = y_start;
@@ -226,7 +226,7 @@ bool World::Check_If_Scaffold_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, i
 	bool can_be_placed = false;
 	if (item->tile_or_item == 0) // trying to place a scaffold for a tile
 	{
-		if (world_tiles[x_tile][y_tile]->multi_tile_config.built_percent >= 100 && item_tiles[x_tile][y_tile] == NULL) can_be_placed = true;
+		if (world_tiles[x_tile][y_tile]->multi_tile_config.build_time >= 100 && item_tiles[x_tile][y_tile] == NULL) can_be_placed = true;
 	}
 	else if (item->tile_or_item == 1)
 	{
@@ -343,7 +343,7 @@ void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int factio
 	if (tile.tile_or_item == 0)
 	{
 		//if (world_tiles[x_tile][y_tile] != NULL && world_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete world_tiles[x_tile][y_tile];
-		world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
+		world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile,tile.build_time);
 		world_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
 
 		if (tile.is_smooth == 1)
@@ -362,8 +362,31 @@ void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int factio
 		if (world_tiles[x_tile][y_tile]->multi_tile_config.tile_type != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
 		{
 			if (item_tiles[x_tile][y_tile] != NULL && item_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete item_tiles[x_tile][y_tile];
-			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
+			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile, tile.build_time);
 			item_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
+		}
+	}
+}
+
+void World::Add_Scaffold_To_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction)
+{
+	if (tile.tile_or_item == 0 && world_tiles[x_tile][y_tile] != NULL)
+	{
+		if (world_tiles[x_tile][y_tile]->multi_tile_config.tile_type == VACUUM)
+		{
+			world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[Return_Tile_By_Name(TILE_GENERIC_TILE).spritesheet_num], x_tile, y_tile, Return_Tile_By_Name(TILE_GENERIC_TILE));
+		}
+		world_tiles[x_tile][y_tile]->scaffold_on_tile = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
+		world_tiles[x_tile][y_tile]->scaffold_on_tile->npc_dot_config.tile_built_level = 0;
+		cout << x_tile << " : " << y_tile << endl;
+	}
+	else if (tile.tile_or_item == 1)
+	{
+		if (item_tiles[x_tile][y_tile] != NULL) item_tiles[x_tile][y_tile]->scaffold_on_tile = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
+		else
+		{
+			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[Return_Tile_By_Name(TILE_GENERIC_ITEM).spritesheet_num], x_tile, y_tile, Return_Tile_By_Name(TILE_GENERIC_ITEM));
+			item_tiles[x_tile][y_tile]->scaffold_on_tile = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
 		}
 	}
 }
@@ -473,11 +496,11 @@ int World::get_num_scaffolds(bool tile_or_item)
 		{
 			if (tile_or_item)
 			{
-				if (world_tiles[i][p]->multi_tile_config.built_percent < 100) count++;
+				if (world_tiles[i][p]->multi_tile_config.build_time < 100) count++;
 			}
 			else
 			{
-				if (item_tiles[i][p] != NULL && item_tiles[i][p]->multi_tile_config.built_percent < 100) count++;
+				if (item_tiles[i][p] != NULL && item_tiles[i][p]->multi_tile_config.build_time < 100) count++;
 			}
 		}
 	}
@@ -600,7 +623,7 @@ void World::Create_Surrounding_Walls_For_Floor(Tile* tile)
 		{
 			int neighbor_x = neighbor_tile->x_tile;
 			int neighbor_y = neighbor_tile->y_tile;
-			neighbor_tile->Tile::Tile(world_renderer, texture_array[TILESHEET], neighbor_x, neighbor_y, Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_WALL_1));
+			neighbor_tile->Tile::Tile(world_renderer, texture_array[TILESHEET], neighbor_x, neighbor_y, Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_WALL_1), Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_WALL_1).build_time);
 		}
 	}
 }

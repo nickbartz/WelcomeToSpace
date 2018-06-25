@@ -199,6 +199,7 @@ enum TILE_AND_ITEM_IDENTIFIERS
 enum TILE_TYPES_AND_ITEM_TYPES
 {
 	VACUUM,
+	TILE_TYPE_GENERIC,
 	FLOOR_TILE_1,
 	WALL_TILE,
 	DOOR_TILE,
@@ -603,7 +604,7 @@ struct Multi_Tile_Type
 	int is_animated = 0; // 0 is no, anything greater than zero is number of frames
 	int is_smooth = 0; 
 	Building_Spec building_specs = no_requirements;
-	int built_percent = 100;
+	int build_time = 100;
 	int item_job_type = DOT_JOB_NO_ASSIGNED_JOB;
 	int render_layer = RENDER_TILES;
 	Production_Items dot_produced_items = no_produced_items;
@@ -628,9 +629,9 @@ void Load_Tiles()
 	tile_vector.push_back({ TILE_PROCESSED_COBALT, TILESHEET,{ 0,1,1,1,1,1 }, ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_PROCESSED_COBALT,0,0, Specs_Processed_Cobalt,100,0,RENDER_UNDER_PLAYER_ITEMS,no_produced_items,0 });
 	tile_vector.push_back({ TILE_PROCESSED_NICKEL, TILESHEET,{ 0,2,1,1,1,1 },ITEM_TYPE_PROCESSED_ORE,1,1,0,0,0,0,0,0,34,34,1,INVENTORY_PROCESSED_NICKEL,0,0, Specs_Processed_Nickel,100,0,RENDER_UNDER_PLAYER_ITEMS,no_produced_items,0 });
 	
-	tile_vector.push_back({ TILE_GENERIC_TILE,TILESHEET,{ 3,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0,cannot_build,100,0,RENDER_TILES });
+	tile_vector.push_back({ TILE_GENERIC_TILE,TILESHEET,{ 4,0,1,1,1,1 },TILE_TYPE_GENERIC,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0,cannot_build,100,0,RENDER_TILES });
 
-	tile_vector.push_back({ TILE_GENERIC_ITEM,TILESHEET,{ 3,0,1,1,1,1 },VACUUM, 1, 0,1, 0, 0, 0, 0, 0, 34, 34, 0, INVENTORY_EMPTY_SLOT, 0, 0, cannot_build, 100,0,RENDER_ITEMS });
+	tile_vector.push_back({ TILE_GENERIC_ITEM,TILESHEET,{ 4,0,1,1,1,1 },TILE_TYPE_GENERIC, 1, 0,1, 0, 0, 0, 0, 0, 34, 34, 0, INVENTORY_EMPTY_SLOT, 0, 0, cannot_build, 100,0,RENDER_ITEMS });
 
 	tile_vector.push_back({ TILE_OXYGEN_MACHINE, ITEM_SPRITES,{ 0,0,1,1,1,1 },OXYGEN_MACHINE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_OXYGEN_MACHINE,8,0, Oxygen_Machine_1_Specs,100,ITEM_JOB_OXYGENATE,RENDER_ITEMS });
 	tile_vector.push_back({ TILE_SOLAR_ARRAY_1, TILESHEET,{ 1,0,1,1,1,1 },SOLAR_ARRAY,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_SOLAR_ARRAY_1,0,0 , Solar_Array_Specs_1,100,0,RENDER_ITEMS });

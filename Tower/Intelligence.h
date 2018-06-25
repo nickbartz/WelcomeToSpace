@@ -13,15 +13,8 @@ public:
 	// INPUT COMMANDS
 	void Handle_Non_Console_Click(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
 	void Handle_Non_Console_Click_And_Hold(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
-	void Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT)
-	{
-		switch (current_action)
-		{
-		case BUTTON_ACTION_MINING_LASER:
-			//Stop_Firing_Mining_Laser(player_dot);
-			break;
-		}
-	}
+	void Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code = INVENTORY_EMPTY_SLOT);
+
 	void Handle_Keyboard_Input(SDL_Event* e);
 	void Test_Cursor_Position(int mouse_pos_x, int mouse_pos_y, int tile_x, int tile_y);
 	Dot* Return_Clicked_Dot(int mouse_pos_x, int mouse_pos_y);
@@ -95,13 +88,6 @@ public:
 	Dot* return_nearest_oxygenated_tile(Dot* dot);
 	Dot* check_for_enemy_dot_in_radius(Dot* dot, int radius);
 
-	struct Storage_Inventory_Locations
-	{
-		vector<Dot_Inventory_Slot> storage_inventory;
-		Dot* storage_location;
-	};
-	vector<Storage_Inventory_Locations> current_storage;
-
 	// DOT JOB COMMANDS
 	float Calculate_Total_Job_Priority();
 	bool check_dot_pointer(Dot* npc_dot, Dot* pointer_to_check);
@@ -130,9 +116,11 @@ public:
 	void Stop_Firing_Mining_Laser(Dot* firing_dot);
 	void update_bolt_ai();
 
-	// SCAFFOLDING COMMANDS
-	void Create_Scaffolding(Multi_Tile_Type* tile_type, int x_tile, int y_tile);
+	// WORLD COMMANDS
 	void Update_World_Ai();
+	void Check_Scaffold_Needs(Tile* tile);
+	void Process_Built_Scaffold(Tile* tile);
+	void Check_Production_Needs(Tile* tile);
 	void Check_If_Tile_Has_Needs(Tile* tile);
 
 	// PHYSICS COMMANDS
@@ -149,14 +137,9 @@ public:
 	void free();
 	void render();
 
-	// TEST OBJECTS
+	// NON-PRIVATE MEMBERS
 	NPC_Dot* player_dot;
 	NPC_Dot* lifepod;
-
-	int delay = 0;
-
-	float total_job_priority = 0.0;
-	int current_frenzel_amount = 1;
 
 private: 
 
@@ -166,11 +149,19 @@ private:
 	World* world;
 	Path_Field* iField;
 
+	SDL_Rect mouse_hold_rect;
+	bool mouse_hold_rect_active = false;
+
 	LTexture* texture_array[NUM_TILESHEETS];
 	LTexture* dot_spritesheet_array[6];
-
+	
 	vector<string> console_alerts;
-
+	struct Storage_Inventory_Locations
+	{
+		vector<Dot_Inventory_Slot> storage_inventory;
+		Dot* storage_location;
+	};
+	vector<Storage_Inventory_Locations> current_storage;
 	vector<Bolt*> bolt_array;
 	vector<Asteroid*> asteroid_array;
 	vector<Ship_Dot*> enemy_ship_array;
@@ -180,9 +171,10 @@ private:
 	vector<dot_faction_relationship> faction_relationships;
 	vector<Dot_Star*> background_star_array;
 
-	Dot_Star* new_star;
-
 	int max_enemy_ships = 10;
+	int delay = 0;
+	float total_job_priority = 0.0;
+	int current_frenzel_amount = 1;
 
 	bool ai_debug = false;
 	bool job_debug = false;
@@ -255,15 +247,15 @@ void Intelligence::Create_Test_Conditions()
 	//world->Create_Tile(Return_Tile_By_Name(TILE_TESLA_TOWER_1), 154, 145);
 	//world->item_tiles[154][145]->npc_dot_config.dot_stat_faction = DOT_FACTION_PLAYER;
 
-	//for (int i = 0; i < 20; i++)
-	//{
-	//	int random_head = rand() % 2;
-	//	npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (150 + i) * TILE_WIDTH, 155 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
-	//	Add_Item_To_Dot_Inventory(npc_dot_array.back(), INVENTORY_SPACESUIT_1, 1);
-	//	npc_dot_array.back()->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1, 1 };
-	//	npc_dot_array.back()->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
-	//	npc_dot_array.back()->npc_dot_config.functional_relationship_map.insert({ DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE, {return_nearest_tile_by_type_or_name(npc_dot_array.back(), false, TILE_TYPE_STORAGE_TILE),0} });
-	//}
+	for (int i = 0; i < 1; i++)
+	{
+		int random_head = rand() % 2;
+		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (150 + i) * TILE_WIDTH, 155 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
+		Add_Item_To_Dot_Inventory(npc_dot_array.back(), INVENTORY_SPACESUIT_1, 1);
+		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1, 1 };
+		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
+		npc_dot_array.back()->npc_dot_config.functional_relationship_map.insert({ DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE, {return_nearest_tile_by_type_or_name(npc_dot_array.back(), false, TILE_TYPE_STORAGE_TILE),0} });
+	}
 
 	//for (int i = 0; i < 20; i++)
 	//{
@@ -321,7 +313,8 @@ void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int 
 	case BUTTON_ACTION_PLACE_SCAFFOLD:
 		if (world->Check_If_Scaffold_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
 		{
-			Create_Scaffolding(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
+			//Create_Scaffolding(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile);
+			world->Add_Scaffold_To_Tile(Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile, DOT_FACTION_PLAYER);
 		}
 		break;
 	case BUTTON_ACTION_MINE_ASTEROID:
@@ -339,13 +332,37 @@ void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int 
 
 void Intelligence::Handle_Non_Console_Click_And_Hold(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code)
 {
+	if (mouse_hold_rect_active == true)
+	{
+		int x_dif = (x - mouse_hold_rect.x);
+		int y_dif = (y - mouse_hold_rect.y);
+
+		mouse_hold_rect.w = x_dif;
+		mouse_hold_rect.h = y_dif;
+	}
+	else
+	{
+		mouse_hold_rect_active = true;
+		mouse_hold_rect.x = x;
+		mouse_hold_rect.y = y;
+	}
+	
 	switch (current_action)
 	{
-	case BUTTON_ACTION_ATTACK:
-		//if (player_dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0) Fire_Weapon(player_dot, world->world_tiles[x_tile][y_tile], 0, 20, true, x, y);
+	case BUTTON_ACTION_PLACE_SCAFFOLD:
 		break;
+	}
+}
+
+void Intelligence::Handle_Non_Console_Unclick(int current_action, int x_tile, int y_tile, int x, int y, int inventory_item_code)
+{
+	mouse_hold_rect_active = false;
+	mouse_hold_rect = { 0,0,0,0 };
+	
+	switch (current_action)
+	{
 	case BUTTON_ACTION_MINING_LASER:
-		//Fire_Mining_Laser(player_dot, world->world_tiles[x_tile][y_tile], true, x, y);
+		//Stop_Firing_Mining_Laser(player_dot);
 		break;
 	}
 }
@@ -742,7 +759,7 @@ void Intelligence::Delete_Container_by_Pointer(Dot* container_pointer)
 
 void Intelligence::Dot_Give_Inventory_To_Another_Dot(Dot* dot, Dot* second_dot, int inventory_item_code, int quantity)
 {
-	if (second_dot->multi_tile_config.built_percent < 100)
+	if (second_dot->multi_tile_config.build_time < 100)
 	{
 		for (int i = 0; i < second_dot->npc_dot_config.tile_parts_list.size(); i++)
 		{
@@ -1487,7 +1504,7 @@ bool Intelligence::check_dot_type(Dot* test_dot, int focus_type_category, int fo
 		if (test_focus == focus_type_specific) dot_focus_match = true;
 		break;
 	}
-	if (dot_focus_match == false && tile_built == false && test_dot->multi_tile_config.built_percent < 100) dot_focus_match = true;
+	if (dot_focus_match == false && tile_built == false && test_dot->multi_tile_config.build_time < 100) dot_focus_match = true;
 	return dot_focus_match;
 }
 
@@ -2238,13 +2255,6 @@ void Intelligence::update_bolt_ai()
 
 // WORLD COMMANDS
 
-void Intelligence::Create_Scaffolding(Multi_Tile_Type* tile_type, int x_tile, int y_tile)
-{
-	Multi_Tile_Type Scaffolding_Tile = *tile_type;
-	Scaffolding_Tile.built_percent = 0;
-	world->Create_Tile(Scaffolding_Tile, x_tile, y_tile);
-}
-
 void Intelligence::Update_World_Ai()
 {
 	for (int p = 0; p < TILE_NUM_Y; p++)
@@ -2278,14 +2288,11 @@ void Intelligence::Update_World_Ai()
 	}
 }
 
-void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
-{
+void Intelligence::Check_Scaffold_Needs(Tile* tile)
+{		
 	// CHECK IF THE TILE HAS ANY NEEDED SCAFFOLD PARTS
 	tile->Check_if_Dot_Can_Pop_Tile_List_Items();
-	
 
-
-	//IF THE TILE NEEDS PARTS, SEND OUT A FETCH TILES REQUEST
 	for (int i = 0; i < tile->npc_dot_config.tile_parts_list.size(); i++)
 	{
 		Dot* project_dot = tile;
@@ -2300,9 +2307,49 @@ void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
 	}
 
 	// IF THE TILE ISN'T BUILT, SEND OUT A BUILDING REQUEST
-	if (tile->multi_tile_config.built_percent < 100 && tile->npc_dot_config.tile_parts_list.size() == 0)
+	if (tile->npc_dot_config.tile_parts_list.size() == 0)
 	{
-		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_BUILD_SCAFFOLD, 1 , tile, NULL, null_tile, 1,100, &tile->multi_tile_config.built_percent });
+		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_BUILD_SCAFFOLD, 1 , tile, NULL, null_tile, 1,tile->multi_tile_config.build_time, &tile->npc_dot_config.tile_built_level });
+	}
+
+
+}
+
+void Intelligence::Process_Built_Scaffold(Tile* tile)
+{
+	int x_tile = tile->getTileX();
+	int y_tile = tile->getTileY();
+
+	world->Create_Tile(tile->scaffold_on_tile->multi_tile_config, x_tile, y_tile, tile->npc_dot_config.dot_stat_faction);
+}
+
+void Intelligence::Check_Production_Needs(Tile* tile)
+{
+	// CHECK IF THE TILE HAS ANY NEEDED SCAFFOLD PARTS
+	tile->Check_if_Dot_Can_Pop_Tile_List_Items();
+	
+	for (int i = 0; i < tile->npc_dot_config.tile_parts_list.size(); i++)
+	{
+		Dot* project_dot = tile;
+		Dot* dot_with_item = return_nearest_storage_unit_with_item(tile, tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
+		Multi_Tile_Type item_to_transport = Return_Tile_By_Inventory_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
+
+		if (dot_with_item != NULL)
+		{
+			int quantity = max(dot_with_item->Check_Inventory_For_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code), tile->npc_dot_config.tile_parts_list[i].item_number);
+			dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_SHUTTLE_ITEM_TO_PROJECT, 1 , project_dot, dot_with_item, item_to_transport, tile->npc_dot_config.tile_parts_list[i].item_number });
+		}
+	}
+}
+
+void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
+{
+	if (tile->multi_tile_config.dot_produced_items.tile_name_1 != TILE_GENERIC_TILE) Check_Production_Needs(tile);
+
+	if (tile->scaffold_on_tile != NULL)
+	{	
+		if (tile->scaffold_on_tile->npc_dot_config.tile_built_level < tile->scaffold_on_tile->multi_tile_config.build_time) Check_Scaffold_Needs(tile->scaffold_on_tile);
+		else Process_Built_Scaffold(tile);
 	}
 
 	// IF THE TILE IS AN ASTEROID AND HAS BEEN MARKED AS A JOB, SEND OUT A MINING REQUEST
@@ -2311,7 +2358,7 @@ void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
 		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_MINE_ASTEROID, 1 ,tile, NULL, null_tile, 0,0, NULL });
 	}
 
-	// IF THE TILE IS A TURRET, CHECK FOR NEARBY ENEMY DOTS, AND IF FOUND, ELIMINATE
+	//IF THE TILE IS A TURRET, CHECK FOR NEARBY ENEMY DOTS, AND IF FOUND, ELIMINATE
 	if (tile->multi_tile_config.tile_type == TILE_TYPE_TURRET)
 	{
 		tile->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].max_level = 20;
@@ -2418,11 +2465,11 @@ bool Intelligence::check_global_collisions(Dot* dot)
 	{
 		for (int i = max(0, (object->x / TILE_WIDTH) - 2); i < min((object->x / TILE_WIDTH) + 2, TILE_NUM_X); i++)
 		{
-			if (world->world_tiles[i][p] != NULL &&  world->world_tiles[i][p]->multi_tile_config.is_collidable == 1 && world->world_tiles[i][p]->multi_tile_config.built_percent == 100)
+			if (world->world_tiles[i][p] != NULL &&  world->world_tiles[i][p]->multi_tile_config.is_collidable == 1 && world->world_tiles[i][p]->multi_tile_config.build_time == 100)
 			{
 				if (check_dot_collision(&dot->dot_rect, &world->world_tiles[i][p]->dot_rect) == true) collision = true, world->world_tiles[i][p]->respond_to_collision(dot);
 			}
-			if (world->item_tiles[i][p] != NULL && world->item_tiles[i][p]->multi_tile_config.is_collidable == 1 && world->item_tiles[i][p]->multi_tile_config.built_percent == 100)
+			if (world->item_tiles[i][p] != NULL && world->item_tiles[i][p]->multi_tile_config.is_collidable == 1 && world->item_tiles[i][p]->multi_tile_config.build_time == 100)
 			{
 				if (check_dot_collision(&dot->dot_rect, &world->item_tiles[i][p]->dot_rect) == true) collision = true, world->item_tiles[i][p]->respond_to_collision(dot);
 			}
@@ -2612,8 +2659,16 @@ void Intelligence::render()
 
 	//world->Render(camera, RENDER_ROOF);
 
-
-
+	if (mouse_hold_rect_active == true)
+	{
+		SDL_Rect click_rect = { mouse_hold_rect.x - camera->camera_box.x, mouse_hold_rect.y - camera->camera_box.y, mouse_hold_rect.w, mouse_hold_rect.h };
+		SDL_Color click_hold_color = { 50,50,255,50 };
+		SDL_SetRenderDrawColor(gRenderer, click_hold_color.r, click_hold_color.g, click_hold_color.b, click_hold_color.a);
+		SDL_RenderFillRect(gRenderer, &click_rect);
+		SDL_SetRenderDrawColor(gRenderer, click_hold_color.r, click_hold_color.g, click_hold_color.b, 255);
+		SDL_RenderDrawRect(gRenderer, &click_rect);
+	}
+	
 }
 
 void Intelligence::free()

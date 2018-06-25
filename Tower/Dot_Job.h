@@ -210,6 +210,7 @@ void Dot_Job::Routine_Take_Items_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_wit
 void Dot_Job::Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project, bool tile_built)
 {
 	dot->npc_dot_config.current_dot_focus = project_dot;
+
 	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_OUT_OF_ANOTHER_DOT,0,0,0,0,null_tile,increment,tile_built,dot->npc_dot_config.current_dot_focus });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHANGE_DOT_QUANTITY,0,0,0,0,null_tile,increment,tile_built,dot->npc_dot_config.current_dot_focus, dot_quantity_pointer, finished_quantity });
 	if (get_inside_project) dot->npc_dot_config.current_goal_list.push_back({ ACTION_GET_INSIDE_ANOTHER_DOT,0,0,0,0,null_tile,increment,tile_built,dot->npc_dot_config.current_dot_focus });
@@ -284,7 +285,7 @@ void Dot_Job::Subroutine_Manage_Item_Production(Dot* dot, int production_slot)
 	
 	if (!dot->Check_If_Tile_Needs_Parts(tile_type))
 	{
-		if (dot->npc_dot_config.production_status_array[production_slot].slot_production_current < tile_type.built_percent)
+		if (dot->npc_dot_config.production_status_array[production_slot].slot_production_current < tile_type.build_time)
 		{
 			dot->npc_dot_config.production_status_array[production_slot].slot_production_current++;
 		}
