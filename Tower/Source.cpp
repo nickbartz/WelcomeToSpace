@@ -25,6 +25,7 @@ using namespace std;
 #include <Camera.h>
 #include <LTexture.h>
 #include <Shared_Draw_Functions.h>
+#include <Item.h>
 #include <Dot.h>
 
 #include <Cursor.h>
@@ -486,7 +487,7 @@ int main(int argc, char* args[])
 			//Render Objects
 			if (debug) cout << "rendering objects" << endl;
 			intelligence.render();
-			if (console.current_action == BUTTON_ACTION_PLACE_ITEM || BUTTON_ACTION_REMOVE_TILE || BUTTON_ACTION_CREATE_ITEM) cursor.Render(gRenderer, &camera);
+			if (console.current_action == BUTTON_ACTION_REMOVE_TILE || console.current_action == BUTTON_ACTION_PLACE_SCAFFOLD) cursor.Render(gRenderer, &camera);
 			console.render(gRenderer, &camera);
 
 			if (debug) cout << "updating screen" << endl;
@@ -498,11 +499,6 @@ int main(int argc, char* args[])
 			if (!pause)
 			{
 				intelligence.Advance_Time(avgFPS);
-				//if (intelligence.player_dot->npc_dot_config.dot_stat_health <= 0)
-				//{
-				//	pause = true;
-				//	console.Pull_Up_Restart_Screen();
-				//}
 			}
 
 			console.Update_Console(gRenderer);

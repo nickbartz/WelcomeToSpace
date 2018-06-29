@@ -28,9 +28,10 @@ public:
 	void Run_Job(Dot* dot);
 
 	// DOT ROUTINES
-	void Routine_Move_Container_To_Storage(Dot* dot, Dot* container, Dot* storage_tile);
+	void Routine_Collect_Container(Dot* dot, Dot* container);
 	void Routine_Put_Container_Items_In_Inventory(Dot* dot, Dot* container);
-	void Routine_Take_Items_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity);
+	void Routine_Shuttle_Item_To_Dot(Dot* dot, Dot* project_dot, Multi_Tile_Type item_to_shuttle, int quantity);
+	void Routine_Pickup_Item_And_Shuttle_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity);
 	void Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project, bool tile_built = true);
 	void Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab);
 	void Routine_Eliminate_Dot(Dot* dot, Dot* dot_to_eliminate, int attack_range);
@@ -104,11 +105,14 @@ void Dot_Job::Run_Job(Dot* dot)
 	case DOT_HEALTH_JOB_ELIMINATE_DOT:
 		Routine_Eliminate_Dot(dot, second_dot, first_quantity);
 		break;
-	case SPECIFIC_DOT_JOB_STORE_CONTAINER:
-		Routine_Move_Container_To_Storage(dot, second_dot, third_dot);
+	case DOT_HEALTH_JOB_DUMP_STORAGE:
+		Routine_Shuttle_Item_To_Dot(dot, second_dot, first_item, first_quantity);
+		break;
+	case SPECIFIC_DOT_JOB_COLLECT_CONTAINER:
+		Routine_Collect_Container(dot, second_dot);
 		break;
 	case SPECIFIC_DOT_JOB_SHUTTLE_ITEM_TO_PROJECT:
-		Routine_Take_Items_To_Dot(dot, second_dot, third_dot, first_item, first_quantity);
+		Routine_Pickup_Item_And_Shuttle_To_Dot(dot, second_dot, third_dot, first_item, first_quantity);
 		break;
 	case SPECIFIC_DOT_JOB_BUILD_SCAFFOLD:
 		Routine_Run_Project(dot, second_dot, first_quantity_pointer, first_quantity, second_quantity, false, false);
@@ -150,26 +154,26 @@ void Dot_Job::Routine_Mine_Asteroid(Dot* dot, Dot* asteroid)
 
 // RESOURCE SHUTTLING ROUTINES
 
-void Dot_Job::Routine_Move_Container_To_Storage(Dot* dot, Dot* container, Dot* storage_tile)
+void Dot_Job::Routine_Collect_Container(Dot* dot, Dot* container)
 {	
 	vector<Dot_Inventory_Slot> container_inventory = container->return_inventory_as_vector();
 	Dot* current_storage_tile = dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE].related_dot;
 
 	if (container_inventory.size() > 0)
 	{
-		if (current_storage_tile != NULL)
-		{
-			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
-			for (int i = 0; i < container_inventory.size(); i++)
-			{
-				dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,current_storage_tile });
-			}
+		//if (current_storage_tile != NULL)
+		//{
+		//	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
+		//	for (int i = 0; i < container_inventory.size(); i++)
+		//	{
+		//		dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,current_storage_tile });
+		//	}
 
-			dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,current_storage_tile });
-			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,current_storage_tile });
+		//	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,current_storage_tile });
+		//	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,current_storage_tile });
 
-			dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
-		}
+		//	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory.back().inventory_item_code),0,false,dot });
+		//}
 
 		for (int i = 0; i < container_inventory.size(); i++)
 		{
@@ -193,18 +197,19 @@ void Dot_Job::Routine_Put_Container_Items_In_Inventory(Dot* dot, Dot* container)
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,container });
 }
 
-void Dot_Job::Routine_Take_Items_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity)
-{	
-	dot->npc_dot_config.tile_parts_list.erase(dot->npc_dot_config.tile_parts_list.begin(), dot->npc_dot_config.tile_parts_list.begin() + dot->npc_dot_config.tile_parts_list.size());
-
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM,							0,0,0,0,item_to_grab,0,false,dot });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT,						0,0,0,0,item_to_grab,quantity,false,project_dot });
+void Dot_Job::Routine_Shuttle_Item_To_Dot(Dot* dot, Dot* project_dot, Multi_Tile_Type item_to_shuttle, int quantity)
+{
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM,							0,0,0,0,item_to_shuttle,0,false,dot });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT,						0,0,0,0,item_to_shuttle,quantity,false,project_dot });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,				0,0,0,0,null_tile,0,true,project_dot });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,0,false,project_dot });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM,								0,0,0,0,item_to_grab,0,true,dot });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT,						0,0,0,0,item_to_grab,quantity,true,dot_with_item });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,				0,0,0,0,null_tile,0,true,dot_with_item });
-	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,							0,0,0,0,null_tile,0,true,dot_with_item });
+	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM,								0,0,0,0,item_to_shuttle,0,true,dot });
+}
+
+void Dot_Job::Routine_Pickup_Item_And_Shuttle_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity)
+{	
+	Routine_Shuttle_Item_To_Dot(dot, project_dot, item_to_grab, quantity);
+	if (dot->Check_Inventory_For_Item(item_to_grab.inventory_pointer) < quantity) Routine_Take_Items_From_Dot(dot, dot_with_item, item_to_grab, quantity);
 }
 
 void Dot_Job::Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project, bool tile_built)

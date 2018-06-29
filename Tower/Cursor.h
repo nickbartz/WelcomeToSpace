@@ -71,50 +71,34 @@ void Cursor::Set_Type(int current_action, Multi_Tile_Type* currently_selected_it
 		current_clip.x = 9 * SPRITESHEET_W;
 		current_clip.y = 0 * SPRITESHEET_H;
 		break;
-	case BUTTON_ACTION_MINING_LASER:
-		cTexture = texture_array[TILESHEET];
-		current_clip.x = 9 * SPRITESHEET_W;
-		current_clip.y = 0 * SPRITESHEET_H;
-		break;
 	case BUTTON_ACTION_DO_NOTHING:
-		cTexture = texture_array[TILESHEET];
-		current_clip.x = 3 * SPRITESHEET_W;
-		current_clip.y = 0 * SPRITESHEET_H;
-		break;
-	case BUTTON_ACTION_CREATE_ITEM:
-		if (currently_selected_item->sprite_specs.sprite_rows == -2) render_offset_y = -1;
-		cTexture = texture_array[currently_selected_item->spritesheet_num];
-		cursor_rect.w = currently_selected_item->sprite_specs.rect_columns*TILE_WIDTH;
-		cursor_rect.h = currently_selected_item->sprite_specs.rect_rows*TILE_HEIGHT;
-		current_clip.x = currently_selected_item->sprite_specs.sprite_column*SPRITESHEET_W;
-		current_clip.y = currently_selected_item->sprite_specs.sprite_row*SPRITESHEET_H;
-		current_clip.w = abs(currently_selected_item->sprite_specs.sprite_columns*SPRITESHEET_W);
-		current_clip.h = abs(currently_selected_item->sprite_specs.sprite_rows*SPRITESHEET_W);
-		break;
-	case BUTTON_ACTION_PLACE_ITEM:
-		if (currently_selected_item->sprite_specs.sprite_rows == -2) render_offset_y = -1;
-		cTexture = texture_array[currently_selected_item->spritesheet_num];
-		cursor_rect.w = currently_selected_item->sprite_specs.rect_columns*TILE_WIDTH;
-		cursor_rect.h = currently_selected_item->sprite_specs.rect_rows*TILE_HEIGHT;
-		current_clip.x = currently_selected_item->sprite_specs.sprite_column*SPRITESHEET_W;
-		current_clip.y = currently_selected_item->sprite_specs.sprite_row*SPRITESHEET_H;
-		current_clip.w = abs(currently_selected_item->sprite_specs.sprite_columns*SPRITESHEET_W);
-		current_clip.h = abs(currently_selected_item->sprite_specs.sprite_rows*SPRITESHEET_W);
-		break;
-	case BUTTON_ACTION_PICKUP_ITEM:
 		cTexture = texture_array[TILESHEET];
 		current_clip.x = 3 * SPRITESHEET_W;
 		current_clip.y = 0 * SPRITESHEET_H;
 		break;
 	case BUTTON_ACTION_PLACE_SCAFFOLD:
 		if (currently_selected_item->sprite_specs.sprite_rows == -2) render_offset_y = -1;
-		cTexture = texture_array[currently_selected_item->spritesheet_num];
-		cursor_rect.w = currently_selected_item->sprite_specs.rect_columns*TILE_WIDTH;
-		cursor_rect.h = currently_selected_item->sprite_specs.rect_rows*TILE_HEIGHT;
-		current_clip.x = currently_selected_item->sprite_specs.sprite_column*SPRITESHEET_W;
-		current_clip.y = currently_selected_item->sprite_specs.sprite_row*SPRITESHEET_H;
-		current_clip.w = abs(currently_selected_item->sprite_specs.sprite_columns*SPRITESHEET_W);
-		current_clip.h = abs(currently_selected_item->sprite_specs.sprite_rows*SPRITESHEET_W);
+		if (currently_selected_item->is_smooth == 0)
+		{
+			cTexture = texture_array[currently_selected_item->spritesheet_num];
+			cursor_rect.w = currently_selected_item->sprite_specs.rect_columns*TILE_WIDTH;
+			cursor_rect.h = currently_selected_item->sprite_specs.rect_rows*TILE_HEIGHT;
+			current_clip.x = currently_selected_item->sprite_specs.sprite_column*SPRITESHEET_W;
+			current_clip.y = currently_selected_item->sprite_specs.sprite_row*SPRITESHEET_H;
+			current_clip.w = abs(currently_selected_item->sprite_specs.sprite_columns*SPRITESHEET_W);
+			current_clip.h = abs(currently_selected_item->sprite_specs.sprite_rows*SPRITESHEET_W);
+		}
+		else
+		{
+			cTexture = texture_array[INVENTORY_SPRITESHEET];
+			cursor_rect.w = TILE_WIDTH;
+			cursor_rect.h = TILE_HEIGHT;
+			Inventory_Item new_item = inventory_item_map[currently_selected_item->inventory_pointer];
+			current_clip.x = new_item.clip_rect_x*SPRITESHEET_W;
+			current_clip.y = new_item.clip_rect_y*SPRITESHEET_H;
+			current_clip.w = SPRITESHEET_W;
+			current_clip.h = SPRITESHEET_H;
+		}
 		break;
 	case BUTTON_ACTION_INSPECT:
 		cTexture = texture_array[TILESHEET];

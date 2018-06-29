@@ -72,13 +72,8 @@ public:
 	Dot* Find_tile_within_radius_of_dot(Dot* dot, int tile_type, int radius, bool tile_or_item);
 
 	// Fix Orientation
-	void Create_Surrounding_Walls_For_Floor(Tile* tile);
 	void Update_Surrounding_Tiles(Tile* tile);
 	void Fix_Smooth_Tile(Tile* tile);
-
-	// Tile Texture Clip Commands
-	tile_clip_coords World::Return_Tile_Clip_Offset(int tile_orientation);
-	void Update_Tile_Texture_Clip(int x_tile, int y_tile, int tile_clip_x, int tile_clip_y, bool tile_or_item);
 
 	// Tile Specific Commands
 	void Remove_Tile(int i, int p, bool is_item);
@@ -169,9 +164,7 @@ void World::Create_Asteroid_Cluster(int start_x, int start_y, int size)
 
 void World::Create_Test_Room(int x_start, int y_start, int faction)
 {
-	string room =
-
-		"FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFFD;\FFFFFFFFFFF;\FFFFFFFFFFF;\FFFFFFFFFFF;";
+	string room = "WWWWWWWWWWW;\WFFFFFFFFFW;\WFFFFFFFFFD;\WFFFFFFFFFW;\WFFFFFFFFFW;\WFFFFFFFFFW;\WWWWWWWWWWW";
 
 	int column = x_start;
 	int row = y_start;
@@ -179,7 +172,7 @@ void World::Create_Test_Room(int x_start, int y_start, int faction)
 	for (int i = 0; i < room.size(); i++)
 	{
 		if (room[i] == 'F') Create_Tile(Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_FLOOR_1), column, row, faction);
-		else if (room[i] == 'W') Create_Tile(Return_Tile_By_Name(TILE_WALL_TILE_2), column, row, faction);
+		else if (room[i] == 'W') Create_Tile(Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_WALL_1), column, row, faction);
 		else if (room[i] == 'D') Create_Tile(Return_Tile_By_Name(TILE_DOOR_1), column, row, faction);
 		else if (room[i] == 'S') Create_Tile(Return_Tile_By_Name(TILE_STORAGE_TILE_1), column, row, faction);
 		else if (room[i] == 'X') Create_Tile(Return_Tile_By_Name(TILE_LOCKER_1), column, row, faction);
@@ -202,6 +195,31 @@ void World::Create_Test_Room(int x_start, int y_start, int faction)
 }
 
 /// Create Commands
+
+void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction)
+{
+	if (tile.tile_or_item == 0)
+	{
+		if (world_tiles[x_tile][y_tile] != NULL) delete world_tiles[x_tile][y_tile];
+		world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile, tile.build_time);
+		world_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
+
+		if (tile.is_smooth == 1)
+		{
+			Update_Surrounding_Tiles(world_tiles[x_tile][y_tile]);
+			Fix_Smooth_Tile(world_tiles[x_tile][y_tile]);
+		}
+	}
+	else if (tile.tile_or_item == 1)
+	{
+		if (world_tiles[x_tile][y_tile]->multi_tile_config.tile_type != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			if (item_tiles[x_tile][y_tile] != NULL && item_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete item_tiles[x_tile][y_tile];
+			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile, tile.build_time);
+			item_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
+		}
+	}
+}
 
 bool World::Check_If_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile)
 {
@@ -338,47 +356,12 @@ Tile* World::Find_Accessible_Tile_Away_From_Dot(Dot* dot_to_move, Dot* dot_to_mo
 	return NULL;
 }
 
-void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction)
-{
-	if (tile.tile_or_item == 0)
-	{
-		//if (world_tiles[x_tile][y_tile] != NULL && world_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete world_tiles[x_tile][y_tile];
-		world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile,tile.build_time);
-		world_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
-
-		if (tile.is_smooth == 1)
-		{
-			if (tile.tile_type == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
-			{
-				world_tiles[x_tile][y_tile]->handle_floor_tiling(false,false,false,false,false,false,false,false);
-				Create_Surrounding_Walls_For_Floor(world_tiles[x_tile][y_tile]);
-			}
-			Update_Surrounding_Tiles(world_tiles[x_tile][y_tile]);
-			Fix_Smooth_Tile(world_tiles[x_tile][y_tile]);
-		}
-	}
-	else if (tile.tile_or_item == 1)
-	{
-		if (world_tiles[x_tile][y_tile]->multi_tile_config.tile_type != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
-		{
-			if (item_tiles[x_tile][y_tile] != NULL && item_tiles[x_tile][y_tile]->multi_tile_config.inventory_pointer != tile.inventory_pointer) delete item_tiles[x_tile][y_tile];
-			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile, tile.build_time);
-			item_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
-		}
-	}
-}
-
 void World::Add_Scaffold_To_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction)
 {
 	if (tile.tile_or_item == 0 && world_tiles[x_tile][y_tile] != NULL)
 	{
-		if (world_tiles[x_tile][y_tile]->multi_tile_config.tile_type == VACUUM)
-		{
-			world_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[Return_Tile_By_Name(TILE_GENERIC_TILE).spritesheet_num], x_tile, y_tile, Return_Tile_By_Name(TILE_GENERIC_TILE));
-		}
-		world_tiles[x_tile][y_tile]->scaffold_on_tile = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
-		world_tiles[x_tile][y_tile]->scaffold_on_tile->npc_dot_config.tile_built_level = 0;
-		cout << x_tile << " : " << y_tile << endl;
+		world_tiles[x_tile][y_tile]->scaffold_on_tile = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile,0);
+		world_tiles[x_tile][y_tile]->scaffold_on_tile->handle_smooth_tiles(VACUUM, VACUUM, VACUUM, VACUUM, VACUUM, VACUUM, VACUUM, VACUUM);
 	}
 	else if (tile.tile_or_item == 1)
 	{
@@ -569,64 +552,6 @@ Dot* World::Find_tile_within_radius_of_dot(Dot* dot, int tile_type, int radius, 
 
 
 // Fix Tile Orientation
-
-World::tile_clip_coords World::Return_Tile_Clip_Offset(int tile_orientation)
-{
-	tile_clip_coords clips;
-
-	if (tile_orientation == NO_EDGE) clips.clip_x = 1, clips.clip_y = 1;
-	if (tile_orientation == ALL_EDGE) clips.clip_x = 0, clips.clip_y = 0;
-
-	if (tile_orientation == JUST_LEFT_EDGE) clips.clip_x = 0, clips.clip_y = 2;
-	if (tile_orientation == JUST_RIGHT_EDGE) clips.clip_x = 0, clips.clip_y = 1;
-	if (tile_orientation == JUST_TOP_EDGE) clips.clip_x = 2, clips.clip_y = 0;
-	if (tile_orientation == JUST_BOTTOM_EDGE) clips.clip_x = 1, clips.clip_y = 0;
-	
-	if (tile_orientation == TOP_OR_BOTTOM_EDGE) clips.clip_x = 0, clips.clip_y = -1;
-	if (tile_orientation == LEFT_OR_RIGHT_EDGE) clips.clip_x = -1, clips.clip_y = 0;
-
-	if (tile_orientation == TOP_LEFT_CORNER) clips.clip_x = -1, clips.clip_y = -1;
-	if (tile_orientation == TOP_RIGHT_CORNER) clips.clip_x = 2, clips.clip_y = -1;
-	if (tile_orientation == BOTTOM_LEFT_CORNER) clips.clip_x = -1, clips.clip_y = 2;
-	if (tile_orientation == BOTTOM_RIGHT_CORNER) clips.clip_x = 2, clips.clip_y = 2;
-
-	if (tile_orientation == UPSIDE_DOWN_T)  clips.clip_x = 1, clips.clip_y = 2;
-	if (tile_orientation == UPRIGHT_T)  clips.clip_x = 1, clips.clip_y = -1;
-	if (tile_orientation == T_BAR_ON_LEFT)  clips.clip_x = -1, clips.clip_y = 1;
-	if (tile_orientation == T_BAR_ON_RIGHT)  clips.clip_x = 2, clips.clip_y = 1;
-
-	return clips;
-}
-
-void World::Update_Tile_Texture_Clip(int x_tile, int y_tile, int tile_clip_x, int tile_clip_y, bool tile_or_item)
-{
-	if (tile_or_item == false)
-	{
-		world_tiles[x_tile][y_tile]->update_texture_clip(world_tiles[x_tile][y_tile]->multi_tile_config.sprite_specs.sprite_column + tile_clip_x, world_tiles[x_tile][y_tile]->multi_tile_config.sprite_specs.sprite_row + tile_clip_y);
-	}
-	else if (tile_or_item == true)
-	{
-		item_tiles[x_tile][y_tile]->update_texture_clip(item_tiles[x_tile][y_tile]->multi_tile_config.sprite_specs.sprite_column + tile_clip_x, item_tiles[x_tile][y_tile]->multi_tile_config.sprite_specs.sprite_row + tile_clip_y);
-	}
-}
-
-void World::Create_Surrounding_Walls_For_Floor(Tile* tile)
-{
-	int x_tile = tile->getTileX();
-	int y_tile = tile->getTileY();
-
-	// IF THERE ARE NO WALLS AROUND THE FLOOR TILE, BUILD THEN
-	for (int i = 0; i < 9; i++)
-	{
-		Tile* neighbor_tile = Return_Tile_Neighbor(x_tile, y_tile, i, false);
-		if (neighbor_tile != NULL && neighbor_tile->multi_tile_config.tile_type == VACUUM)
-		{
-			int neighbor_x = neighbor_tile->x_tile;
-			int neighbor_y = neighbor_tile->y_tile;
-			neighbor_tile->Tile::Tile(world_renderer, texture_array[TILESHEET], neighbor_x, neighbor_y, Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_WALL_1), Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_WALL_1).build_time);
-		}
-	}
-}
 
 void World::Update_Surrounding_Tiles(Tile* tile)
 {

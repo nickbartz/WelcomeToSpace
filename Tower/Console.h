@@ -981,13 +981,13 @@ void Console::Handle_Console_Clicks()
 				current_action = BUTTON_ACTION_PLACE_SCAFFOLD;
 			}
 			break;
-		case PANEL_DOT_INVENTORY:
-			if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
-			{
-				current_selected_inventory_item = last_clicked_button->slot_item_pointer->inventory_item_code;
-				current_action = BUTTON_ACTION_PLACE_ITEM;
-			}
-			break;
+		//case PANEL_DOT_INVENTORY:
+		//	if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
+		//	{
+		//		current_selected_inventory_item = last_clicked_button->slot_item_pointer->inventory_item_code;
+		//		current_action = BUTTON_ACTION_PLACE_ITEM;
+		//	}
+		//	break;
 		//case PANEL_EQUIPMENT_LOADOUT:
 		//	if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
 		//	{
@@ -1007,14 +1007,6 @@ void Console::Handle_Console_Clicks()
 		switch (last_clicked_button->button_group)
 		{
 		case PANEL_DOT_INVENTORY:
-			if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON)
-			{
-				if (current_action == BUTTON_ACTION_PLACE_ITEM)
-				{
-					//current_intelligence->Dot_Give_Inventory_To_Another_Dot(current_intelligence->player_dot, currently_selected_dot, current_selected_inventory_item, 1);
-				}
-				//else current_intelligence->Dot_Give_Inventory_To_Another_Dot(currently_selected_dot, current_intelligence->player_dot, last_clicked_button->slot_item_pointer->inventory_item_code, 1);
-			}
 			break;
 		case PANEL_CRAFTABLE_ITEMS:
 			if (last_clicked_button->button_action == BUTTON_ACTION_CRAFT_ITEM)
@@ -1066,6 +1058,7 @@ void Console::Change_Current_Focus_Dot(SDL_Renderer* gRenderer, Dot* new_focus_d
 void Console::Update_Console(SDL_Renderer* gRenderer)
 {
 	current_intelligence->player_dot->Check_Craftable_Items();
+	current_intelligence->current_action = current_action;
 	console_windows[WINDOW_PLAYER_DIAGNOSTIC].Update_Dot_Crafting_Window(inventory_spritesheet,console_font,gRenderer,current_intelligence->player_dot, PANEL_CRAFTABLE_ITEMS, 0, 0, 6, 8, "Craft");
 }
 
