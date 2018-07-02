@@ -47,14 +47,14 @@ public:
 	void Populate_Asteroids();
 	void Create_Asteroid_Cluster(int start_x, int start_y, int size);
 	void Create_Test_Room(int x_start, int y_start, int faction);
-	bool Check_If_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile);
-	bool Check_If_Scaffold_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile);
+	bool Check_If_Can_Be_Placed(Tile_Template* item, int x_tile, int y_tile);
+	bool Check_If_Scaffold_Can_Be_Placed(Tile_Template* item, int x_tile, int y_tile);
 	bool Tile_Is_Accessible(int x_tile, int y_tile);
 	Tile* Find_Accessible_Adjacent_Tile(Dot* tile);
 	Tile* Find_Random_Accessible_Surrounding_Tile(Dot* tile);
 	Tile* Find_Accessible_Tile_Away_From_Dot(Dot* dot_to_move, Dot* dot_to_move_away_from);
-	void Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction = DOT_FACTION_NO_FACTION);
-	void Add_Scaffold_To_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction);
+	void Create_Tile(Tile_Template tile, int x_tile, int y_tile, int faction = DOT_FACTION_NO_FACTION);
+	void Add_Scaffold_To_Tile(Tile_Template tile, int x_tile, int y_tile, int faction);
 
 
 	// Check Commands
@@ -66,7 +66,7 @@ public:
 	bool Is_Tile_Collidable(int x_tile, int y_tile);
 
 	int get_num_scaffolds(bool tile_or_item);
-	int get_number_of_tiles_of_type(Multi_Tile_Type tile_type);
+	int get_number_of_tiles_of_type(Tile_Template tile_type);
 
 	bool check_if_dot_in_radius_of_another_dot(Dot* dot_one, Dot* dot_two, int radius);
 	Dot* Find_tile_within_radius_of_dot(Dot* dot, int tile_type, int radius, bool tile_or_item);
@@ -125,7 +125,7 @@ void World::Create_Background()
 	{
 		for (int i = 0; i < TILE_NUM_Y; i++)
 		{
-			Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
+			Create_Tile(Return_Tile_Template_By_Identifier(TILE_VACUUM), i, p);
 		}
 	}
 }
@@ -153,9 +153,9 @@ void World::Create_Asteroid_Cluster(int start_x, int start_y, int size)
 			{
 				int asteroid_type = rand() % 100;
 
-				if (asteroid_type >= 99) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_NICKEL), i, p);
-				else if (asteroid_type >= 95) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_COBALT), i, p);
-				else if (asteroid_type >= 55) Create_Tile(Return_Tile_By_Name(TILE_ASTEROID_IRON), i, p);
+				if (asteroid_type >= 99) Create_Tile(Return_Tile_Template_By_Identifier(TILE_ASTEROID_NICKEL), i, p);
+				else if (asteroid_type >= 95) Create_Tile(Return_Tile_Template_By_Identifier(TILE_ASTEROID_COBALT), i, p);
+				else if (asteroid_type >= 55) Create_Tile(Return_Tile_Template_By_Identifier(TILE_ASTEROID_IRON), i, p);
 			}
 
 		}
@@ -171,15 +171,15 @@ void World::Create_Test_Room(int x_start, int y_start, int faction)
 
 	for (int i = 0; i < room.size(); i++)
 	{
-		if (room[i] == 'F') Create_Tile(Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_FLOOR_1), column, row, faction);
-		else if (room[i] == 'W') Create_Tile(Return_Tile_By_Name(TILE_CONSTRUCTION_TUBE_WALL_1), column, row, faction);
-		else if (room[i] == 'D') Create_Tile(Return_Tile_By_Name(TILE_DOOR_1), column, row, faction);
-		else if (room[i] == 'S') Create_Tile(Return_Tile_By_Name(TILE_STORAGE_TILE_1), column, row, faction);
-		else if (room[i] == 'X') Create_Tile(Return_Tile_By_Name(TILE_LOCKER_1), column, row, faction);
-		else if (room[i] == 'O') Create_Tile(Return_Tile_By_Name(TILE_OXYGEN_MACHINE), column, row, faction);
-		else if (room[i] == 'P') Create_Tile(Return_Tile_By_Name(TILE_TABLE_1), column, row, faction);
-		else if (room[i] == 'Q') Create_Tile(Return_Tile_By_Name(TILE_CHAIR_1), column, row, faction);
-		else if (room[i] == 'B') Create_Tile(Return_Tile_By_Name(TILE_BED_1), column, row, faction);
+		if (room[i] == 'F') Create_Tile(Return_Tile_Template_By_Identifier(TILE_CONSTRUCTION_TUBE_FLOOR_1), column, row, faction);
+		else if (room[i] == 'W') Create_Tile(Return_Tile_Template_By_Identifier(TILE_CONSTRUCTION_TUBE_WALL_1), column, row, faction);
+		else if (room[i] == 'D') Create_Tile(Return_Tile_Template_By_Identifier(TILE_DOOR_1), column, row, faction);
+		else if (room[i] == 'S') Create_Tile(Return_Tile_Template_By_Identifier(TILE_STORAGE_TILE_1), column, row, faction);
+		else if (room[i] == 'X') Create_Tile(Return_Tile_Template_By_Identifier(TILE_LOCKER_1), column, row, faction);
+		else if (room[i] == 'O') Create_Tile(Return_Tile_Template_By_Identifier(TILE_OXYGEN_MACHINE), column, row, faction);
+		else if (room[i] == 'P') Create_Tile(Return_Tile_Template_By_Identifier(TILE_TABLE_1), column, row, faction);
+		else if (room[i] == 'Q') Create_Tile(Return_Tile_Template_By_Identifier(TILE_CHAIR_1), column, row, faction);
+		else if (room[i] == 'B') Create_Tile(Return_Tile_Template_By_Identifier(TILE_BED_1), column, row, faction);
 		else if (room[i] == '(') column = column -2;
 		else if (room[i] == ')') column = column - 1;
 		else if (room[i] == '+') column = column++;
@@ -196,7 +196,7 @@ void World::Create_Test_Room(int x_start, int y_start, int faction)
 
 /// Create Commands
 
-void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction)
+void World::Create_Tile(Tile_Template tile, int x_tile, int y_tile, int faction)
 {
 	if (tile.tile_or_item == 0)
 	{
@@ -221,7 +221,7 @@ void World::Create_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int factio
 	}
 }
 
-bool World::Check_If_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile)
+bool World::Check_If_Can_Be_Placed(Tile_Template* item, int x_tile, int y_tile)
 {
 	bool can_be_placed = true;
 	if (item->tile_or_item == 0)
@@ -239,7 +239,7 @@ bool World::Check_If_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile
 	return can_be_placed;
 }
 
-bool World::Check_If_Scaffold_Can_Be_Placed(Multi_Tile_Type* item, int x_tile, int y_tile)
+bool World::Check_If_Scaffold_Can_Be_Placed(Tile_Template* item, int x_tile, int y_tile)
 {
 	bool can_be_placed = false;
 	if (item->tile_or_item == 0) // trying to place a scaffold for a tile
@@ -356,7 +356,7 @@ Tile* World::Find_Accessible_Tile_Away_From_Dot(Dot* dot_to_move, Dot* dot_to_mo
 	return NULL;
 }
 
-void World::Add_Scaffold_To_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, int faction)
+void World::Add_Scaffold_To_Tile(Tile_Template tile, int x_tile, int y_tile, int faction)
 {
 	if (tile.tile_or_item == 0 && world_tiles[x_tile][y_tile] != NULL)
 	{
@@ -368,7 +368,7 @@ void World::Add_Scaffold_To_Tile(Multi_Tile_Type tile, int x_tile, int y_tile, i
 		if (item_tiles[x_tile][y_tile] != NULL) item_tiles[x_tile][y_tile]->scaffold_on_tile = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
 		else
 		{
-			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[Return_Tile_By_Name(TILE_GENERIC_ITEM).spritesheet_num], x_tile, y_tile, Return_Tile_By_Name(TILE_GENERIC_ITEM));
+			item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[Return_Tile_Template_By_Identifier(TILE_GENERIC_ITEM).spritesheet_num], x_tile, y_tile, Return_Tile_Template_By_Identifier(TILE_GENERIC_ITEM));
 			item_tiles[x_tile][y_tile]->scaffold_on_tile = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile);
 		}
 	}
@@ -490,7 +490,7 @@ int World::get_num_scaffolds(bool tile_or_item)
 	return count;
 }
 
-int World::get_number_of_tiles_of_type(Multi_Tile_Type tile_type)
+int World::get_number_of_tiles_of_type(Tile_Template tile_type)
 {
 	int count = 0;
 	for (int p = 0; p < TILE_NUM_Y; p++)
@@ -620,7 +620,7 @@ void World::Remove_Tile(int i, int p, bool is_item)
 	}
 	else if (world_tiles[i][p]->multi_tile_config.tile_type != VACUUM)
 	{
-		Create_Tile(Return_Tile_By_Name(TILE_VACUUM), i, p);
+		Create_Tile(Return_Tile_Template_By_Identifier(TILE_VACUUM), i, p);
 		Update_Surrounding_Tiles(world_tiles[i][p]);
 	}
 }
@@ -641,7 +641,7 @@ void World::Grow_Frenzel(int i, int p, int current_frenzel_amount)
 
 	if (item_tiles[adjacent_x][adjacent_y] == NULL && world_tiles[adjacent_x][adjacent_y]->multi_tile_config.tile_type == VACUUM)
 	{
-		Create_Tile(Return_Tile_By_Name(TILE_FRENZEL_1), adjacent_x, adjacent_y);
+		Create_Tile(Return_Tile_Template_By_Identifier(TILE_FRENZEL_1), adjacent_x, adjacent_y);
 	}
 }
 

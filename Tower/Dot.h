@@ -7,7 +7,7 @@ public:
 	Carried_Multi_Tile(SDL_Renderer* gRenderer = NULL, LTexture* inventory_spritesheet = NULL, int* linked_x_coordinate = NULL, int* linked_y_coordinate = NULL, int inventory_item = INVENTORY_EMPTY_SLOT);
 
 	LTexture* spritesheet;
-	Inventory_Item carried_item;
+	Inventory_Item_Template carried_item;
 	void render(SDL_Renderer* gRenderer, Camera* camera);
 
 	int* linked_x_coord;
@@ -22,13 +22,13 @@ public:
 
 Carried_Multi_Tile::Carried_Multi_Tile(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int* linked_x_coordinate, int* linked_y_coordinate, int inventory_item)
 {
-	carried_item = Fetch_Inventory(inventory_item);
+	carried_item = Fetch_Inventory_Item_Template(inventory_item);
 	spritesheet = inventory_spritesheet;
 	linked_x_coord = linked_x_coordinate;
 	linked_y_coord = linked_y_coordinate;
-	sprite_clip_x = carried_item.clip_rect_x;
-	sprite_clip_y = carried_item.clip_rect_y;
-	item_clip = {  sprite_clip_x*SPRITESHEET_W, sprite_clip_y * SPRITESHEET_H, TILE_WIDTH, TILE_HEIGHT };
+	sprite_clip_x = carried_item.sprite_config.x;
+	sprite_clip_y = carried_item.sprite_config.y;
+	item_clip = {  sprite_clip_x*SPRITESHEET_W, sprite_clip_y * SPRITESHEET_H, carried_item.sprite_config.w , carried_item.sprite_config.h };
 }
 
 void Carried_Multi_Tile::render(SDL_Renderer* gRenderer, Camera* camera)
@@ -105,7 +105,7 @@ public:
 		int tile_or_item = 0;
 
 		int goal_dot_type = NULL;
-		Multi_Tile_Type tile_type;
+		Tile_Template tile_type;
 
 		int action_quantity;
 		bool tile_built = true;
@@ -171,7 +171,8 @@ public:
 		int dot_sprite_row = 1;
 		
 		vector<Dot_Relationship> dot_relationships;
-		vector<Dot_Inventory_Slot> dot_starting_inventory;
+		vector<Dot_Inventory_Slot> dot_starting_inventory; // not the dot's actual inventory, just a template
+
 		map <int, Dot_Inventory_Slot> dot_equipment_map;
 		map <int, Dot_Priority> dot_priority_map;
 		unordered_map<int, Dot_Relationship> functional_relationship_map;
@@ -209,7 +210,7 @@ public:
 
 	int dot_config[NUM_DOT_STATS];
 	NPC_Dot_Config_Struct npc_dot_config;
-	Multi_Tile_Type multi_tile_config;
+	Tile_Template multi_tile_config;
 
 	// Dot Job 
 	void dot_wipe_goals();
@@ -229,13 +230,13 @@ public:
 	string Create_Dot_Name();
 	void Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int carried_item_type);
 	int Check_Inventory_For_Item(int inventory_item_code);
-	Inventory_Item Check_Inventory_For_Item_Type(int item_type);
+	Inventory_Item_Template Check_Inventory_For_Item_Type(int item_type);
 	void Create_Default_Dot_Priorities();
 	void Check_Craftable_Items();
-	void Return_Parts_List(Multi_Tile_Type tile_type);
-	bool Check_If_Tile_Needs_Parts(Multi_Tile_Type tile_type);
-	bool Check_if_Dot_Has_All_Needed_Scaffold_Parts(Dot* dot, Multi_Tile_Type tile_type);
-	int Check_How_Much_Dot_Can_Craft_Of_Item(Multi_Tile_Type tile_type);
+	void Return_Parts_List(Tile_Template tile_type);
+	bool Check_If_Tile_Needs_Parts(Tile_Template tile_type);
+	bool Check_if_Dot_Has_All_Needed_Scaffold_Parts(Dot* dot, Tile_Template tile_type);
+	int Check_How_Much_Dot_Can_Craft_Of_Item(Tile_Template tile_type);
 	void Check_if_Dot_Can_Pop_Tile_List_Items();
 	vector<Dot_Inventory_Slot> return_inventory_as_vector();
 
@@ -539,20 +540,20 @@ void Dot::Check_Craftable_Items()
 {
 	npc_dot_config.craftable_items.clear();
 	
-	for (int i = 0; i < tile_vector.size(); i++)
+	for (int i = 0; i < tile_template_vector.size(); i++)
 	{
-		if (tile_vector[i].can_be_scaffold == 1)
+		if (tile_template_vector[i].can_be_scaffold == 1)
 		{
-			int craftable_amount = Check_How_Much_Dot_Can_Craft_Of_Item(tile_vector[i]);
+			int craftable_amount = Check_How_Much_Dot_Can_Craft_Of_Item(tile_template_vector[i]);
 			if (craftable_amount > 0)
 			{
-				npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_vector[i].inventory_pointer,craftable_amount });
+				npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_template_vector[i].inventory_pointer,craftable_amount });
 			}
 		}
 	}
 }
 
-int Dot::Check_How_Much_Dot_Can_Craft_Of_Item(Multi_Tile_Type tile_type)
+int Dot::Check_How_Much_Dot_Can_Craft_Of_Item(Tile_Template tile_type)
 {
 	int lowest_craftable_quantity = 99;
 
@@ -583,19 +584,19 @@ int Dot::Check_Inventory_For_Item(int inventory_item_code)
 	return inventory_count;
 }
 
-Inventory_Item Dot::Check_Inventory_For_Item_Type(int item_type)
+Inventory_Item_Template Dot::Check_Inventory_For_Item_Type(int item_type)
 {
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++)
 	{
 		if (npc_dot_config.inventory_slots[i].inventory_item_code == item_type)
 		{
-			return Fetch_Inventory(npc_dot_config.inventory_slots[i].inventory_item_code);
+			return Fetch_Inventory_Item_Template(npc_dot_config.inventory_slots[i].inventory_item_code);
 		}
 	}
-	return Fetch_Inventory(INVENTORY_NULL_ITEM);
+	return Fetch_Inventory_Item_Template(INVENTORY_NULL_ITEM);
 }
 
-void Dot::Return_Parts_List(Multi_Tile_Type tile_type)
+void Dot::Return_Parts_List(Tile_Template tile_type)
 {
 	if (tile_type.building_specs.Requirement_1.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_1.inventory_requirement, tile_type.building_specs.Requirement_1.requirement_quantity});
 	if (tile_type.building_specs.Requirement_2.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_2.inventory_requirement, tile_type.building_specs.Requirement_2.requirement_quantity});
@@ -605,7 +606,7 @@ void Dot::Return_Parts_List(Multi_Tile_Type tile_type)
 	if (tile_type.building_specs.Requirement_6.requirement_quantity > 0) npc_dot_config.tile_parts_list.push_back(Dot_Inventory_Slot{ tile_type.building_specs.Requirement_6.inventory_requirement, tile_type.building_specs.Requirement_5.requirement_quantity});
 }
 
-bool Dot::Check_If_Tile_Needs_Parts(Multi_Tile_Type tile_type)
+bool Dot::Check_If_Tile_Needs_Parts(Tile_Template tile_type)
 {
 	bool needs_parts = false;
 	if (tile_type.building_specs.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT && Check_Inventory_For_Item(tile_type.building_specs.Requirement_1.inventory_requirement) < tile_type.building_specs.Requirement_1.requirement_quantity) needs_parts = true;
@@ -617,7 +618,7 @@ bool Dot::Check_If_Tile_Needs_Parts(Multi_Tile_Type tile_type)
 	return needs_parts;
 }
 
-bool Dot::Check_if_Dot_Has_All_Needed_Scaffold_Parts(Dot* dot, Multi_Tile_Type tile_type)
+bool Dot::Check_if_Dot_Has_All_Needed_Scaffold_Parts(Dot* dot, Tile_Template tile_type)
 {
 	bool has_parts = true;
 	if (tile_type.building_specs.Requirement_1.inventory_requirement != INVENTORY_EMPTY_SLOT && dot->Check_Inventory_For_Item(tile_type.building_specs.Requirement_1.inventory_requirement) < tile_type.building_specs.Requirement_1.requirement_quantity) has_parts = false;
@@ -649,7 +650,6 @@ vector<Dot_Inventory_Slot> Dot::return_inventory_as_vector()
 	}
 	return temp_vector;
 }
-
 
 
 // GOAL_COMMANDS
@@ -695,7 +695,7 @@ class Tile : public Dot
 {
 public:
 	//Initializes the variables
-	Tile(SDL_Renderer* gRenderer = NULL, LTexture* tile_texture = NULL, int x_coordinate = NULL, int y_coordinate = NULL, Multi_Tile_Type multi_config = Return_Tile_By_Name(TILE_GENERIC_TILE), int tile_built_level = 0) :Dot(gRenderer, tile_texture, x_coordinate, y_coordinate)
+	Tile(SDL_Renderer* gRenderer = NULL, LTexture* tile_texture = NULL, int x_coordinate = NULL, int y_coordinate = NULL, Tile_Template multi_config = Return_Tile_Template_By_Identifier(TILE_GENERIC_TILE), int tile_built_level = 0) :Dot(gRenderer, tile_texture, x_coordinate, y_coordinate)
 	{
 		multi_tile_config = multi_config;
 		dot_rect = { x_coordinate * TILE_WIDTH,y_coordinate * TILE_HEIGHT,TILE_WIDTH*multi_config.sprite_specs.rect_columns, TILE_HEIGHT*multi_config.sprite_specs.rect_rows };
@@ -1147,7 +1147,7 @@ public:
 
 		Create_Default_Dot_Priorities();
 
-		for (int i = 0; i < tile_vector.size(); i++) npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_vector[i].inventory_pointer,1 });
+		for (int i = 0; i < tile_template_vector.size(); i++) npc_dot_config.craftable_items.push_back(Dot_Inventory_Slot{ tile_template_vector[i].inventory_pointer,1 });
 	}
 
 	void set_dot_render_color(SDL_Color color);
@@ -1515,88 +1515,6 @@ void Container::render(SDL_Renderer* gRenderer, Camera* camera, double angle, SD
 			if (bounce > 3) bounce_direction = -1;
 			if (bounce < -3) bounce_direction = 1;
 		}
-	}
-}
-
-// ASTEROID DOTS
-
-class Asteroid : public Dot
-{
-public:
-	Asteroid(SDL_Renderer* gRenderer, LTexture* asteroid_spritesheet, int x_pos, int y_pos, int row_num) :Dot(gRenderer, asteroid_spritesheet, x_pos, y_pos)
-	{
-		spritesheet = asteroid_spritesheet;
-
-		dot_config[DOT_IS_COLLIDABLE] = 1;
-		dot_config[DOT_TYPE] = DOT_ASTEROID;
-
-		mVelX = 0;
-		mVelY = 0;
-
-		asteroid_num = rand() % 1000;
-
-		if (asteroid_rarity <= 850)
-		{
-			multi_tile_config = Return_Tile_By_Name(TILE_IRON_ORE);
-			random_clip_row = 0;
-		}
-		else if (asteroid_rarity > 850 && asteroid_rarity <= 950)
-		{
-			multi_tile_config = Return_Tile_By_Name(TILE_COBALT_ORE);
-			random_clip_row = 1;
-		}
-		else if (asteroid_rarity > 950)
-		{
-			multi_tile_config = Return_Tile_By_Name(TILE_NICKEL_ORE);
-			random_clip_row = 2;
-		};
-
-		npc_dot_config.inventory_slots[0].inventory_item_code = multi_tile_config.inventory_pointer;
-		npc_dot_config.inventory_slots[0].item_number = 1;
-	}
-
-	void render(SDL_Renderer* gRenderer, Camera* camera);
-	int angle = rand() % 100;
-	int direction = rand() % 100;
-	int spin_speed = rand() % 2 - 1;
-
-	int asteroid_num;
-	int random_clip_column = rand() % 7;
-	int asteroid_rarity = rand() % 1000;
-	
-	int random_clip_row;
-
-
-private:
-	LTexture* spritesheet;
-
-};
-
-void Asteroid::render(SDL_Renderer* gRenderer, Camera* camera)
-{
-	if (is_onscreen(camera))
-	{
-		if (direction >= 50)
-		{
-			angle += spin_speed;
-		}
-		else
-		{
-			angle -= spin_speed;
-		}
-
-		
-		SDL_Rect currentClip = { random_clip_column * 34,random_clip_row*34,dot_rect.w, dot_rect.h };
-
-		SDL_Rect renderQuad = { dot_rect.x - camera->camera_box.x, dot_rect.y - camera->camera_box.y, TILE_WIDTH, TILE_HEIGHT };
-
-		spritesheet->render(gRenderer, &renderQuad, &currentClip, angle);
-	}
-
-
-	if (npc_dot_config.dot_stat_health < npc_dot_config.dot_stat_max_health)
-	{
-		render_status_bar(gRenderer, camera, npc_dot_config.dot_stat_health);
 	}
 }
 

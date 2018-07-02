@@ -8,7 +8,7 @@ public:
 		float priority = 1.0, 
 		Dot* secondary_dot = NULL, 
 		Dot* tertiary_dot = NULL, 
-		Multi_Tile_Type primary_item = null_tile, 
+		Tile_Template primary_item = null_tile, 
 		int primary_quantity = 0,
 		int secondary_quantity = 0,
 		int* primary_quantity_pointer = NULL);
@@ -19,7 +19,7 @@ public:
 
 	Dot* second_dot;
 	Dot* third_dot;
-	Multi_Tile_Type first_item;
+	Tile_Template first_item;
 	int first_quantity;
 	int second_quantity;
 	int* first_quantity_pointer;
@@ -30,10 +30,10 @@ public:
 	// DOT ROUTINES
 	void Routine_Collect_Container(Dot* dot, Dot* container);
 	void Routine_Put_Container_Items_In_Inventory(Dot* dot, Dot* container);
-	void Routine_Shuttle_Item_To_Dot(Dot* dot, Dot* project_dot, Multi_Tile_Type item_to_shuttle, int quantity);
-	void Routine_Pickup_Item_And_Shuttle_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity);
+	void Routine_Shuttle_Item_To_Dot(Dot* dot, Dot* project_dot, Tile_Template item_to_shuttle, int quantity);
+	void Routine_Pickup_Item_And_Shuttle_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Tile_Template item_to_grab, int quantity);
 	void Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_pointer, int increment, int finished_quantity, bool get_inside_project, bool tile_built = true);
-	void Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab);
+	void Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Tile_Template item_to_grab, int quantity_to_grab);
 	void Routine_Eliminate_Dot(Dot* dot, Dot* dot_to_eliminate, int attack_range);
 	void Routine_Mine_Asteroid(Dot* dot, Dot* asteroid);
 	void Routine_Flee_To_Safety(Dot*);
@@ -48,7 +48,7 @@ public:
 	bool debug = true;
 };
 
-Dot_Job::Dot_Job(int type, float priority, Dot* secondary_dot, Dot* tertiary_dot, Multi_Tile_Type primary_item, int primary_quantity, int secondary_quantity, int* primary_quanty_pointer)
+Dot_Job::Dot_Job(int type, float priority, Dot* secondary_dot, Dot* tertiary_dot, Tile_Template primary_item, int primary_quantity, int secondary_quantity, int* primary_quanty_pointer)
 {
 	job_type = type;
 	job_priority = priority;
@@ -177,7 +177,7 @@ void Dot_Job::Routine_Collect_Container(Dot* dot, Dot* container)
 
 		for (int i = 0; i < container_inventory.size(); i++)
 		{
-			dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,container });
+			dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Linked_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,container });
 		}
 
 		dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,container });
@@ -191,13 +191,13 @@ void Dot_Job::Routine_Put_Container_Items_In_Inventory(Dot* dot, Dot* container)
 	
 	for (int i = 0; i < container_inventory.size(); i++)
 	{
-		dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,container });
+		dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT, 0,0,0,0,Return_Tile_By_Linked_Inventory_Item(container_inventory[i].inventory_item_code),container_inventory[i].item_number,false,container });
 	}
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,0,0,0,0,null_tile,1,false,container });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,	0,0,0,0,null_tile,0,false,container });
 }
 
-void Dot_Job::Routine_Shuttle_Item_To_Dot(Dot* dot, Dot* project_dot, Multi_Tile_Type item_to_shuttle, int quantity)
+void Dot_Job::Routine_Shuttle_Item_To_Dot(Dot* dot, Dot* project_dot, Tile_Template item_to_shuttle, int quantity)
 {
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_NOT_CARRY_ITEM,							0,0,0,0,item_to_shuttle,0,false,dot });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_GIVE_INVENTORY_TO_ANOTHER_DOT,						0,0,0,0,item_to_shuttle,quantity,false,project_dot });
@@ -206,7 +206,7 @@ void Dot_Job::Routine_Shuttle_Item_To_Dot(Dot* dot, Dot* project_dot, Multi_Tile
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_TO_CARRY_ITEM,								0,0,0,0,item_to_shuttle,0,true,dot });
 }
 
-void Dot_Job::Routine_Pickup_Item_And_Shuttle_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Multi_Tile_Type item_to_grab, int quantity)
+void Dot_Job::Routine_Pickup_Item_And_Shuttle_To_Dot(Dot* dot, Dot* project_dot, Dot* dot_with_item, Tile_Template item_to_grab, int quantity)
 {	
 	Routine_Shuttle_Item_To_Dot(dot, project_dot, item_to_grab, quantity);
 	if (dot->Check_Inventory_For_Item(item_to_grab.inventory_pointer) < quantity) Routine_Take_Items_From_Dot(dot, dot_with_item, item_to_grab, quantity);
@@ -224,7 +224,7 @@ void Dot_Job::Routine_Run_Project(Dot* dot, Dot* project_dot, int* dot_quantity_
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_SET_DOT_PATH_TO_SPECIFIC_DOT,0,0,0,0,null_tile,0,tile_built,dot->npc_dot_config.current_dot_focus });
 }
 
-void Dot_Job::Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Multi_Tile_Type item_to_grab, int quantity_to_grab)
+void Dot_Job::Routine_Take_Items_From_Dot(Dot* dot, Dot* dot_to_take_items_from, Tile_Template item_to_grab, int quantity_to_grab)
 {
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_TAKE_INVENTORY_FROM_ANOTHER_DOT,						0,0,0,0,item_to_grab,quantity_to_grab,false,dot_to_take_items_from });
 	dot->npc_dot_config.current_goal_list.push_back({ ACTION_CHECK_IF_DOT_IS_ADJACENT_TO_SPECIFIC_DOT,				0,0,0,0,null_tile,0,true,dot_to_take_items_from });
@@ -286,7 +286,7 @@ void Dot_Job::Routine_Manage_Item_Production(Dot* dot)
 
 void Dot_Job::Subroutine_Manage_Item_Production(Dot* dot, int production_slot)
 {
-	Multi_Tile_Type tile_type = Return_Tile_By_Name(dot->npc_dot_config.production_status_array[production_slot].slot_tile_name);
+	Tile_Template tile_type = Return_Tile_Template_By_Identifier(dot->npc_dot_config.production_status_array[production_slot].slot_tile_name);
 	
 	if (!dot->Check_If_Tile_Needs_Parts(tile_type))
 	{

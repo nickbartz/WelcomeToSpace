@@ -19,7 +19,7 @@ public:
 	void free();
 
 	void Set_Coords(int x, int y, Camera* camera);
-	void Cursor::Set_Type(int current_action, Multi_Tile_Type* currently_selected_item);
+	void Cursor::Set_Type(int current_action, Tile_Template* currently_selected_item);
 
 private:
 	LTexture* texture_array[NUM_TILESHEETS];
@@ -44,7 +44,7 @@ Cursor::Cursor(SDL_Renderer* gRenderer, LTexture textures[])
 	cTexture = texture_array[TILESHEET];
 }
 
-void Cursor::Set_Type(int current_action, Multi_Tile_Type* currently_selected_item)
+void Cursor::Set_Type(int current_action, Tile_Template* currently_selected_item)
 {
 	render_offset_y = 0;
 	cursor_rect.w = TILE_WIDTH;
@@ -93,9 +93,9 @@ void Cursor::Set_Type(int current_action, Multi_Tile_Type* currently_selected_it
 			cTexture = texture_array[INVENTORY_SPRITESHEET];
 			cursor_rect.w = TILE_WIDTH;
 			cursor_rect.h = TILE_HEIGHT;
-			Inventory_Item new_item = inventory_item_map[currently_selected_item->inventory_pointer];
-			current_clip.x = new_item.clip_rect_x*SPRITESHEET_W;
-			current_clip.y = new_item.clip_rect_y*SPRITESHEET_H;
+			Inventory_Item_Template new_item = inventory_item_template_map[currently_selected_item->inventory_pointer];
+			current_clip.x = new_item.sprite_config.x*SPRITESHEET_W;
+			current_clip.y = new_item.sprite_config.y*SPRITESHEET_H;
 			current_clip.w = SPRITESHEET_W;
 			current_clip.h = SPRITESHEET_H;
 		}

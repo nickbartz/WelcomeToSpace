@@ -128,8 +128,8 @@
     <ClInclude Include="Cursor.h" />
     <ClInclude Include="Dot.h" />
     <ClInclude Include="Dot_Job.h" />
-    <ClInclude Include="Item.h" />
     <ClInclude Include="Intelligence.h" />
+    <ClInclude Include="Item.h" />
     <ClInclude Include="LTexture.h" />
     <ClInclude Include="Save_Load.h" />
     <ClInclude Include="Shared_Draw_Functions.h" />

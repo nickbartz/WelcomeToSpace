@@ -48,7 +48,7 @@ public:
 	bool dot_has_item_in_inventory(Dot* dot, int inventory_item_code);
 	void Add_Item_To_Dot_Inventory(Dot* dot, int inventory_item_code, int quantity);
 	void Remove_Item_From_Dot_Inventory(Dot* dot, int inventory_item_code, int quantity_to_remove);
-	void Remove_Building_Items_From_Dot_Inventory(Dot* dot, Multi_Tile_Type built_item);
+	void Remove_Building_Items_From_Dot_Inventory(Dot* dot, Tile_Template built_item);
 	void Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, int inventory_item_code, int quantity_dropped);
 	void Dot_Drop_Inventory(Dot* dot, int x_pos, int y_pos);
 	void Add_Container_Items_to_Dot_Inventory(Dot* dot, Dot* container);
@@ -86,7 +86,7 @@ public:
 	vector<Dot*> return_array_of_tiles_by_type_or_name(bool type_or_name, int search_number);
 
 	Dot* return_nearest_dot_with_faction(Dot* searching_dot, int faction, int search_distance);
-	Dot* return_nearest_dot_by_type(Dot* dot, int dot_type, Multi_Tile_Type tile_type = null_tile);
+	Dot* return_nearest_dot_by_type(Dot* dot, int dot_type, Tile_Template tile_type = null_tile);
 	Dot* return_nearest_storage_unit_with_item(Dot* dot, int item_name);
 	Dot* return_nearest_tile_by_type_or_name(Dot* dot, bool type_or_name, int search_number);
 	vector<Dot*> return_chair_and_table_combo(Dot* dot);
@@ -103,12 +103,6 @@ public:
 	void Check_Global_Inventory_In_Storage();
 
 	// ASTEROID COMMANDS
-	void Distribute_Asteroids();
-	void Spawn_Asteroids();
-	void Despawn_Asteroids();
-	int Get_Num_Asteroids();
-	Asteroid* Get_Asteroid_At_Coord(int x_pos, int y_pos);
-	void Update_Asteroid_AI();
 	void Create_Asteroid_Mining_Animation(Dot* mining_dot, int t_x, int t_y);
 
 	// CONTAINER COMMANDS
@@ -170,8 +164,8 @@ private:
 		Dot* storage_location;
 	};
 	vector<Storage_Inventory_Locations> current_storage;
+	vector<Item*> world_items;
 	vector<Bolt*> bolt_array;
-	vector<Asteroid*> asteroid_array;
 	vector<Ship_Dot*> enemy_ship_array;
 	vector<Container*> container_array;
 	vector<NPC_Dot*> npc_dot_array;
@@ -242,7 +236,7 @@ void Intelligence::Create_Test_Conditions()
 	//npc_dot_array.push_back(lifepod);
 
 	// CREATE STARTING LOCKER
-	world->Create_Tile(Return_Tile_By_Name(TILE_LOCKER_1), 152, 151);
+	world->Create_Tile(Return_Tile_Template_By_Identifier(TILE_LOCKER_1), 152, 151);
 	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_IRON_ORE, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_COBALT_ORE, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_NICKEL_ORE, 100);
@@ -256,7 +250,7 @@ void Intelligence::Create_Test_Conditions()
 	//world->Create_Tile(Return_Tile_By_Name(TILE_TESLA_TOWER_1), 154, 145);
 	//world->item_tiles[154][145]->npc_dot_config.dot_stat_faction = DOT_FACTION_PLAYER;
 
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		int random_head = rand() % 2;
 		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (151 + i) * TILE_WIDTH, 155 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
@@ -374,9 +368,9 @@ void Intelligence::Handle_Non_Console_Unclick(int current_action, int x_tile, in
 			int x_tile = mouse_hold_coordinate_vector[i].x;
 			int y_tile = mouse_hold_coordinate_vector[i].y;
 
-			if (world->Check_If_Scaffold_Can_Be_Placed(&Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile))
+			if (world->Check_If_Scaffold_Can_Be_Placed(&Return_Tile_By_Linked_Inventory_Item(inventory_item_code), x_tile, y_tile))
 			{
-				world->Add_Scaffold_To_Tile(Return_Tile_By_Inventory_Item(inventory_item_code), x_tile, y_tile, DOT_FACTION_PLAYER);
+				world->Add_Scaffold_To_Tile(Return_Tile_By_Linked_Inventory_Item(inventory_item_code), x_tile, y_tile, DOT_FACTION_PLAYER);
 			}
 		}
 		break;
@@ -751,7 +745,7 @@ void Intelligence::Remove_Item_From_Dot_Inventory(Dot* dot, int inventory_item_c
 	}
 }
 
-void Intelligence::Remove_Building_Items_From_Dot_Inventory(Dot* dot, Multi_Tile_Type built_item)
+void Intelligence::Remove_Building_Items_From_Dot_Inventory(Dot* dot, Tile_Template built_item)
 {
 	if (built_item.building_specs.Requirement_1.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_1.inventory_requirement,built_item.building_specs.Requirement_1.requirement_quantity);
 	if (built_item.building_specs.Requirement_2.requirement_quantity > 0) Remove_Item_From_Dot_Inventory(dot, built_item.building_specs.Requirement_2.inventory_requirement, built_item.building_specs.Requirement_2.requirement_quantity);
@@ -765,7 +759,7 @@ void Intelligence::Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, int i
 {
 	if (dot->Check_Inventory_For_Item(inventory_item_code))
 	{
-		Container* new_container = new Container(gRenderer, texture_array[INVENTORY_SPRITESHEET], x_pos, y_pos, Fetch_Inventory(inventory_item_code).clip_rect_x, Fetch_Inventory(inventory_item_code).clip_rect_y);
+		Container* new_container = new Container(gRenderer, texture_array[INVENTORY_SPRITESHEET], x_pos, y_pos, Fetch_Inventory_Item_Template(inventory_item_code).sprite_config.x, Fetch_Inventory_Item_Template(inventory_item_code).sprite_config.y);
 		Add_Item_To_Dot_Inventory(new_container, inventory_item_code, quantity_dropped);
 		Remove_Item_From_Dot_Inventory(dot, inventory_item_code, quantity_dropped);
 		container_array.push_back(new_container);
@@ -774,7 +768,7 @@ void Intelligence::Dot_Drop_Inventory_Item(Dot* dot, int x_pos, int y_pos, int i
 
 void Intelligence::Dot_Drop_Inventory(Dot* dot, int x_pos, int y_pos)
 {
-	Container* new_container = new Container(gRenderer, texture_array[INVENTORY_SPRITESHEET], x_pos, y_pos, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_x, Fetch_Inventory(dot->npc_dot_config.inventory_slots[0].inventory_item_code).clip_rect_y);
+	Container* new_container = new Container(gRenderer, texture_array[INVENTORY_SPRITESHEET], x_pos, y_pos, Fetch_Inventory_Item_Template(dot->npc_dot_config.inventory_slots[0].inventory_item_code).sprite_config.x, Fetch_Inventory_Item_Template(dot->npc_dot_config.inventory_slots[0].inventory_item_code).sprite_config.y);
 	
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++)
 	{
@@ -821,7 +815,7 @@ void Intelligence::Dot_Craft_Item(Dot* dot, int inventory_item_code, int quantit
 	for (int i=0; i < quantity; i++)
 	{
 		Add_Item_To_Dot_Inventory(dot, inventory_item_code, 1);
-		Remove_Building_Items_From_Dot_Inventory(dot, Return_Tile_By_Inventory_Item(inventory_item_code));
+		Remove_Building_Items_From_Dot_Inventory(dot, Return_Tile_By_Linked_Inventory_Item(inventory_item_code));
 	}
 }
 
@@ -1162,7 +1156,7 @@ void Intelligence::Manage_Dot_Inventory_Storage(NPC_Dot* dot)
 		// FIX THIS SO IT HAS A BETTER WAY OF DECIDING WHEN NOT TO DUMP ITEMS THAT ARE CURRENTLY EQUIPPED
 		for (int i = 0; i < MAX_DOT_INVENTORY; i++) if (dot->npc_dot_config.inventory_slots[i].item_number > 0 && dot->npc_dot_config.inventory_slots[i].inventory_item_code != INVENTORY_SPACESUIT_1)
 		{
-			Multi_Tile_Type inventory_item = Return_Tile_By_Inventory_Item(dot->npc_dot_config.inventory_slots[i].inventory_item_code);
+			Tile_Template inventory_item = Return_Tile_By_Linked_Inventory_Item(dot->npc_dot_config.inventory_slots[i].inventory_item_code);
 			int inventory_quantity = dot->npc_dot_config.inventory_slots[i].item_number;
 			dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_DUMP_STORAGE, 1.0 , dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE].related_dot, NULL, inventory_item, inventory_quantity };
 			dot->dot_current_job.Run_Job(dot);
@@ -1190,7 +1184,7 @@ void Intelligence::Manage_Dot_Combat(NPC_Dot* dot)
 	// IF THERE'S A CURRENT COMBAT TARGET, ELMINATE IT
 	if (combat_target_dot != NULL && dot->dot_current_job.job_type > DOT_HEALTH_JOB_ELIMINATE_DOT && dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0 )
 	{
-		dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_ELIMINATE_DOT,1,combat_target_dot,NULL, null_tile, Fetch_Inventory(dot->npc_dot_config.dot_equipment_config.Weapon.inventory_item_code).weapon_range };
+		dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_ELIMINATE_DOT,1,combat_target_dot,NULL, null_tile, Fetch_Inventory_Item_Template(dot->npc_dot_config.dot_equipment_config.Weapon.inventory_item_code).weapon_config.weapon_range };
 		dot->dot_current_job.Run_Job(dot);
 	}
 }
@@ -1377,7 +1371,7 @@ void Intelligence::Respond_To_Dot_Priority_Alarm_Level(NPC_Dot* dot, int dot_pri
 			Dot* nearest_space_suit_closet = return_nearest_storage_unit_with_item(dot, INVENTORY_SPACESUIT_1);
 			if (nearest_space_suit_closet != NULL)
 			{
-				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_GET_SPACESUIT, 1.0 , nearest_space_suit_closet, NULL, Return_Tile_By_Inventory_Item(INVENTORY_SPACESUIT_1), 1 };
+				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_GET_SPACESUIT, 1.0 , nearest_space_suit_closet, NULL, Return_Tile_By_Linked_Inventory_Item(INVENTORY_SPACESUIT_1), 1 };
 				dot->dot_current_job.Run_Job(dot);
 			}
 			else if (world->world_tiles[dot->getTileX()][dot->getTileY()]->multi_tile_config.is_oxygenated == 0 && dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_FIND_OXYGENATED_TILE)
@@ -1406,7 +1400,7 @@ void Intelligence::Respond_To_Dot_Priority_Alarm_Level(NPC_Dot* dot, int dot_pri
 			vector<Dot*> chair_and_table_combo = return_chair_and_table_combo(dot);
 			if (chair_and_table_combo.size() == 2)
 			{
-				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_EAT_FOOD, 1.0 , chair_and_table_combo[0], chair_and_table_combo[1], Return_Tile_By_Inventory_Item(dot->Check_Inventory_For_Item_Type(INVENTORY_TYPE_FOOD).item_code), -1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
+				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_EAT_FOOD, 1.0 , chair_and_table_combo[0], chair_and_table_combo[1], Return_Tile_By_Linked_Inventory_Item(dot->Check_Inventory_For_Item_Type(INVENTORY_TYPE_FOOD).item_code), -1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
 				dot->dot_current_job.Run_Job(dot);
 			}
 		}
@@ -1416,7 +1410,7 @@ void Intelligence::Respond_To_Dot_Priority_Alarm_Level(NPC_Dot* dot, int dot_pri
 			Dot* nearest_soylent_meal = return_nearest_storage_unit_with_item(dot, INVENTORY_TYPE_FOOD);
 			if (nearest_soylent_meal != NULL)
 			{
-				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_FIND_FOOD, 1.0 , nearest_soylent_meal, NULL, Return_Tile_By_Inventory_Item(nearest_soylent_meal->Check_Inventory_For_Item_Type(ITEM_TYPE_FOOD).item_code), 1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
+				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_FIND_FOOD, 1.0 , nearest_soylent_meal, NULL, Return_Tile_By_Linked_Inventory_Item(nearest_soylent_meal->Check_Inventory_For_Item_Type(ITEM_TYPE_FOOD).item_code), 1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
 				dot->dot_current_job.Run_Job(dot);
 			}
 		}
@@ -1657,7 +1651,6 @@ vector<vector<Dot*>> Intelligence::Return_Array_of_Pointers_To_All_Dot_Vectors()
 {
 	vector<vector<Dot*>> my_vector;
 	my_vector.resize(10);
-	my_vector[DOT_ASTEROID] = { asteroid_array.begin(),asteroid_array.end() };
 	my_vector[DOT_NPC] = { npc_dot_array.begin(),npc_dot_array.end() };
 	my_vector[DOT_CONTAINER] = { container_array.begin(),container_array.end() };
 	my_vector[DOT_BOLT] = { bolt_array.begin(),bolt_array.end() };
@@ -1688,9 +1681,6 @@ vector<Dot*> Intelligence::return_appropriate_dot_vector(int dot_vector_type)
 		break;
 	case DOT_ENEMY_SHIP:
 		temp_vector = { enemy_ship_array.begin(), enemy_ship_array.end() };
-		break;
-	case DOT_ASTEROID:
-		temp_vector = { asteroid_array.begin(), asteroid_array.end() };
 		break;
 	case DOT_CONTAINER:
 		temp_vector = { container_array.begin(), container_array.end() };
@@ -1804,7 +1794,7 @@ vector<Dot*> Intelligence::return_array_of_dots_within_radius(Dot* dot, int radi
 	return search_vector;
 }
 
-Dot* Intelligence::return_nearest_dot_by_type(Dot* dot, int dot_vector_type, Multi_Tile_Type tile_type)
+Dot* Intelligence::return_nearest_dot_by_type(Dot* dot, int dot_vector_type, Tile_Template tile_type)
 {
 	vector <Dot*> search_vector = return_appropriate_dot_vector(dot_vector_type);
 	int current_x_tile = dot->getTileX();
@@ -2080,100 +2070,6 @@ void Intelligence::Update_All_Enemy_Ships_AI()
 
 // ASTEROID COMMANDS1
 
-void Intelligence::Distribute_Asteroids()
-{
-	for (int p = 0; p < TILE_NUM_Y; ++p)
-	{
-		for (int i = 0; i < TILE_NUM_X; ++i)
-		{
-			int randomizer = rand() % 100;
-
-			if (randomizer > 98)
-			{
-				if (world->world_tiles[i][p]->multi_tile_config.tile_type == VACUUM)
-				{
-					asteroid_array.push_back(new Asteroid(gRenderer, texture_array[ASTEROID_SPRITESHEET], i*TILE_WIDTH, p*TILE_WIDTH, 0));
-				}
-			}
-		}
-	}
-}
-
-void Intelligence::Spawn_Asteroids()
-{	
-	while (asteroid_array.size() < MAX_NUM_ASTEROIDS)
-	{
-		int start_range_x = max(0,(camera->camera_box.x) - (SCREEN_WIDTH / 2));
-		int end_range_x = min(LEVEL_WIDTH, (camera->camera_box.x + camera->camera_box.w) + SCREEN_WIDTH / 2);
-		int start_range_y = max(0, (camera->camera_box.y) - SCREEN_HEIGHT / 2);
-		int end_range_y = min(LEVEL_HEIGHT, (camera->camera_box.y + camera->camera_box.h) + SCREEN_HEIGHT / 2);
-
-		int asteroid_x = return_point_not_onscreen(true, start_range_x, end_range_x);
-		int asteroid_y = return_point_not_onscreen(false,start_range_y, end_range_y);
-
-		if (world->world_tiles[asteroid_x / TILE_WIDTH][asteroid_y / TILE_HEIGHT] != NULL && world->world_tiles[asteroid_x / TILE_WIDTH][asteroid_y / TILE_HEIGHT]->multi_tile_config.tile_type == VACUUM)
-		{
-			asteroid_array.push_back(new Asteroid(gRenderer, texture_array[ASTEROID_SPRITESHEET], asteroid_x, asteroid_y, 0));
-		}
-
-	}
-}
-
-void Intelligence::Despawn_Asteroids()
-{
-	for (int p = 0; p < asteroid_array.size(); p++) 
-	{
-		if (p < asteroid_array.size())
-		{
-			if (abs(camera->camera_box.x - asteroid_array[p]->dot_rect.x) > ASTEROID_DESPAWN_RADIUS && abs(camera->camera_box.y - asteroid_array[p]->dot_rect.y) > ASTEROID_DESPAWN_RADIUS)
-			{
-				delete asteroid_array[p];
-				asteroid_array.erase(asteroid_array.begin() + p);
-			}
-		}
-	}
-}
-
-Asteroid* Intelligence::Get_Asteroid_At_Coord(int x_coord, int y_coord)
-{
-	Asteroid* asteroid = NULL;
-	for (int p = 0; p < asteroid_array.size(); ++p)
-	{
-		if (asteroid_array[p]->is_onscreen(camera))
-		{
-			if (x_coord >= asteroid_array[p]->dot_rect.x && x_coord <= (asteroid_array[p]->dot_rect.x + asteroid_array[p]->dot_rect.w)
-				&& y_coord >= asteroid_array[p]->dot_rect.y && y_coord <= (asteroid_array[p]->dot_rect.y + asteroid_array[p]->dot_rect.h))
-			{
-				asteroid = asteroid_array[p];
-				return asteroid;
-			}
-		}
-	}
-	return asteroid;
-}
-
-int Intelligence::Get_Num_Asteroids()
-{
-	return asteroid_array.size();
-}
-
-void Intelligence::Update_Asteroid_AI()
-{
-	for (int p = 0; p < asteroid_array.size(); ++p)
-	{
-		if (asteroid_array[p]->npc_dot_config.dot_stat_health <= 0)
-		{
-			Dot_Drop_Inventory(asteroid_array[p], asteroid_array[p]->getPosX(), asteroid_array[p]->getPosY());
-			delete asteroid_array[p];
-			asteroid_array.erase(asteroid_array.begin() + p);
-		}
-		else if (asteroid_array[p]->is_onscreen(camera) && (asteroid_array[p]->mVelX != 0 || asteroid_array[p]->mVelY != 0))
-		{
-			move_dot(asteroid_array[p], &asteroid_array[p]->mVelX, &asteroid_array[p]->mVelY);
-		}
-	}
-}
-
 void Intelligence::Create_Asteroid_Mining_Animation(Dot* mining_dot, int t_x, int t_y)
 {
 	int target_x = t_x;
@@ -2386,7 +2282,7 @@ void Intelligence::Check_Scaffold_Needs(Tile* tile)
 	{
 		Dot* project_dot = tile;
 		Dot* dot_with_item = return_nearest_storage_unit_with_item(tile, tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
-		Multi_Tile_Type item_to_transport = Return_Tile_By_Inventory_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
+		Tile_Template item_to_transport = Return_Tile_By_Linked_Inventory_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
 
 		if (dot_with_item != NULL)
 		{
@@ -2419,7 +2315,7 @@ void Intelligence::Check_Production_Needs(Tile* tile)
 	{
 		Dot* project_dot = tile;
 		Dot* dot_with_item = return_nearest_storage_unit_with_item(tile, tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
-		Multi_Tile_Type item_to_transport = Return_Tile_By_Inventory_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
+		Tile_Template item_to_transport = Return_Tile_By_Linked_Inventory_Item(tile->npc_dot_config.tile_parts_list[i].inventory_item_code);
 
 		if (dot_with_item != NULL)
 		{
@@ -2782,9 +2678,6 @@ void Intelligence::free()
 
 	for (int i = 0; i < bolt_array.size(); i++) delete bolt_array[i];
 	bolt_array.erase(bolt_array.begin(), bolt_array.begin() + bolt_array.size());
-
-	for (int i = 0; i < asteroid_array.size(); i++) delete asteroid_array[i];
-	asteroid_array.erase(asteroid_array.begin(), asteroid_array.begin() + asteroid_array.size());
 
 	for (int i = 0; i < enemy_ship_array.size(); i++) delete enemy_ship_array[i];
 	enemy_ship_array.erase(enemy_ship_array.begin(), enemy_ship_array.begin() + enemy_ship_array.size());

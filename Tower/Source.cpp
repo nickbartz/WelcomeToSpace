@@ -312,7 +312,7 @@ void handle_event(SDL_Event* e, Camera* camera, Cursor* cursor, Intelligence* in
 void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* intelligence, Console* console)
 {
 	cursor->Set_Coords(current_mouse_pos_x, current_mouse_pos_y, camera);
-	cursor->Set_Type(console->current_action, &Return_Tile_By_Inventory_Item(console->current_selected_inventory_item));
+	cursor->Set_Type(console->current_action, &Return_Tile_By_Linked_Inventory_Item(console->current_selected_inventory_item));
 
 	int x_pos = (current_mouse_pos_x + camera->camera_box.x);
 	int y_pos = (current_mouse_pos_y + camera->camera_box.y);
@@ -390,8 +390,8 @@ int main(int argc, char* args[])
 		if (debug) cout << "Loading Textures" << endl;
 		
 		load_textures();
-		Load_Tiles();
-		Load_Inventory_Items();
+		Load_Tile_Templates();
+		Load_Inventory_Item_Templates();
 
 		//if (debug) cout << "Creating Save" << endl;
 		//Save_File* current_save_state = new Save_File();

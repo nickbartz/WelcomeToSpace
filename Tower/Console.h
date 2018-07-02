@@ -242,8 +242,8 @@ void Button::render(SDL_Renderer* gRenderer)
 
 	if (slot_item_pointer != NULL)
 	{
-		button_sprite.console_sprite_clip.x = Fetch_Inventory(slot_item_pointer->inventory_item_code).clip_rect_x * SPRITESHEET_W;
-		button_sprite.console_sprite_clip.y = Fetch_Inventory(slot_item_pointer->inventory_item_code).clip_rect_y * SPRITESHEET_H;
+		button_sprite.console_sprite_clip.x = Fetch_Inventory_Item_Template(slot_item_pointer->inventory_item_code).sprite_config.x * SPRITESHEET_W;
+		button_sprite.console_sprite_clip.y = Fetch_Inventory_Item_Template(slot_item_pointer->inventory_item_code).sprite_config.y * SPRITESHEET_H;
 	}
 
 	if (button_filled)
@@ -388,7 +388,7 @@ Button Console_Window::Create_Dot_Inventory_Slot(SDL_Renderer* gRenderer, SDL_Re
 	Button new_inventory_button = Button(gRenderer, BUTTON_ACTION_INVENTORY_BUTTON, pos_rect, true, panel_name);
 	new_inventory_button.slot_item_pointer = slot_pointer;
 	new_inventory_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont, &slot_pointer->item_number, true);
-	new_inventory_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_x * SPRITESHEET_W, Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
+	new_inventory_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.x* SPRITESHEET_W, Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
 	return new_inventory_button;
 }
 
@@ -397,7 +397,7 @@ Button Console_Window::Create_Crafting_Button(SDL_Renderer* gRenderer, SDL_Rect 
 	Button new_crafting_button = Button(gRenderer, BUTTON_ACTION_PLACE_SCAFFOLD, pos_rect, true, panel_name);
 	new_crafting_button.slot_item_pointer = slot_pointer;
 	new_crafting_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont, &slot_pointer->item_number, true);
-	new_crafting_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_x * SPRITESHEET_W, Fetch_Inventory(slot_pointer->inventory_item_code).clip_rect_y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
+	new_crafting_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.x * SPRITESHEET_W, Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
 	return new_crafting_button;
 }
 
@@ -576,39 +576,39 @@ void Console_Window::Create_Item_Production_Window(LTexture* spritesheet, TTF_Fo
 	vector<Button> panel_buttons;
 
 	SDL_Rect production_item_1_rect = { base_window_rect.x, base_window_rect.y, TILE_WIDTH, TILE_HEIGHT };
-	Inventory_Item production_1_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[0].slot_tile_name).inventory_pointer);
+	Inventory_Item_Template production_1_item = Fetch_Inventory_Item_Template(Return_Tile_Template_By_Identifier(focus_dot->npc_dot_config.production_status_array[0].slot_tile_name).inventory_pointer);
 	Button production_item_1 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_1_rect,true, PANEL_PRODUCTION_ORDERS,0 };
-	production_item_1.Add_Button_Sprite(spritesheet, { production_1_item.clip_rect_x*SPRITESHEET_W,production_1_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W },0,0);
+	production_item_1.Add_Button_Sprite(spritesheet, { production_1_item.sprite_config.x*SPRITESHEET_W,production_1_item.sprite_config.y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W },0,0);
 	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[0].slot_requests, &production_item_1_rect, { TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT },panel_name));
 
 	SDL_Rect production_item_2_rect = { base_window_rect.x, base_window_rect.y+TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
-	Inventory_Item production_2_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[1].slot_tile_name).inventory_pointer);
+	Inventory_Item_Template production_2_item = Fetch_Inventory_Item_Template(Return_Tile_Template_By_Identifier(focus_dot->npc_dot_config.production_status_array[1].slot_tile_name).inventory_pointer);
 	Button production_item_2 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_2_rect,true, PANEL_PRODUCTION_ORDERS,1 };
-	production_item_2.Add_Button_Sprite(spritesheet, { production_2_item.clip_rect_x*SPRITESHEET_W,production_2_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	production_item_2.Add_Button_Sprite(spritesheet, { production_2_item.sprite_config.x*SPRITESHEET_W,production_2_item.sprite_config.y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
 	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[1].slot_requests, &production_item_1_rect, { TILE_WIDTH,TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
 
 	SDL_Rect production_item_3_rect = { base_window_rect.x, base_window_rect.y+2*TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
-	Inventory_Item production_3_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[2].slot_tile_name).inventory_pointer);
+	Inventory_Item_Template production_3_item = Fetch_Inventory_Item_Template(Return_Tile_Template_By_Identifier(focus_dot->npc_dot_config.production_status_array[2].slot_tile_name).inventory_pointer);
 	Button production_item_3 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_3_rect,true, PANEL_PRODUCTION_ORDERS,2 };
-	production_item_3.Add_Button_Sprite(spritesheet, { production_3_item.clip_rect_x*SPRITESHEET_W,production_3_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	production_item_3.Add_Button_Sprite(spritesheet, { production_3_item.sprite_config.x*SPRITESHEET_W,production_3_item.sprite_config.y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
 	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[2].slot_requests, &production_item_1_rect, { TILE_WIDTH,2*TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
 
 	SDL_Rect production_item_4_rect = { base_window_rect.x, base_window_rect.y + 3 * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
-	Inventory_Item production_4_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[3].slot_tile_name).inventory_pointer);
+	Inventory_Item_Template production_4_item = Fetch_Inventory_Item_Template(Return_Tile_Template_By_Identifier(focus_dot->npc_dot_config.production_status_array[3].slot_tile_name).inventory_pointer);
 	Button production_item_4 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_4_rect,true, PANEL_PRODUCTION_ORDERS,3 };
-	production_item_4.Add_Button_Sprite(spritesheet, { production_4_item.clip_rect_x*SPRITESHEET_W,production_4_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	production_item_4.Add_Button_Sprite(spritesheet, { production_4_item.sprite_config.x*SPRITESHEET_W,production_4_item.sprite_config.y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
 	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[3].slot_requests, &production_item_1_rect, { TILE_WIDTH,3 * TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
 
 	SDL_Rect production_item_5_rect = { base_window_rect.x, base_window_rect.y + 4 * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
-	Inventory_Item production_5_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[4].slot_tile_name).inventory_pointer);
+	Inventory_Item_Template production_5_item = Fetch_Inventory_Item_Template(Return_Tile_Template_By_Identifier(focus_dot->npc_dot_config.production_status_array[4].slot_tile_name).inventory_pointer);
 	Button production_item_5 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_5_rect,true, PANEL_PRODUCTION_ORDERS,4 };
-	production_item_5.Add_Button_Sprite(spritesheet, { production_5_item.clip_rect_x*SPRITESHEET_W,production_5_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	production_item_5.Add_Button_Sprite(spritesheet, { production_5_item.sprite_config.x*SPRITESHEET_W,production_5_item.sprite_config.y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
 	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[4].slot_requests, &production_item_1_rect, { TILE_WIDTH,4 * TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
 
 	SDL_Rect production_item_6_rect = { base_window_rect.x, base_window_rect.y + 5 * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT };
-	Inventory_Item production_6_item = Fetch_Inventory(Return_Tile_By_Name(focus_dot->npc_dot_config.production_status_array[5].slot_tile_name).inventory_pointer);
+	Inventory_Item_Template production_6_item = Fetch_Inventory_Item_Template(Return_Tile_Template_By_Identifier(focus_dot->npc_dot_config.production_status_array[5].slot_tile_name).inventory_pointer);
 	Button production_item_6 = { gRenderer, BUTTON_ACTION_CREATE_PRODUCTION_ORDER, production_item_6_rect,true, PANEL_PRODUCTION_ORDERS,5 };
-	production_item_6.Add_Button_Sprite(spritesheet, { production_6_item.clip_rect_x*SPRITESHEET_W,production_6_item.clip_rect_y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
+	production_item_6.Add_Button_Sprite(spritesheet, { production_6_item.sprite_config.x*SPRITESHEET_W,production_6_item.sprite_config.y*SPRITESHEET_H,SPRITESHEET_W, SPRITESHEET_W }, 0, 0);
 	panel_buttons.push_back(Create_Simple_Linked_Number(gRenderer, console_font, &focus_dot->npc_dot_config.production_status_array[5].slot_requests, &production_item_1_rect, { TILE_WIDTH,5 * TILE_HEIGHT,TILE_WIDTH,TILE_HEIGHT }, panel_name));
 
 	panel_buttons.push_back(production_item_1);
