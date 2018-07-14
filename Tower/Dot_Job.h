@@ -137,6 +137,9 @@ void Dot_Job::Run_Job(Dot* dot)
 	case ITEM_JOB_PRODUCE_ITEM:
 		Routine_Manage_Item_Production(dot);
 		break;
+	case ITEM_JOB_LIGHT_SURROUNDING_TILES:
+		dot->npc_dot_config.current_goal_list.push_back({ ACTION_LIGHT_SURROUNDING_TILES,0,0,0,0,null_tile,0,false,NULL });
+		break;
 	}
 }
 

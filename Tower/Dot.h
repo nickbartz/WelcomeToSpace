@@ -78,6 +78,11 @@ public:
 	// DOT BASIC PLACEMENT AND MOVEMENT
 	SDL_Rect dot_rect;
 	double angle = 0;
+	int bounce = 0;
+	int bounce_direction = 1;
+	int delay = 0;
+	int max_delay = 5;
+	double spin = 0.0;
 
 	//Movement trackers
 	int delta_x, delta_y;
@@ -86,12 +91,15 @@ public:
 	int previous_mPosX, previous_mPosY;
 	double targetPosX, targetPosY;
 	bool dot_pause_movement = false;
+	
 
 	//Clipped Dimensions
 	int sWidth;
 	int sHeight;
 
+	//Color functions
 	void Dot::toggle_highlight(bool on_or_off);
+	void Dot::light_dot_with_light_specs(SDL_Color lighting_specs);
 
 	// Structs
 
@@ -184,6 +192,7 @@ public:
 		Dot* current_storage_tile = NULL;
 		int dot_init = 1;
 		SDL_Color dot_color = { 255,255,255,255 };
+		SDL_Color dot_light = { 0,0,0,0 };
 		int dot_angle = 0;
 		Dot_Inventory_Slot inventory_slots[MAX_DOT_INVENTORY];
 		vector<Dot_Inventory_Slot> craftable_items;
@@ -362,6 +371,31 @@ void Dot::toggle_highlight(bool on_or_off)
 		npc_dot_config.dot_color.g = 255;
 		npc_dot_config.dot_color.r = 255;
 	}
+}
+
+void Dot::light_dot_with_light_specs(SDL_Color lighting_specs)
+{
+	int dot_light_r = npc_dot_config.dot_light.r;
+	int dot_light_g = npc_dot_config.dot_light.g;
+	int dot_light_b = npc_dot_config.dot_light.b;
+
+	int lighting_specs_r = lighting_specs.r;
+	int lighting_specs_g = lighting_specs.g;
+	int lighting_specs_b = lighting_specs.b;
+
+	if (dot_light_r + lighting_specs_r > 255) npc_dot_config.dot_light.r = 255;
+	else npc_dot_config.dot_light.r += lighting_specs.r;
+
+	if (dot_light_g + lighting_specs_g > 255) npc_dot_config.dot_light.g = 255;
+	else npc_dot_config.dot_light.g += lighting_specs.g;
+	
+	if (dot_light_b + lighting_specs_b > 255) npc_dot_config.dot_light.b = 255;
+	else npc_dot_config.dot_light.b += lighting_specs.b;
+
+	int num = npc_dot_config.dot_light.a;
+
+	if (multi_tile_config.tile_name = TILE_LOCKER_1) cout << num << endl;
+	
 }
 
 void Dot::Simple_Increment_Animation(Simple_Dot_Animation_Struct* animation_struct)
@@ -697,12 +731,14 @@ public:
 	//Initializes the variables
 	Tile(SDL_Renderer* gRenderer = NULL, LTexture* tile_texture = NULL, int x_coordinate = NULL, int y_coordinate = NULL, Tile_Template multi_config = Return_Tile_Template_By_Identifier(TILE_GENERIC_TILE), int tile_built_level = 0) :Dot(gRenderer, tile_texture, x_coordinate, y_coordinate)
 	{
+		tile_renderer = gRenderer;
 		multi_tile_config = multi_config;
 		dot_rect = { x_coordinate * TILE_WIDTH,y_coordinate * TILE_HEIGHT,TILE_WIDTH*multi_config.sprite_specs.rect_columns, TILE_HEIGHT*multi_config.sprite_specs.rect_rows };
 		mTexture = tile_texture;
 
 		int render_offset_x = 0;
 		int render_offset_y = 0;
+		
 
 		if (multi_config.sprite_specs.sprite_rows < 0)  render_offset_y = multi_config.sprite_specs.sprite_rows/2;
 		if (multi_config.sprite_specs.sprite_columns < 0)  render_offset_x = multi_config.sprite_specs.sprite_columns/2;
@@ -710,12 +746,14 @@ public:
 		if (multi_tile_config.is_smooth == 1) handle_smooth_tiles(2, 2, 2, 2, 2, 2, 2, 2);
 		if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID)
 		{
+			spin = (rand() % 40)/100.0 - 0.2;
+			angle = rand() % 360;
 			multi_tile_config.sprite_specs.sprite_column = rand() % 8;
 			populate_tile_inventory();
 		}
 
 		render_rect =  { (x_coordinate + render_offset_x)*TILE_WIDTH,(y_coordinate + render_offset_y)*TILE_HEIGHT, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };
-		current_clip = { (1 + multi_tile_config.sprite_specs.sprite_column*SPRITESHEET_W),(1 + multi_tile_config.sprite_specs.sprite_row*SPRITESHEET_H) + SPRITESHEET_H * tile_orientation, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };
+		current_clip = { (1 + multi_tile_config.sprite_specs.sprite_column*SPRITESHEET_W),(1 + multi_tile_config.sprite_specs.sprite_row*SPRITESHEET_H) + SPRITESHEET_H * door_offset_y, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };
 		
 		dot_config[DOT_TYPE] = DOT_TILE;
 		npc_dot_config.dot_stat_health = multi_config.max_health;
@@ -738,7 +776,6 @@ public:
 	bool is_onscreen(Camera* camera);
 	void update_texture_clip(int clip_row_x, int clip_row_y);
 	virtual void render(SDL_Renderer* gRenderer, Camera* camera, int render_layer);
-	void Tile::change_door_orientation();
 	void Tile::handle_door_animation();
 	void Tile::handle_animation();
 	void Tile::handle_floor_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge);
@@ -749,7 +786,7 @@ public:
 	void Tile::populate_tile_inventory();
 	void Tile::populate_tile_production_config();
 	
-	void Tile::Set_Color(Uint8 R, Uint8 G, Uint8 B);
+	void Tile::Tint_Tile_Before_Render();
 
 	// The tile's position on the screen
 	SDL_Rect* Tile::get_tile_rect(bool camera_rect = false);
@@ -757,7 +794,6 @@ public:
 	clip_and_rotation Tile::Create_Clip_And_Rotation(int base_sprite_x, int base_sprite_y, int offset_tile_x, int offset_tile_y, int component_x, int component_y, double rotation, SDL_RendererFlip flip = SDL_FLIP_NONE, int render_layer = RENDER_TILES);
 
 	SDL_Rect current_clip;
-
 	vector<clip_and_rotation> multi_clip;
 	SDL_Rect render_rect;
 	SDL_Rect status_bar;
@@ -766,7 +802,8 @@ public:
 	// set initially not as an animated item
 	int animation_ticker = 0;
 	int max_animation_ticker = 32;
-	int tile_orientation = 0;
+	int door_offset_y = 0;
+	int door_offset_x = 0;
 
 	// Item Jobs
 	int item_job_type;
@@ -776,13 +813,9 @@ public:
 	Tile* scaffold_on_tile = NULL;
 
 private:
-
+	SDL_Renderer* tile_renderer;
+	SDL_Texture* multi_texture;
 	SDL_Rect dot_rect_camera;
-
-	//Set Texture Color Mods
-	Uint8 r = 255;
-	Uint8 g = 255;
-	Uint8 b = 255;
 
 	//The tile's hardware texture and clip from sprite_sheet
 	LTexture* mTexture;
@@ -804,11 +837,6 @@ SDL_Rect* Tile::get_tile_rect(bool camera_rect)
 	{
 		return &dot_rect_camera;
 	}
-}
-
-void Tile::change_door_orientation()
-{
-
 }
 
 bool Tile::is_onscreen(Camera* camera)
@@ -837,40 +865,24 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 {
 	if (multi_tile_config.is_animated > 0) handle_animation();
 
-	dot_rect_camera.x = render_rect.x - camera->camera_box.x;
-	dot_rect_camera.y = render_rect.y - camera->camera_box.y;
-	dot_rect_camera.w = render_rect.w;
-	dot_rect_camera.h = render_rect.h;
+	dot_rect_camera = { render_rect.x - camera->camera_box.x, render_rect.y - camera->camera_box.y + bounce, render_rect.w, render_rect.h };
+	SDL_Rect render_clip = { current_clip.x + door_offset_x, current_clip.y + door_offset_y*SPRITESHEET_H, current_clip.w, current_clip.h };
 
-	//Render to screen
-
-	// Change the color if the tile is "marked" at this point just for mining
-	if (npc_dot_config.marked_for_mining == 1) mTexture->setColor(255, 150, 150);
-	else mTexture->setColor(npc_dot_config.dot_color.r - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.g - multi_tile_config.is_oxygenated * 10, npc_dot_config.dot_color.b);
-
-	// Change the alpha if the tile isn't built yet
-	if (npc_dot_config.tile_built_level < multi_tile_config.build_time) mTexture->setAlpha(100), mTexture->setColor(200, 200, 255);
-
-
-	SDL_Rect render_clip = { current_clip.x, current_clip.y + tile_orientation * SPRITESHEET_H, current_clip.w, current_clip.h };
 	if (multi_tile_config.tile_type == ITEM_TYPE_EMITTER) render_circle(gRenderer, camera, getTileX(), getTileY(), 5, 255, 0, 0, 50);
 
-	SDL_Point rotate_angle{ 16,16 };
-	
-	if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >=1 ) && multi_tile_config.render_layer == render_layer) mTexture->render(gRenderer, &dot_rect_camera, &render_clip, angle);
-	else
-	{
-		for (int i = 0; i < multi_clip.size(); i++)
-		{
-			SDL_Rect draw_rect = { multi_clip[i].rect.x - camera->camera_box.x ,multi_clip[i].rect.y - camera->camera_box.y ,TILE_WIDTH,TILE_HEIGHT };
-			if (multi_clip[i].render_layer == render_layer)
-			{
-				mTexture->render(gRenderer, &draw_rect, &multi_clip[i].clip, multi_clip[i].angle, &rotate_angle, multi_clip[i].flip);
-			}
-		}
-	}
+	// Change colors or alpha of tile before render
+	Tint_Tile_Before_Render();
 
+	SDL_Point rotate_angle{ 16,16 };
+
+	if (multi_tile_config.render_layer == render_layer)
+	{
+		if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >= 1)) mTexture->render(gRenderer, &dot_rect_camera, &render_clip, angle);
+		else if (multi_texture != NULL) SDL_RenderCopyEx(gRenderer, multi_texture, new SDL_Rect{ 0,0,TILE_WIDTH,TILE_HEIGHT }, &dot_rect_camera, 0, NULL, SDL_FLIP_NONE);
+	}
+	
 	if (scaffold_on_tile != NULL) scaffold_on_tile->render(gRenderer, camera, render_layer);
+	if (multi_tile_config.tile_type == TILE_TYPE_ASTEROID) angle += spin;
 	
 	Dot::render(gRenderer, camera);
 	//if (npc_dot_config.production_current > 0) render_status_bar(gRenderer, camera, npc_dot_config.production_current);
@@ -882,14 +894,40 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 	multi_tile_config.leak_check = 0;
 	multi_tile_config.oxygenation_check = 0;
 	multi_tile_config.is_oxygenated = 0;
+	npc_dot_config.dot_light = { 0,0,0,0 };
 	npc_dot_config.dot_color = { 255,255,255,255 };
+
 }
 
-void Tile::Set_Color(Uint8 R, Uint8 G, Uint8 B)
+void Tile::Tint_Tile_Before_Render()
 {
-	r = R;
-	g = G;
-	b = B;
+	npc_dot_config.dot_color = { 255,255,255,255 };
+	if (multi_tile_config.tile_type == TILE_TYPE_LIGHT) npc_dot_config.dot_color = multi_tile_config.light_specs.light_color;
+	npc_dot_config.dot_color.a = 255;
+
+	// Mark tiles when they're flagged 
+	if (npc_dot_config.marked_for_mining == 1) npc_dot_config.dot_color.g -= 100, npc_dot_config.dot_color.b -= 100;
+	
+	// Tint tiles blue when they're oxygenated
+	npc_dot_config.dot_color.r -= multi_tile_config.is_oxygenated * 10;
+	npc_dot_config.dot_color.g -= multi_tile_config.is_oxygenated * 10;
+
+	// Make tiles transparent and blue when they're scaffolds
+	if (npc_dot_config.tile_built_level < multi_tile_config.build_time)
+	{
+		npc_dot_config.dot_color.a -= 155;
+		npc_dot_config.dot_color.r -= 55;
+		npc_dot_config.dot_color.g -= 55;
+	}
+
+	mTexture->setAlpha(npc_dot_config.dot_color.a);
+	mTexture->setColor(npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
+
+	if (multi_texture != NULL)
+	{
+		SDL_SetTextureAlphaMod(multi_texture,npc_dot_config.dot_color.a);
+		SDL_SetTextureColorMod(multi_texture,npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
+	}
 }
 
 void Tile::handle_animation()
@@ -954,6 +992,19 @@ void Tile::handle_smooth_tiles(int left_edge, int right_edge, int top_edge, int 
 			handle_frenzel_tiling(left_edge, right_edge, top_edge, bottom_edge, top_left_edge, top_right_edge, bottom_right_edge, bottom_left_edge);
 			break;
 	}
+
+	multi_texture = SDL_CreateTexture(tile_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, TILE_WIDTH, TILE_HEIGHT);;
+
+	SDL_SetRenderTarget(tile_renderer, multi_texture);
+	SDL_RenderClear(tile_renderer);
+	
+	for (vector<clip_and_rotation>::iterator it = multi_clip.begin(); it != multi_clip.end(); ++it)
+	{
+		SDL_Rect draw_rect = { 0,0,TILE_WIDTH,TILE_HEIGHT };
+		mTexture->render(tile_renderer, &draw_rect, &it->clip, it->angle, 0, it->flip);
+	}
+
+	SDL_SetRenderTarget(tile_renderer, NULL);
 }
 
 void Tile::handle_wall_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge)
@@ -973,61 +1024,93 @@ void Tile::handle_wall_tiling(int left_edge, int right_edge, int top_edge, int b
 	if (bottom_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) bottom_left_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
 
 	// TOP_LEFT QUAD
-	if (left_edge == VACUUM && top_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_NONE));
-	else if (left_edge == VACUUM && bottom_edge == VACUUM && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_NONE));
-	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_NONE));
-	else if ((left_edge == VACUUM || left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_NONE));
-	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL ) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_NONE));
-	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && top_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 1, 0, SDL_FLIP_NONE));
+	if (left_edge == VACUUM)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_NONE));
+	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+	{
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_NONE));
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_NONE));
+	}
 	else multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 0, 0, SDL_FLIP_NONE));
 
+	if (right_edge == VACUUM && top_edge == VACUUM)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_HORIZONTAL));
+	else if (right_edge == VACUUM && bottom_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 0, 0, SDL_FLIP_HORIZONTAL));
+	
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_NONE));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 0, 0, SDL_FLIP_NONE));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_NONE));
+
+	if (top_edge == VACUUM || (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_left_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 1, 0, SDL_FLIP_NONE));
+
 	// TOP_RIGHT QUAD
-	if (right_edge == VACUUM && top_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_HORIZONTAL));
-	else if (right_edge == VACUUM && bottom_edge == VACUUM && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_HORIZONTAL));
-	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_HORIZONTAL));
-	else if ((right_edge == VACUUM || right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_HORIZONTAL));
-	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL ) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_HORIZONTAL));
-	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && top_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 1, 0, SDL_FLIP_HORIZONTAL));
+	if (right_edge == VACUUM)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_HORIZONTAL));
+	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+	{
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_HORIZONTAL));
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 6, 0, 0, SDL_FLIP_NONE));
+	}
 	else multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 0, 0, SDL_FLIP_HORIZONTAL));
+	
+	if (left_edge == VACUUM && top_edge == VACUUM)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_NONE));
+	else if (left_edge == VACUUM && bottom_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 0, 0, SDL_FLIP_NONE));
+	
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_HORIZONTAL));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 0, 0, SDL_FLIP_HORIZONTAL));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_HORIZONTAL));
+
+	if (top_edge == VACUUM || (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_right_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 1, 0, SDL_FLIP_HORIZONTAL));
+
 
 	// BOTTOM_LEFT QUAD
-	if (left_edge == VACUUM && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 0, 0, SDL_FLIP_NONE));
-	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_NONE));
-	else if ((left_edge == VACUUM || left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_VERTICAL));
-	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_left_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 0, 0, SDL_FLIP_VERTICAL));
-	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_VERTICAL));
-	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && bottom_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_NONE));
+	if (left_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_VERTICAL));
+	else if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_VERTICAL));
 	else multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 0, 0, SDL_FLIP_VERTICAL));
 
+	if (bottom_edge == VACUUM && left_edge != VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_NONE));
+	else if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_left_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_NONE));
+	else if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_NONE));
+	
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_left_edge != VACUUM && right_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_VERTICAL));
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && (right_edge == VACUUM || bottom_right_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 0, 0, SDL_FLIP_VERTICAL));
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_VERTICAL));
+
+	if (bottom_edge == VACUUM && right_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_HORIZONTAL));
+
 	// BOTTOM_RIGHT QUAD
-	if (right_edge == VACUUM && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 0, 0, SDL_FLIP_HORIZONTAL));
-	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_HORIZONTAL));
-	else if ((right_edge == VACUUM || right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 180, SDL_FLIP_NONE));
-	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_right_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 0, 180, SDL_FLIP_NONE));
-	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 180, SDL_FLIP_NONE));
-	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && bottom_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_HORIZONTAL));
+	if (right_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 180, SDL_FLIP_NONE));
+	else if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 180, SDL_FLIP_NONE));
 	else multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 0, 180, SDL_FLIP_NONE));
 
-	//// OVERLAY ACCOUTREMENT - NEED TO FIX THIS A LITTLE
-	//if ((left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
-	//{
-	//	multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 2, 0, SDL_FLIP_NONE));
-	//	multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
-	//}
-	//
-	//if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 2, 0, SDL_FLIP_NONE));
-	//
-	//if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL && (right_edge != VACUUM && left_edge != VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 2, 0, SDL_FLIP_NONE));
-	//if ((left_edge == VACUUM && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 2, 0, SDL_FLIP_NONE));
-	//if ((right_edge == VACUUM && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 2, 0, SDL_FLIP_NONE));
-	//if (top_edge == VACUUM && left_edge == VACUUM && (top_left_edge == VACUUM || top_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 2, 0, SDL_FLIP_NONE));
-	//if (top_edge == VACUUM && right_edge == VACUUM && (top_right_edge == VACUUM || top_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 6, 2, 0, SDL_FLIP_NONE));
-	//if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
-	//if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
-	//if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 2, 0, SDL_FLIP_NONE));
-	//if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 2, 0, SDL_FLIP_NONE));
-	//if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 2, 0, SDL_FLIP_NONE));
-	//
+	if (bottom_edge == VACUUM && right_edge != VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_HORIZONTAL));
+	else if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_right_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_HORIZONTAL));
+	else if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_HORIZONTAL));
+
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_right_edge != VACUUM && left_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 180, SDL_FLIP_NONE));
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && (left_edge == VACUUM || bottom_left_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 0, 180, SDL_FLIP_NONE));
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 180, SDL_FLIP_NONE));
+
+	if (bottom_edge == VACUUM && left_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_NONE));
+
+
+	// OVERLAY ACCOUTREMENT - NEED TO FIX THIS A LITTLE
+	if ((left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 2, 0, SDL_FLIP_NONE));
+	if ((left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge != VACUUM) || (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge != VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
+	
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 4, 2, 0, SDL_FLIP_NONE));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 2, 0, SDL_FLIP_NONE));
+	
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL && (right_edge != VACUUM && left_edge != VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 2, 0, SDL_FLIP_NONE));
+	if ((left_edge == VACUUM && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 2, 0, SDL_FLIP_NONE));
+	if ((right_edge == VACUUM && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == VACUUM)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 2, 0, SDL_FLIP_NONE));
+	if (top_edge == VACUUM && left_edge == VACUUM && (top_left_edge == VACUUM || top_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 2, 0, SDL_FLIP_NONE));
+	if (top_edge == VACUUM && right_edge == VACUUM && (top_right_edge == VACUUM || top_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 6, 2, 0, SDL_FLIP_NONE));
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_NONE));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 6, 0, 0, SDL_FLIP_NONE));
+
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge != VACUUM && right_edge != VACUUM && bottom_left_edge != VACUUM && bottom_right_edge != VACUUM) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_NONE));
+
+	
 
 }
 
@@ -1038,29 +1121,150 @@ void Tile::handle_floor_tiling(int left_edge, int right_edge, int top_edge, int 
 	int x = multi_tile_config.sprite_specs.sprite_column;
 	int y = multi_tile_config.sprite_specs.sprite_row;
 
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) left_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+	if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) right_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) top_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) bottom_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+	if (top_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) top_left_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+	if (top_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) top_right_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+	if (bottom_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) bottom_right_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+	if (bottom_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_DOOR) bottom_left_edge = TILE_TYPE_CONSTRUCTION_TUBING_WALL;
+
 	for (int i = 0; i < 4; i++)
 	{
 		int offset_x = rand() % 2;
 		int offset_y = rand() % 2;
-		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, offset_x, offset_y, i*90, SDL_FLIP_NONE));
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, offset_x, offset_y, 0, SDL_FLIP_NONE));
 	}
 
-	if (left_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_NONE));
-	if (right_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_HORIZONTAL));
-	if (top_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_NONE));
-	if (bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_VERTICAL));
+	// TOP LEFT CORNERS GUTTERS
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_NONE));
+	if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_HORIZONTAL));
+	if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 180, SDL_FLIP_NONE));
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 270, SDL_FLIP_NONE));
+	
+	// LEFT EDGE GUTTERS
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_NONE));
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_VERTICAL));
+	
+	// RIGHT EDGE GUTTERS
+	if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_HORIZONTAL));
+	if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 180, SDL_FLIP_NONE));
+
+	// TOP EDGE GUTTERS
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_NONE));
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_HORIZONTAL));
+
+	// BOTTOM EDGE GUTTERS
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_VERTICAL));
+	if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 180, SDL_FLIP_NONE));
+
+	// BOTTOM RIGHT CORNERS GUTTERS
+	if (top_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_HORIZONTAL));
+	if (top_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_NONE));
+	if (bottom_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 180, SDL_FLIP_NONE));
+	if (bottom_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_VERTICAL));
+
+	// WALL OCCLUSION
+	if (left_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 1, 0, SDL_FLIP_NONE));
+	if (right_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 1, 0, SDL_FLIP_HORIZONTAL));
+	if (top_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 0, 0, SDL_FLIP_NONE));
+	if (bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_FLOOR) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 7, 0, 0, SDL_FLIP_VERTICAL));
+
+	// GUTTER OCCLUSION
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+	{
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_NONE));
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_NONE));
+	}
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+	{
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_VERTICAL));
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_VERTICAL));
+	}
+	if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+	{
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_HORIZONTAL));
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_HORIZONTAL));
+	}
+	if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+	{
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 180, SDL_FLIP_NONE));
+		multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 180, SDL_FLIP_NONE));
+	}
+
+	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
+	{
+		if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_NONE));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_HORIZONTAL));
+		}
+		if (bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 180, SDL_FLIP_NONE));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 180, SDL_FLIP_HORIZONTAL));
+		}
+		if (bottom_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_VERTICAL));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 90, SDL_FLIP_HORIZONTAL));
+		}
+		if (top_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_NONE));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 0, SDL_FLIP_HORIZONTAL));
+		}
+	}
+
+
+	if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR && bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
+	{
+		if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && right_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_NONE));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_VERTICAL));
+		}
+		if (right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && left_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 90, SDL_FLIP_NONE));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 90, SDL_FLIP_HORIZONTAL));
+		}
+		if (top_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_left_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_right_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_right_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_VERTICAL));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 0, 0, SDL_FLIP_NONE));
+		}
+		if (top_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_right_edge == TILE_TYPE_CONSTRUCTION_TUBING_WALL && top_left_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL && bottom_left_edge != TILE_TYPE_CONSTRUCTION_TUBING_WALL)
+		{
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 90, SDL_FLIP_NONE));
+			multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 5, 1, 90, SDL_FLIP_HORIZONTAL));
+		}
+
+	}
+
+
+
+
+
 }
 
 void Tile::handle_door_orientation(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge)
 {
 	if (left_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || right_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
 	{
-		tile_orientation = 1;
+		door_offset_y = 2;
+		if (right_edge == VACUUM || left_edge == VACUUM)
+		{
+			door_offset_y = 1;
+			if (right_edge == VACUUM) door_offset_x = 16;
+		}
 	}
 	else if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
 	{
-		tile_orientation = 0;
+		door_offset_y = 0;
 	}
+
 }
 
 void Tile::handle_frenzel_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge)
@@ -1489,11 +1693,6 @@ public:
 	}
 
 	void render(SDL_Renderer* gRenderer, Camera* camera, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
-
-	int bounce = 0;
-	int bounce_direction = 1;
-	int delay = 0;
-	int max_delay = 2;
 	SDL_Rect current_clip;
 
 private:
@@ -1645,6 +1844,59 @@ void Ship_Dot::turn_towards_target()
 
 	angle = new_angle + 180;
 }
+
+// LIGHT DOTS
+
+class Light:public Dot {
+public: 
+	Light(SDL_Renderer* gRenderer, LTexture* texture, int start_location_x, int start_location_y, SDL_Color color, int radius, int brightness, int attenuation, bool screen_shadow = false) :Dot(gRenderer, texture, start_location_x, start_location_y)
+	{
+		light_texture = texture;
+		light_attenuation = attenuation;
+		light_color = color;
+		light_brightness = brightness;
+		light_radius = radius;
+
+		draw_clip = {attenuation*128,0,128,128};
+
+	}
+
+	SDL_Rect draw_clip;
+	SDL_Color light_color;
+
+	int light_radius;
+	int light_brightness;
+	int light_attenuation;
+	int pulse = 0;
+	int pulse_direction = 1;
+	int max_pulse = 10;
+
+	void render(SDL_Renderer* gRenderer, Camera* camera);
+
+private: 
+	LTexture* light_texture;
+};
+
+void Light::render(SDL_Renderer* gRenderer, Camera* camera)
+{
+	pulse += pulse_direction;
+	if (pulse >= max_pulse || pulse <= 0)
+	{
+		pulse_direction *= -1;
+	}
+
+	if (is_onscreen(camera))
+	{		
+		SDL_Rect renderQuad = { dot_rect.x +TILE_WIDTH/2 - (light_radius + pulse) - camera->camera_box.x, dot_rect.y + TILE_HEIGHT/2 - (light_radius + pulse) - camera->camera_box.y, (light_radius + pulse)*2, (light_radius + pulse)*2 };
+		light_texture->setColor(light_color.r, light_color.g, light_color.b);
+		light_texture->setAlpha(255);
+		
+		light_texture->setBlendMode(SDL_BLENDMODE_ADD);
+		light_texture->render(gRenderer, &renderQuad, &draw_clip);
+	}
+
+}
+
 
 // BOLT DOTS
 

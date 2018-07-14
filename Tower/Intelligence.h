@@ -164,7 +164,6 @@ private:
 		Dot* storage_location;
 	};
 	vector<Storage_Inventory_Locations> current_storage;
-	vector<Item*> world_items;
 	vector<Bolt*> bolt_array;
 	vector<Ship_Dot*> enemy_ship_array;
 	vector<Container*> container_array;
@@ -172,6 +171,7 @@ private:
 	vector<Dot_Job> dot_job_array;
 	vector<dot_faction_relationship> faction_relationships;
 	vector<Dot_Star*> background_star_array;
+	vector<Light*> light_array;
 
 	int max_enemy_ships = 10;
 	int delay = 0;
@@ -234,6 +234,8 @@ void Intelligence::Create_Test_Conditions()
 	lifepod->shadow_offset = 5;
 
 	//npc_dot_array.push_back(lifepod);
+
+	world->Create_Tile(Return_Tile_Template_By_Identifier(TILE_INTERIOR_LIGHT_1), 148, 149);
 
 	// CREATE STARTING LOCKER
 	world->Create_Tile(Return_Tile_Template_By_Identifier(TILE_LOCKER_1), 152, 151);
@@ -948,7 +950,7 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		goal_complete = true;
 		break;
 	case ACTION_OXYGENATE_AIR:
-		dot->multi_tile_config.is_oxygenated = 500;
+		dot->multi_tile_config.is_oxygenated = 50;
 		world->Test_All_Tile_Neighbors_For_Leaks(world->world_tiles[dot->getTileX()][dot->getTileY()], &new_check);
 		if (new_check.breach_status == false) world->Toggle_Room_Tiles_Oxygenated(new_check.tile_vector, dot->multi_tile_config.is_oxygenated / new_check.tile_vector.size());
 		goal_complete = true;
@@ -2246,8 +2248,9 @@ void Intelligence::Update_World_Ai()
 	{
 		for (int i = 0; i < TILE_NUM_X; i++)
 		{
-			if (world->item_tiles[i][p] != NULL)
+			if (world->item_tiles[i][p] != NULL && (world->item_tiles[i][p]->multi_tile_config.tile_type != TILE_TYPE_ASTEROID || world->item_tiles[i][p]->npc_dot_config.marked_for_mining == 1))
 			{
+				
 				if (world->item_tiles[i][p]->npc_dot_config.current_goal_list.size() == 0) world->item_tiles[i][p]->item_job.Run_Job(world->item_tiles[i][p]);
 				Process_Most_Recent_Dot_Goal(world->item_tiles[i][p]);
 				Check_If_Tile_Has_Needs(world->item_tiles[i][p]);
@@ -2257,17 +2260,16 @@ void Intelligence::Update_World_Ai()
 					Dot_Drop_Inventory(world->item_tiles[i][p], i*TILE_WIDTH, p*TILE_HEIGHT);
 					world->Remove_Tile(i, p, true);
 				}
+
 			}
 			if (world->world_tiles[i][p] != NULL && (world->world_tiles[i][p]->multi_tile_config.tile_type != VACUUM|| world->world_tiles[i][p]->scaffold_on_tile != NULL))
 			{
 				if (world->world_tiles[i][p]->npc_dot_config.current_goal_list.size() == 0) world->world_tiles[i][p]->item_job.Run_Job(world->world_tiles[i][p]);
 				Process_Most_Recent_Dot_Goal(world->world_tiles[i][p]);
+				
 				Check_If_Tile_Has_Needs(world->world_tiles[i][p]);
 
-				if (world->world_tiles[i][p]->npc_dot_config.dot_stat_health <= 0)
-				{
-					world->Remove_Tile(i, p, false);
-				}
+				if (world->world_tiles[i][p]->npc_dot_config.dot_stat_health <= 0) world->Remove_Tile(i, p, false);
 			}
 		}
 	}
@@ -2339,7 +2341,7 @@ void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
 		}
 	}
 
-	// IF THE TILE IS AN ASTEROID AND HAS BEEN MARKED AS A JOB, SEND OUT A MINING REQUEST
+	 //IF THE TILE IS AN ASTEROID AND HAS BEEN MARKED AS A JOB, SEND OUT A MINING REQUEST
 	if (tile->multi_tile_config.tile_type == TILE_TYPE_ASTEROID && tile->npc_dot_config.marked_for_mining == 1)
 	{
 		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_MINE_ASTEROID, 1 ,tile, NULL, null_tile, 0,0, NULL });
@@ -2584,12 +2586,6 @@ void Intelligence::Advance_Time(float avgFPS)
 	if (ai_debug) cout << "updating player dot ai" << endl;
 	update_player_dot_ai(player_dot);
 
-	if (ai_debug) cout << "Spawn Enemy Ships" << endl;
-	Spawn_Enemy_Ships();
-	
-	if (ai_debug) cout << "updating Enemy_ship ai" << endl;
-	Update_All_Enemy_Ships_AI();
-
 	if (ai_debug) cout << "updating bolt ai" << endl;
 	update_bolt_ai();
 
@@ -2610,8 +2606,12 @@ void Intelligence::render()
 {
 	int npc_dot_size = npc_dot_array.size();
 
+
 	// Render background stars
 	for (int p = 0; p < background_star_array.size(); p++) background_star_array[p]->render(gRenderer, camera);
+
+	texture_array[SPRITESHEET_BACKGROUND]->render(gRenderer, new SDL_Rect{ 0,0,SCREEN_WIDTH,SCREEN_HEIGHT }, new SDL_Rect{ 0,0,SCREEN_WIDTH,SCREEN_HEIGHT }, 0, 0, SDL_FLIP_NONE);
+
 
 	// Render tiles
 	for (int p = camera->camera_box.y / TILE_HEIGHT; p < (camera->camera_box.y + camera->camera_box.h)/TILE_HEIGHT ; ++p)
@@ -2640,6 +2640,11 @@ void Intelligence::render()
 	for (int p = 0; p < enemy_ship_array.size(); p++) if (enemy_ship_array[p]->is_onscreen(camera)) enemy_ship_array[p]->render(gRenderer, camera);
 
 	//world->Render(camera, RENDER_ROOF);
+
+	//Render Lights
+	world->Render(camera, RENDER_LIGHTS);
+
+	 //ender Mouse Click and Drag
 
 	if (mouse_hold_rect_active == true)
 	{
@@ -2678,9 +2683,6 @@ void Intelligence::free()
 
 	for (int i = 0; i < bolt_array.size(); i++) delete bolt_array[i];
 	bolt_array.erase(bolt_array.begin(), bolt_array.begin() + bolt_array.size());
-
-	for (int i = 0; i < enemy_ship_array.size(); i++) delete enemy_ship_array[i];
-	enemy_ship_array.erase(enemy_ship_array.begin(), enemy_ship_array.begin() + enemy_ship_array.size());
 
 	for (int i = 0; i < container_array.size(); i++) delete container_array[i];
 	container_array.erase(container_array.begin(), container_array.begin() + container_array.size());

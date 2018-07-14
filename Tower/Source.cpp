@@ -25,7 +25,6 @@ using namespace std;
 #include <Camera.h>
 #include <LTexture.h>
 #include <Shared_Draw_Functions.h>
-#include <Item.h>
 #include <Dot.h>
 
 #include <Cursor.h>
@@ -111,7 +110,7 @@ bool init()
 		else
 		{
 			//Create renderer for window
-			gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+			gRenderer = SDL_CreateRenderer(gWindow, -1, (SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC) | SDL_RENDERER_TARGETTEXTURE);
 			if (gRenderer == NULL)
 			{
 				printf("Renderer could not be created! SDL Error: %s\n", SDL_GetError());
@@ -222,6 +221,8 @@ void load_textures()
 	texture_array[INVENTORY_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Inventory_Items/Inventory_Spritesheet_1.png");
 	texture_array[ENEMY_SHIP_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Enemies/Enemy_Ships_1.png");
 	texture_array[CONTAINER_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Inventory_Items/Container_Spritesheet.png");
+	texture_array[SPRITESHEET_LIGHTS].loadFromFile(gRenderer, "Sprites/Tilesheets/Lighting_1.png");
+	texture_array[SPRITESHEET_BACKGROUND].loadFromFile(gRenderer, "Sprites/Background/Background_Texture.png");
 
 
 	int row = 0;
@@ -467,7 +468,6 @@ int main(int argc, char* args[])
 			}
 
 			if (debug) cout << "processing current input state" << endl;
-			//if (debug) cout << "processing current input state" << endl;
 			process_current_input_state(&camera, &cursor, &intelligence, &console);
 
 			//Calculate and correct fps
@@ -493,6 +493,7 @@ int main(int argc, char* args[])
 			if (debug) cout << "updating screen" << endl;
 			//Update screen
 			SDL_RenderPresent(gRenderer);
+
 			++countedFrames;
 			if (debug) cout << "advancing time" << endl;
 

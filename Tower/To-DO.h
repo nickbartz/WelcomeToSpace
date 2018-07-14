@@ -3,7 +3,6 @@
 // BIG THINGS THAT RUN EVERY CYCLE
 
 // 1. rendering world tiles -- PARTLY SOLVED
-// 2. checking for the number of scaffolds;
 // 3. Assigning items jobs - PARTLY SOLVED BY RETURNING TO LOOP OVER ARRAY, BUT NEED TO CHANGE ARRAY TO VECTOR ULTIMATELY
 // 4. checking for the number of items 
 
