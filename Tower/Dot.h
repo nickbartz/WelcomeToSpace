@@ -150,6 +150,14 @@ public:
 		SDL_Color laser_color = { 255, 0, 0, 255 };
 	};
 
+	struct NPC_Dot_Equipment_Slot
+	{
+		int dot_equipment_slot_type;
+		int item_name;
+		int quantity;
+		bool is_equipped;
+	};
+
 	struct NPC_Dot_Equipment_Struct
 	{
 		Dot_Inventory_Slot Spacesuit = { INVENTORY_EMPTY_SLOT,0 };
@@ -216,7 +224,6 @@ public:
 	};
 
 	//Set Dot Configuration
-
 	int dot_config[NUM_DOT_STATS];
 	NPC_Dot_Config_Struct npc_dot_config;
 	Tile_Template multi_tile_config;
@@ -566,6 +573,7 @@ void Dot::Create_Default_Dot_Priorities()
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_ENNUI, { DOT_PRIORITY_ENNUI, 0,0,50,100,0,200 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HAPPINESS, { DOT_PRIORITY_HAPPINESS, 100,0,50,100,0,100 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SANITY, { DOT_PRIORITY_SANITY, 100,0,50,100,0,100 }));
+	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_PATH_CHECK_COOLDOWN, { DOT_PRIORITY_PATH_CHECK_COOLDOWN,0,0,0,1,0,20000 }));
 }
 
 // CRAFTING COMMANDS

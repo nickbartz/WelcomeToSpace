@@ -9,7 +9,7 @@ int dir_map[SEARCH_WIDTH][SEARCH_HEIGHT];
 class Path_Field {
 public:
 	Path_Field(World* world);
-	vector<Tile_Queue> pathFind(const int & xStart, const int & yStart, const int & xFinish, const int & yFinish, int recursion);
+	vector<Tile_Queue> pathFind(const int & xStart, const int & yStart, const int & xFinish, const int & yFinish, int max_closed_nodes);
 	void run_A_star(int xA, int yA, int xB, int yB);
 	bool Path_Field::check_if_tile_is_inaccessible(int xdx, int ydy, int finish_x, int finish_y);
 
@@ -83,15 +83,16 @@ bool operator<(const node & a, const node & b)
 	return a.getPriority() > b.getPriority();
 }
 
-vector<Tile_Queue> Path_Field::pathFind(const int & xStart, const int & yStart, const int & xFinish, const int & yFinish, int recursion)
+vector<Tile_Queue> Path_Field::pathFind(const int & xStart, const int & yStart, const int & xFinish, const int & yFinish, int max_closed_nodes)
 {
 	int start_x = xStart;
 	int start_y = yStart;
 	int finish_x = xFinish;
 	int finish_y = yFinish;
+	int node_check_count = 0;
 
 	vector<Tile_Queue> vector_path;
-	static priority_queue<node> pq[2]; // list of open (not-yet-tried) nodes
+	priority_queue<node> pq[2]; // list of open (not-yet-tried) nodes
 	static int pqi; // pq index
 	static node* n0;
 	static node* m0;
@@ -110,8 +111,6 @@ vector<Tile_Queue> Path_Field::pathFind(const int & xStart, const int & yStart, 
 		}
 	}
 
-	//obstacle_map[50][45] = 1;
-
 	// create the start node and push into list of open nodes
 	n0 = new node(start_x, start_y, 0, 0);
 	n0->updatePriority(finish_x, finish_y);
@@ -119,8 +118,9 @@ vector<Tile_Queue> Path_Field::pathFind(const int & xStart, const int & yStart, 
 	open_nodes_map[x][y] = n0->getPriority(); // mark it on the open nodes map
 
 	// A* search
-	while (!pq[pqi].empty())
+	while (!pq[pqi].empty() && node_check_count <= max_closed_nodes)
 	{
+		node_check_count += 1;
 		// get the current node w/ the highest priority
 		// from the list of open nodes
 		n0 = new node(pq[pqi].top().getxPos(), pq[pqi].top().getyPos(),
@@ -150,7 +150,6 @@ vector<Tile_Queue> Path_Field::pathFind(const int & xStart, const int & yStart, 
 				y += dy[j];
 				counter++;
 			}
-
 			vector_path.push_back({ start_x, start_y,counter });
 
 			// garbage collection
@@ -158,12 +157,13 @@ vector<Tile_Queue> Path_Field::pathFind(const int & xStart, const int & yStart, 
 			// empty the leftover nodes
 			while (!pq[pqi].empty()) pq[pqi].pop();
 			return vector_path;
-		}
 
+		}
 		// generate moves (child nodes) in all possible directions
 		for (i = 0; i<4; i++)
 		{
 			xdx = x + dx[i]; ydy = y + dy[i];
+
 
 			if (!(xdx<0 || xdx>SEARCH_WIDTH - 1 || ydy<0 || ydy>SEARCH_HEIGHT - 1 || check_if_tile_is_inaccessible(xdx, ydy, finish_x, finish_y) || closed_nodes_map[xdx][ydy] == 1))
 			{
@@ -192,8 +192,7 @@ vector<Tile_Queue> Path_Field::pathFind(const int & xStart, const int & yStart, 
 					// by emptying one pq to the other one
 					// except the node to be replaced will be ignored
 					// and the new node will be pushed in instead
-					while (!(pq[pqi].top().getxPos() == xdx &&
-						pq[pqi].top().getyPos() == ydy))
+					while (!(pq[pqi].top().getxPos() == xdx && pq[pqi].top().getyPos() == ydy))
 					{
 						pq[1 - pqi].push(pq[pqi].top());
 						pq[pqi].pop();

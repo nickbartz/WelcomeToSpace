@@ -688,7 +688,7 @@ void World::Remove_Tile(int i, int p, bool is_item)
 		if (item_tiles[i][p]->multi_tile_config.tile_type == TILE_TYPE_LIGHT)
 		{
 			delete light_tiles[{i, p}];
-			light_tiles[{i, p}] = NULL;
+			light_tiles.erase({i, p});
 		}
 
 		delete item_tiles[i][p];
@@ -796,7 +796,7 @@ void World::Render(Camera* camera, int render_layer)
 		{
 			it->second->render(world_renderer, camera);
 		}
-
+		
 		SDL_SetRenderTarget(world_renderer, NULL);
 
 		SDL_SetTextureBlendMode(shadow_texture, SDL_BLENDMODE_MOD);

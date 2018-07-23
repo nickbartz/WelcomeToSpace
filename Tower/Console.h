@@ -729,9 +729,14 @@ void Console_Window::Create_Action_Button_Window(SDL_Rect* reference_rect, LText
 	Button delete_button = { gRenderer, BUTTON_ACTION_REMOVE_TILE, delete_rect,true, PANEL_ACTION_BUTTONS };
 	delete_button.Add_Button_Sprite(spritesheet, { 2 * SPRITESHEET_W, 1 * SPRITESHEET_H,SPRITESHEET_W,SPRITESHEET_H }, 0, 0);
 
+	SDL_Rect spawn_enemy_rect = { reference_rect->x + 3 * TILE_WIDTH, reference_rect->y, TILE_WIDTH, TILE_HEIGHT };
+	Button spawn_enemy_button = { gRenderer, BUTTON_ACTION_SPAWN_ENEMY, spawn_enemy_rect,true, PANEL_ACTION_BUTTONS };
+	spawn_enemy_button.Add_Button_Sprite(spritesheet, { 0 * SPRITESHEET_W, 3 * SPRITESHEET_H,SPRITESHEET_W,SPRITESHEET_H }, 0, 0);
+
 	panel_buttons.push_back(mark_for_mining_button);
 	panel_buttons.push_back(inspect_button);
 	panel_buttons.push_back(delete_button);
+	panel_buttons.push_back(spawn_enemy_button);
 
 	console_window_panels.insert(pair <int, vector<Button>>(PANEL_ACTION_BUTTONS, panel_buttons));
 

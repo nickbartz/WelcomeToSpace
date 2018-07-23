@@ -121,6 +121,7 @@ public:
 	void Process_Built_Scaffold(Tile* tile);
 	void Check_Production_Needs(Tile* tile);
 	void Check_If_Tile_Has_Needs(Tile* tile);
+	void Manage_Turret_Priorities(Tile* turret);
 
 	// PHYSICS COMMANDS
 	void move_dot(Dot* dot, int* mVelX, int* mVelY);
@@ -182,6 +183,7 @@ private:
 	bool ai_debug = false;
 	bool job_debug = false;
 	bool player_dot_debug = false;
+	bool render_debug = false;
 };
 
 Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Camera* world_camera, TTF_Font* gFont_small, LTexture textures[], bool new_game)
@@ -262,14 +264,14 @@ void Intelligence::Create_Test_Conditions()
 		npc_dot_array.back()->npc_dot_config.functional_relationship_map.insert({ DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE, {return_nearest_tile_by_type_or_name(npc_dot_array.back(), false, TILE_TYPE_STORAGE_TILE),0} });
 	}
 
-	//for (int i = 0; i < 5; i++)
-	//{
-	//	NPC_Dot* enemy_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (150+i) * TILE_WIDTH, 145 * TILE_HEIGHT, { 0,0,0,0,0 });
-	//	enemy_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
-	//	enemy_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
-	//	enemy_dot->npc_dot_config.dot_stat_faction = DOT_FACTION_ENEMY;
-	//	npc_dot_array.push_back(enemy_dot);
-	//}
+	for (int i = 0; i < 0; i++)
+	{
+		NPC_Dot* enemy_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (150+i) * TILE_WIDTH, 145 * TILE_HEIGHT, { 0,0,0,0,0 });
+		enemy_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
+		enemy_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
+		enemy_dot->npc_dot_config.dot_stat_faction = DOT_FACTION_ENEMY;
+		npc_dot_array.push_back(enemy_dot);
+	}
 }
 
 // CONSOLE_COMMANDS
@@ -323,6 +325,16 @@ void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int 
 			world->item_tiles[x_tile][y_tile]->npc_dot_config.marked_for_mining = 0;
 		}
 		break;
+	case BUTTON_ACTION_SPAWN_ENEMY:
+		if (world->item_tiles[x_tile][y_tile] == NULL)
+		{
+			NPC_Dot* enemy_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (x_tile) * TILE_WIDTH, y_tile * TILE_HEIGHT, { 0,0,0,0,0 });
+			enemy_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
+			enemy_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
+			enemy_dot->npc_dot_config.dot_stat_faction = DOT_FACTION_ENEMY;
+			npc_dot_array.push_back(enemy_dot);
+		}
+		break;
 	}
 }
 
@@ -344,6 +356,7 @@ void Intelligence::Handle_Non_Console_Click_And_Hold(int current_action, int x_t
 		mouse_hold_rect_active = true;
 		mouse_hold_rect.x = x;
 		mouse_hold_rect.y = y;
+
 	}
 	
 }
@@ -1127,6 +1140,23 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 			goal_complete = true;
 		}
 		break;
+	case ACTION_TURN_TOWARDS_DOT:
+		if (!check_dot_pointer(dot, current_dot_goal_pointer)) break;
+		else
+		{
+			double vector_x = current_dot_goal_pointer->getPosX() - dot->dot_rect.x;
+			double vector_y = current_dot_goal_pointer->getPosY() - dot->dot_rect.y;
+			double new_angle = atan(vector_y / vector_x)*(180.0 / 3.141592653589793238463);
+
+			if (vector_x >= 0 && vector_y >= 0) new_angle = -90 + new_angle;
+			else if (vector_x < 0 && vector_y >= 0) new_angle = 90 + new_angle;
+			else if (vector_x < 0 && vector_y < 0) new_angle = 90 + new_angle;
+			else if (vector_x >= 0 && vector_y < 0) new_angle = -90 + new_angle;
+
+			dot->angle = new_angle + 90;
+		}
+		goal_complete = true;
+		break;
 	case ACTION_FIRE_LASER_AT_DOT:
 		Fire_Mining_Laser(dot, current_dot_goal_pointer, false, 0, 0);
 		if (current_dot_goal_pointer->npc_dot_config.dot_stat_health <= 0) goal_complete = true;
@@ -1170,8 +1200,7 @@ void Intelligence::Manage_Dot_Inventory_Storage(NPC_Dot* dot)
 void Intelligence::Manage_Dot_Combat(NPC_Dot* dot)
 {	
 	Dot* combat_target_dot = NULL;
-	//combat_target_dot = check_for_enemy_dot_in_radius(dot, dot->npc_dot_config.search_radius);
-	
+
 	//IF THERE's ALREADY A RESONABLE CURRENT TARGET, DON'T SEARCH AGAIN FOR ONE
 	if (dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_MOST_RECENT_TARGET].related_dot != NULL && dot->npc_dot_config.functional_relationship_map[DOT_FUNCTIONAL_RELATIONSHIP_MOST_RECENT_TARGET].related_dot->npc_dot_config.dot_stat_health > 0)
 	{
@@ -1293,7 +1322,7 @@ void Intelligence::Manage_Priority_Changes(Dot* dot, int dot_priority_name)
 	case DOT_PRIORITY_SPACESUIT_OXYGEN:
 		if (dot->npc_dot_config.dot_equipment_config.Spacesuit.inventory_item_code == INVENTORY_SPACESUIT_1)
 		{
-			if (get_current_dot_tile(dot)->multi_tile_config.is_oxygenated >= 1)
+			if (get_current_dot_tile(dot)->multi_tile_config.is_oxygenated > 0)
 			{
 				if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].current_level < dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_SPACESUIT_OXYGEN].max_level)
 				{
@@ -1345,6 +1374,12 @@ void Intelligence::Manage_Priority_Changes(Dot* dot, int dot_priority_name)
 		if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level <= dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].min_level)
 		{
 			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].min_level;
+		}
+	case DOT_PRIORITY_PATH_CHECK_COOLDOWN:
+		dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level--;
+		if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level <= dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].min_level)
+		{
+			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].min_level;
 		}
 	}
 }
@@ -1448,16 +1483,21 @@ bool Intelligence::Check_Dot_Path_is_Oxygenated(Dot* dot)
 
 bool Intelligence::Update_Dot_Path(Dot* dot, int target_tile_x, int target_tile_y, bool adjacent)
 {
-	if (target_tile_x >= 0 && target_tile_y >= 0)
+	if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level == 0)
 	{
-		dot->npc_dot_config.current_goal_path = iField->pathFind(dot->getTileX(), dot->getTileY(), target_tile_x, target_tile_y, adjacent);
-		if (dot->npc_dot_config.current_goal_path.size() == 0) return false;
-		else return true;
-	}
-	else
-	{
-		cout << "couldn't chart path to: " + to_string(target_tile_x) + ", " + to_string(target_tile_y) << endl;
-		return false;
+		if (target_tile_x >= 0 && target_tile_y >= 0)
+		{
+			
+			dot->npc_dot_config.current_goal_path = iField->pathFind(dot->getTileX(), dot->getTileY(), target_tile_x, target_tile_y,TILE_NUM_X*TILE_NUM_Y/100);
+			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].max_level;
+			if (dot->npc_dot_config.current_goal_path.size() == 0) return false;
+			else return true;
+		}
+		else
+		{
+			cout << "couldn't chart path to: " + to_string(target_tile_x) + ", " + to_string(target_tile_y) << endl;
+			return false;
+		}
 	}
 }
 
@@ -2070,6 +2110,7 @@ void Intelligence::Update_All_Enemy_Ships_AI()
 }
 
 
+
 // ASTEROID COMMANDS1
 
 void Intelligence::Create_Asteroid_Mining_Animation(Dot* mining_dot, int t_x, int t_y)
@@ -2347,20 +2388,26 @@ void Intelligence::Check_If_Tile_Has_Needs(Tile* tile)
 		dot_job_array.push_back(Dot_Job{ SPECIFIC_DOT_JOB_MINE_ASTEROID, 1 ,tile, NULL, null_tile, 0,0, NULL });
 	}
 
+	Manage_Turret_Priorities(tile);
+}
+
+void Intelligence::Manage_Turret_Priorities(Tile* turret)
+{
 	//IF THE TILE IS A TURRET, CHECK FOR NEARBY ENEMY DOTS, AND IF FOUND, ELIMINATE
-	if (tile->multi_tile_config.tile_type == TILE_TYPE_TURRET)
+	if (turret->multi_tile_config.tile_type == TILE_TYPE_TURRET)
 	{
-		tile->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].max_level = 20;
-		if (tile->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0)
+		turret->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].max_level = 20;
+		if (turret->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level == 0)
 		{
-			Dot* combat_target_dot = check_for_enemy_dot_in_radius(tile, 20);
+			Dot* combat_target_dot = check_for_enemy_dot_in_radius(turret, 20);
 			if (combat_target_dot != NULL)
 			{
-				tile->npc_dot_config.current_goal_list.push_back({ ACTION_FIRE_AT_ANOTHER_DOT,0,0,0,0,null_tile,0,true,combat_target_dot });
+				turret->npc_dot_config.current_goal_list.push_back({ ACTION_TURN_TOWARDS_DOT,0,0,0,0,null_tile,0,true,combat_target_dot });
+				turret->npc_dot_config.current_goal_list.push_back({ ACTION_FIRE_AT_ANOTHER_DOT,0,0,0,0,null_tile,0,true,combat_target_dot });
 			}
 		}
 
-		if (tile->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level > 0) tile->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level--;
+		if (turret->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level > 0) turret->npc_dot_config.dot_priority_map[DOT_PRIORITY_WEAPON_COOLDOWN].current_level--;
 	}
 }
 
@@ -2388,7 +2435,7 @@ void Intelligence::move_dot(Dot* dot, int* mVelX, int* mVelY)
 		//Move back
 		dot->dot_rect.y -= *mVelY;
 	}
-}
+} 
 
 void Intelligence::move_object_without_collision(SDL_Rect* object_rect, float mVelX, float mVelY)
 {
@@ -2608,11 +2655,13 @@ void Intelligence::render()
 
 
 	// Render background stars
+	if (render_debug) cout << "rendering stars" << endl;
 	for (int p = 0; p < background_star_array.size(); p++) background_star_array[p]->render(gRenderer, camera);
 
+	if (render_debug) cout << "rendering background" << endl;
 	texture_array[SPRITESHEET_BACKGROUND]->render(gRenderer, new SDL_Rect{ 0,0,SCREEN_WIDTH,SCREEN_HEIGHT }, new SDL_Rect{ 0,0,SCREEN_WIDTH,SCREEN_HEIGHT }, 0, 0, SDL_FLIP_NONE);
 
-
+	if (render_debug) cout << "rendering tiles" << endl;
 	// Render tiles
 	for (int p = camera->camera_box.y / TILE_HEIGHT; p < (camera->camera_box.y + camera->camera_box.h)/TILE_HEIGHT ; ++p)
 	{
@@ -2627,25 +2676,30 @@ void Intelligence::render()
 		}
 	}
 
+	if (render_debug) cout << "rendering dots" << endl;
 	// Render npc_dots
 	for (int p = 0; p < npc_dot_array.size(); p++) if (npc_dot_array[p]->is_onscreen(camera)) npc_dot_array[p]->render(gRenderer, camera, font_small, Check_Faction_Score_Between_Dots(player_dot,npc_dot_array[p]));
  
+	if (render_debug) cout << "rendering containers" << endl;
 	// Render containers
 	for (int p = 0; p < container_array.size(); p++) if (container_array[p]->is_onscreen(camera)) container_array[p]->render(gRenderer, camera);
 
+	if (render_debug) cout << "rendering bolts" << endl;
 	// Render bolts
 	for (int p = 0; p < bolt_array.size(); p++) bolt_array[p]->render(gRenderer, camera);
 
+	if (render_debug) cout << "rendering enemy ships" << endl;
 	// Render enemy ships
 	for (int p = 0; p < enemy_ship_array.size(); p++) if (enemy_ship_array[p]->is_onscreen(camera)) enemy_ship_array[p]->render(gRenderer, camera);
 
 	//world->Render(camera, RENDER_ROOF);
 
+	if (render_debug) cout << "rendering lights" << endl;
 	//Render Lights
 	world->Render(camera, RENDER_LIGHTS);
 
-	 //ender Mouse Click and Drag
-
+	 //Render Mouse Click and Drag
+	if (render_debug) cout << "rendering mouse clicks" << endl;
 	if (mouse_hold_rect_active == true)
 	{
 		if (current_action == BUTTON_ACTION_PLACE_SCAFFOLD)

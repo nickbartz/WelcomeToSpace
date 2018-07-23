@@ -106,7 +106,8 @@ enum Console_Buttons
 	BUTTON_ACTION_RESTART_GAME,
 	BUTTON_ACTION_QUIT_GAME,
 	BUTTON_ACTION_CREATE_PRODUCTION_ORDER,
-	BUTTON_ACTION_CLEAR_DOT_GOALS
+	BUTTON_ACTION_CLEAR_DOT_GOALS,
+	BUTTON_ACTION_SPAWN_ENEMY
 };
 
 enum Console_Windows
@@ -187,7 +188,7 @@ enum TILE_AND_ITEM_IDENTIFIERS
 	TILE_ASTEROID_NICKEL,
 	TILE_SMELTER_1,
 	TILE_WATER_CANISTER_1,
-	TILE_TESLA_TOWER_1,
+	TILE_LASER_TURRET_GREEN,
 	TILE_INTERIOR_LIGHT_1
 };
 
@@ -285,7 +286,7 @@ enum INVENTORY_ITEM_CODES
 	INVENTORY_CONSTRUCTION_TUBING_WALL_1,
 	INVENTORY_SMELTER_1,
 	INVENTORY_WATER_CANISTER_1,
-	INVENTORY_TESLA_TOWER_1
+	INVENTORY_LASER_TURRET_GREEN
 };
 
 enum INVENTORY_ITEM_TYPES
@@ -323,7 +324,8 @@ enum DOT_PRIORITIES
 	DOT_PRIORITY_ENNUI,
 	DOT_PRIORITY_HAPPINESS,
 	DOT_PRIORITY_SANITY,
-	DOT_PRIORITY_WEAPON_COOLDOWN
+	DOT_PRIORITY_WEAPON_COOLDOWN,
+	DOT_PRIORITY_PATH_CHECK_COOLDOWN
 };
 
 enum DOT_TYPES
@@ -408,7 +410,8 @@ enum DOT_GOAL_ACTIONS
 	ACTION_FIRE_LASER_AT_DOT,
 	ACTION_STOP_FIRING_LASER_AT_DOT,
 	ACTION_STOP_MOVING,
-	ACTION_LIGHT_SURROUNDING_TILES
+	ACTION_LIGHT_SURROUNDING_TILES,
+	ACTION_TURN_TOWARDS_DOT
 
 };
 
@@ -571,7 +574,7 @@ struct Light_Specs
 
 Light_Specs no_light = { 0,{0,0,0,0},0,0 };
 Light_Specs interior_light_soft_yellow = { 1,{255,255,150,0},255,1,200 };
-Light_Specs tesla_tower_light_1 = { 1,{ 100,255,100,0 },256,1,255 };
+Light_Specs laser_turret_green_light_1 = { 1,{ 100,255,100,0 },256,1,255 };
 Light_Specs frenzel_beacon_light_1 = { 1,{255,100,100,0},100,1,255 };
 Light_Specs smelter_light_1 = { 1,{ 255,150,100,0 },50,1,255 };
 
@@ -672,7 +675,7 @@ void Load_Tile_Templates()
 
 	tile_template_vector.push_back({ TILE_SMELTER_1,TILESHEET,{ 1,18,1,-2,1,1 },TILE_TYPE_SMELTER,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_SMELTER_1,0,0, no_requirements,100,ITEM_JOB_PRODUCE_ITEM,RENDER_ITEMS,smelter_1,1,smelter_light_1 });
 
-	tile_template_vector.push_back({ TILE_TESLA_TOWER_1,ITEM_SPRITES,{ 1,17,1,2,1,1 },TILE_TYPE_TURRET,1,1,1,0,0,0,0,0,34,34,1,INVENTORY_TESLA_TOWER_1,8,0, no_requirements,100,0,RENDER_ITEMS,no_produced_items,1,tesla_tower_light_1 });
+	tile_template_vector.push_back({ TILE_LASER_TURRET_GREEN,TILESHEET,{ 4,18,1,1,1,1 },TILE_TYPE_TURRET,1,1,1,0,0,0,0,0,34,34,1,INVENTORY_LASER_TURRET_GREEN,0,0, no_requirements,100,0,RENDER_ITEMS,no_produced_items,1,laser_turret_green_light_1 });
 
 	tile_template_vector.push_back({ TILE_INTERIOR_LIGHT_1,TILESHEET,{ 3,19,1,1,1,1 },TILE_TYPE_LIGHT,1,1,1,0,0,0,0,0,34,34,1,INVENTORY_NULL_ITEM,0,0, no_requirements,100,0,RENDER_ITEMS,no_produced_items,1,interior_light_soft_yellow });
 }
@@ -714,7 +717,7 @@ void Load_Inventory_Item_Templates()
 	inventory_item_template_map.insert({ INVENTORY_CONSTRUCTION_TUBING_WALL_1, { INVENTORY_CONSTRUCTION_TUBING_WALL_1, "Wall",{ 6,1,SPRITESHEET_W,SPRITESHEET_H },0,INVENTORY_TYPE_BUILDING_TILE,default_config } });
 	inventory_item_template_map.insert({ INVENTORY_SMELTER_1,{ INVENTORY_SMELTER_1, "Smelter",{ 1,5,SPRITESHEET_W,SPRITESHEET_H },0,INVENTORY_TYPE_ITEM,default_config } });
 	inventory_item_template_map.insert({ INVENTORY_WATER_CANISTER_1,{ INVENTORY_WATER_CANISTER_1, "Water Canister",{ 2,5,SPRITESHEET_W,SPRITESHEET_H },0,INVENTORY_TYPE_FOOD,default_config } });
-	inventory_item_template_map.insert({ INVENTORY_TESLA_TOWER_1,{ INVENTORY_TESLA_TOWER_1, "Tesla Tower",{ 5,5,SPRITESHEET_W,SPRITESHEET_H },0,INVENTORY_TYPE_TURRET,default_config } });
+	inventory_item_template_map.insert({ INVENTORY_LASER_TURRET_GREEN,{ INVENTORY_LASER_TURRET_GREEN, "Tesla Tower",{ 5,5,SPRITESHEET_W,SPRITESHEET_H },0,INVENTORY_TYPE_TURRET,default_config } });
 }
 
 // Return Inventory Functions 
