@@ -55,6 +55,7 @@ public:
 	void Delete_Container_by_Pointer(Dot* container_pointer);
 	void Dot_Give_Inventory_To_Another_Dot(Dot* dot, Dot* second_dot, int inventory_item_code, int Quantity);
 	void Dot_Craft_Item(Dot* dot, int inventory_item_code, int quantity);
+	void Create_Job_To_Transfer_Item_From_Dot_to_Dot(Dot* dot_from, Dot* dot_to, int inventory_item_code, int quantity);
 
 	// NPD AI
 	void Dot_Choose_Job(NPC_Dot* npc_dot);
@@ -180,10 +181,10 @@ private:
 	int current_frenzel_amount = 1;
 
 
-	bool ai_debug = false;
-	bool job_debug = false;
-	bool player_dot_debug = false;
-	bool render_debug = false;
+	bool ai_debug = AI_DEBUG;
+	bool job_debug = JOB_DEBUG;
+	bool player_dot_debug = PLAYER_DOT_DEBUG;
+	bool render_debug = RENDER_DEBUG;
 };
 
 Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Camera* world_camera, TTF_Font* gFont_small, LTexture textures[], bool new_game)
@@ -237,27 +238,25 @@ void Intelligence::Create_Test_Conditions()
 
 	//npc_dot_array.push_back(lifepod);
 
-	world->Create_Tile(Return_Tile_Template_By_Identifier(TILE_INTERIOR_LIGHT_1), 148, 149);
-
 	// CREATE STARTING LOCKER
-	world->Create_Tile(Return_Tile_Template_By_Identifier(TILE_LOCKER_1), 152, 151);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_IRON_ORE, 100);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_COBALT_ORE, 100);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_NICKEL_ORE, 100);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_FRENZEL_1, 5);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_PROCESSED_IRON, 100);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_PROCESSED_COBALT, 100);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_PROCESSED_NICKEL, 100);
-	Add_Item_To_Dot_Inventory(world->item_tiles[152][151], INVENTORY_WATER_CANISTER_1, 100);
+	world->Create_Tile(Return_Tile_Template_By_Identifier(TILE_LOCKER_1), 153, 153);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_IRON_ORE, 100);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_COBALT_ORE, 100);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_NICKEL_ORE, 100);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_FRENZEL_1, 5);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_PROCESSED_IRON, 100);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_PROCESSED_COBALT, 100);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_PROCESSED_NICKEL, 100);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_WATER_CANISTER_1, 100);
 
 	//CREATE STARTING TURRET
 	//world->Create_Tile(Return_Tile_By_Name(TILE_TESLA_TOWER_1), 154, 145);
 	//world->item_tiles[154][145]->npc_dot_config.dot_stat_faction = DOT_FACTION_PLAYER;
 
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		int random_head = rand() % 2;
-		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (151 + i) * TILE_WIDTH, 155 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
+		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (153 + i) * TILE_WIDTH, 154 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
 		Add_Item_To_Dot_Inventory(npc_dot_array.back(), INVENTORY_SPACESUIT_1, 1);
 		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1, 1 };
 		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
@@ -356,7 +355,6 @@ void Intelligence::Handle_Non_Console_Click_And_Hold(int current_action, int x_t
 		mouse_hold_rect_active = true;
 		mouse_hold_rect.x = x;
 		mouse_hold_rect.y = y;
-
 	}
 	
 }
@@ -834,6 +832,17 @@ void Intelligence::Dot_Craft_Item(Dot* dot, int inventory_item_code, int quantit
 	}
 }
 
+void Intelligence::Create_Job_To_Transfer_Item_From_Dot_to_Dot(Dot* dot_from, Dot* dot_to, int inventory_item_code, int quantity)
+{
+	Dot* giving_dot = dot_from;
+	Dot* receiving_dot = dot_to;
+
+	if (dot_from->dot_config[DOT_TYPE] == DOT_PLAYER) giving_dot = return_nearest_storage_unit_with_item(dot_to, inventory_item_code);
+
+	Dot_Job transfer_item = Dot_Job(SPECIFIC_DOT_JOB_TAKE_ITEM_FROM_DOT, 1);
+	if (giving_dot != NULL && receiving_dot != NULL) transfer_item.Routine_Take_Items_From_Dot(receiving_dot, giving_dot, Return_Tile_By_Linked_Inventory_Item(inventory_item_code), 1);
+}
+
 // DOT AI COMMANDS
 
 // MAJOR
@@ -873,7 +882,7 @@ void Intelligence::Update_NPD_AI()
 		}
 
 		// Check to see if the dot should dump inventory, only if they have no other job
-		Manage_Dot_Inventory_Storage(npc_dot_array[p]);
+		//Manage_Dot_Inventory_Storage(npc_dot_array[p]);
 
 		// Run Goals
 		npc_dot_array[p]->npc_dot_config.current_dot_job = npc_dot_array[p]->dot_current_job.job_type; // set the dummy job variables for the console
@@ -1487,7 +1496,6 @@ bool Intelligence::Update_Dot_Path(Dot* dot, int target_tile_x, int target_tile_
 	{
 		if (target_tile_x >= 0 && target_tile_y >= 0)
 		{
-			
 			dot->npc_dot_config.current_goal_path = iField->pathFind(dot->getTileX(), dot->getTileY(), target_tile_x, target_tile_y,TILE_NUM_X*TILE_NUM_Y/100);
 			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].max_level;
 			if (dot->npc_dot_config.current_goal_path.size() == 0) return false;

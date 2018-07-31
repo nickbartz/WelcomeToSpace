@@ -12,7 +12,7 @@
 // 2. Using tile_list for construction parts as well as project parts 
 
 // UNSOLVED BUGS 
-
+// Unable to render text on switching between storage inventory and dot inventory
 
 // NOTES
 

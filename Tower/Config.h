@@ -3,6 +3,13 @@
 
 void print(string print_string);
 
+const int CONSOLE_DEBUG = 0;
+const int MAIN_DEBUG = 0;
+const int INTELLIGENCE_DEBUG = 0;
+const int AI_DEBUG = 0;
+const int JOB_DEBUG = 0;
+const int PLAYER_DOT_DEBUG = 0;
+const int RENDER_DEBUG = 0;
 
 //Screen dimension constants
 const int TILE_HEIGHT = 32;
@@ -99,7 +106,6 @@ enum Console_Buttons
 	BUTTON_ACTION_ATTACK,
 	BUTTON_ACTION_DO_NOTHING,
 	BUTTON_ACTION_PLACE_SCAFFOLD,
-	BUTTON_ACTION_INSPECT,
 	BUTTON_ACTION_INVENTORY_BUTTON,
 	BUTTON_ACTION_SWITCH_PANEL,
 	BUTTON_ACTION_CRAFT_ITEM,
@@ -107,16 +113,19 @@ enum Console_Buttons
 	BUTTON_ACTION_QUIT_GAME,
 	BUTTON_ACTION_CREATE_PRODUCTION_ORDER,
 	BUTTON_ACTION_CLEAR_DOT_GOALS,
-	BUTTON_ACTION_SPAWN_ENEMY
+	BUTTON_ACTION_SPAWN_ENEMY,
+	BUTTON_ACTION_CLOSE_CONSOLE_WINDOW
 };
 
 enum Console_Windows
 {
 	NULL_WINDOW,
-	WINDOW_DOT_DIAGNOSTIC,
 	WINDOW_PLAYER_DIAGNOSTIC,
 	WINDOW_OPTIONS,
-	WINDOW_ACTION_BUTTONS
+	WINDOW_ACTION_BUTTONS,
+
+	// MAKE SURE THIS GOES LAST //
+	WINDOW_DOT_DIAGNOSTIC,
 };
 
 enum Console_Window_Panels
@@ -130,7 +139,8 @@ enum Console_Window_Panels
 	PANEL_OPTIONS_RESTART,
 	PANEL_ACTION_BUTTONS,
 	PANEL_PRODUCTION_ORDERS,
-	PANEL_JOB_DIAGNOSTIC
+	PANEL_JOB_DIAGNOSTIC, 
+	PANEL_CLOSE_CONSOLE_WINDOW
 };
 
 enum TILE_LAYERS
@@ -573,10 +583,10 @@ struct Light_Specs
 };
 
 Light_Specs no_light = { 0,{0,0,0,0},0,0 };
-Light_Specs interior_light_soft_yellow = { 1,{255,255,150,0},255,1,200 };
-Light_Specs laser_turret_green_light_1 = { 1,{ 100,255,100,0 },256,1,255 };
+Light_Specs interior_light_soft_yellow = { 1,{255,255,150,0},200,1,200 };
+Light_Specs laser_turret_green_light_1 = { 1,{ 100,255,100,0 },50,1,100 };
 Light_Specs frenzel_beacon_light_1 = { 1,{255,100,100,0},100,1,255 };
-Light_Specs smelter_light_1 = { 1,{ 255,150,100,0 },50,1,255 };
+Light_Specs smelter_light_1 = { 1,{ 255,150,100,0 },50,1,100 };
 
 struct Tile_Template
 {
@@ -644,7 +654,7 @@ void Load_Tile_Templates()
 	tile_template_vector.push_back({ TILE_VACUUM, TILESHEET,{ 5,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0, cannot_build,100,0,RENDER_TILES });
 	tile_template_vector.push_back({ TILE_VACUUM_2, TILESHEET,{ 4,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0, cannot_build,100,0,RENDER_TILES });
 
-	tile_template_vector.push_back({ TILE_BED_1, TILESHEET,{ 0,11,2,1,2,1 }, ITEM_TYPE_BED,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_BED_1,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_template_vector.push_back({ TILE_BED_1, TILESHEET,{ 0,11,2,1,2,1 }, ITEM_TYPE_BED,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_BED_1,0,0, no_requirements,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
 	tile_template_vector.push_back({ TILE_TREE_1, TILESHEET,{ 0,9,1,-2,1,1 },TREE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_TREE_1,0,0, cannot_build,100,0,RENDER_ITEMS });
 	tile_template_vector.push_back({ TILE_CONSOLE_1, ITEM_SPRITES,{ 0,3,2,-2,2,1 },CONSOLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CONSOLE_1,4,0, cannot_build,100,0,RENDER_ITEMS });
@@ -662,9 +672,9 @@ void Load_Tile_Templates()
 	tile_template_vector.push_back({ TILE_WATER_CANISTER_1, TILESHEET,{ 2,18,1,1,1,1 },ITEM_TYPE_FOOD,1,0,1,0,0,0,0,0,34,34,0,INVENTORY_WATER_CANISTER_1,0,0, no_requirements,100,0,RENDER_UNDER_PLAYER_ITEMS,no_produced_items,0 });
 
 	tile_template_vector.push_back({ TILE_MICROWAVE_1, ITEM_SPRITES,{ 0,15,1,-2,1,1 },ITEM_TYPE_FOOD_PREPARATION,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_MICROWAVE_1,8,0, Microwave_Specs,100,ITEM_JOB_PRODUCE_ITEM,RENDER_ITEMS, soylent_meal_1 });
-	tile_template_vector.push_back({ TILE_CHAIR_1, TILESHEET,{ 2,11,1,1,1,1 },ITEM_TYPE_CHAIR,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CHAIR_1,0,0, cannot_build,100,0,RENDER_UNDER_PLAYER_ITEMS });
+	tile_template_vector.push_back({ TILE_CHAIR_1, TILESHEET,{ 2,11,1,1,1,1 },ITEM_TYPE_CHAIR,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CHAIR_1,0,0, no_requirements,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_template_vector.push_back({ TILE_TABLE_1, TILESHEET,{ 5,10,1,1,1,1 },ITEM_TYPE_TABLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_TABLE_1,0,0, cannot_build,100,ITEM_JOB_TILE_STREAMLINE,RENDER_UNDER_PLAYER_ITEMS });
+	tile_template_vector.push_back({ TILE_TABLE_1, TILESHEET,{ 5,10,1,1,1,1 },ITEM_TYPE_TABLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_TABLE_1,0,0, no_requirements,100,ITEM_JOB_TILE_STREAMLINE,RENDER_UNDER_PLAYER_ITEMS });
 
 	tile_template_vector.push_back({ TILE_MINING_LASER_1, TILESHEET,{ 3,10,1,1,1,1 },ITEM_TYPE_MINING_LASER,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_MINING_LASER_1,0,0, cannot_build,100,0,RENDER_ITEMS });
 	tile_template_vector.push_back({ TILE_LASER_PISTOL_1, TILESHEET,{ 3,11,1,1,1,1 },ITEM_TYPE_WEAPON,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_LASER_PISTOL_1,0,0, cannot_build,100,0,RENDER_ITEMS });

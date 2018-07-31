@@ -1,9 +1,10 @@
 //Using SDL, SDL_image, standard IO, and strings
 
+using namespace std;
 #include <SDL.h>
-
 #include <SDL_image.h>
 #include <SDL_ttf.h>
+#include <SDL_mixer.h>
 #include <stdio.h>
 #include <string>
 #include <sstream>
@@ -18,15 +19,29 @@
 #include <ctime>
 #include <unordered_map>
 #include <iostream>
-using namespace std;
-
-
-#include <Config.h>
-#include <Camera.h>
+#include <fstream>
 #include <LTexture.h>
+#include <Config.h>
+
+//The window renderer
+SDL_Renderer* gRenderer = NULL;
+
+//Globally used font and font scene texture
+TTF_Font* gFont = NULL;
+TTF_Font* gFont_small = NULL;
+
+// Texture Array for all Textures
+LTexture texture_array[NUM_TILESHEETS];
+
+// Music
+Mix_Music *gMusic = NULL;
+
+// Sound Effect Array
+
+
+#include <Camera.h>
 #include <Shared_Draw_Functions.h>
 #include <Dot.h>
-
 #include <Cursor.h>
 #include <World.h>
 #include <A_Star.h>
@@ -35,15 +50,12 @@ using namespace std;
 #include <Console.h>
 #include <Save_Load.h>
 
-
-
 //Starts up SDL and creates window
 bool init();
 void load_save_from_disk(char* path, Save_File* save);
 void save_data_to_disk(char* path, Save_File* save);
-void load_textures();
+void load_assets();
 void unload_textures();
-
 
 //Frees media and shuts down SDL
 void close();
@@ -55,12 +67,6 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 //The window we'll be rendering to
 SDL_Window* gWindow = NULL;
 
-//The window renderer
-SDL_Renderer* gRenderer = NULL;
-
-SDL_Rect* tilesheet_clips[BASIC_TILESHEET_WIDTH][BASIC_TILESHEET_HEIGHT];
-
-LTexture texture_array[NUM_TILESHEETS];
 
 int mouse_click_state[2][2];
 bool mouse_motion = false;
@@ -68,12 +74,8 @@ bool mouse_motion = false;
 int current_mouse_pos_x;
 int current_mouse_pos_y;
 
-//Globally used font and font scene texture
-TTF_Font* gFont = NULL;
-TTF_Font* gFont_small = NULL;
-
 bool new_game;
-bool debug = false;
+bool debug = MAIN_DEBUG;
 bool pause = false;
 
 void print(string print_string)
@@ -129,12 +131,22 @@ bool init()
 					success = false;
 				}
 
+
+				//Initialize SDL_mixer
+				if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
+				{
+					printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
+					success = false;
+				}
+
 				//Initialize SDL_ttf
 				if (TTF_Init() == -1)
 				{
 					printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
 					success = false;
 				}
+
+				SDL_ShowCursor(SDL_DISABLE);
 			}
 		}
 	}
@@ -204,7 +216,7 @@ void save_data_to_disk(char* path, Save_File* save)
 	}
 }
 
-void load_textures()
+void load_assets()
 {
 	texture_array[BOLT_SPRITES].loadFromFile(gRenderer, "Sprites/Animated_Items/projectiles_spritesheet_1.png");
 	texture_array[ITEM_SPRITES].loadFromFile(gRenderer, "Sprites/Animated_Items/animated_items_spritesheet_1.png");
@@ -228,23 +240,17 @@ void load_textures()
 	int row = 0;
 	int column = 0;
 
-	for (int p = 0; p < BASIC_TILESHEET_HEIGHT; ++p)
-	{
-		for (int i = 0; i < BASIC_TILESHEET_WIDTH; i++)
-		{
-			tilesheet_clips[i][p] = new SDL_Rect();
-			tilesheet_clips[i][p]->x = 1 + 34 * i;
-			tilesheet_clips[i][p]->y = 1 + 34 * p;
-			tilesheet_clips[i][p]->w = 32;
-			tilesheet_clips[i][p]->h = 32;
-		}
-	}
-
 	//Open the font
-	gFont = TTF_OpenFont("lazy.ttf", 12);
+	gFont = TTF_OpenFont("Roboto-Bold.ttf", 12);
 	if (gFont == NULL) printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
-	gFont_small = TTF_OpenFont("lazy.ttf", 9);
+	gFont_small = TTF_OpenFont("Roboto-Bold.ttf", 10);
 	if (gFont_small == NULL) printf("Failed to load small lazy font! SDL_ttf Error: %s\n", TTF_GetError());
+
+	gMusic = Mix_LoadMUS("Music/tell me that i dont fly off.wav");
+	if (gMusic == NULL)
+	{
+		printf("Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+	}
 }
 
 void unload_textures()
@@ -270,6 +276,10 @@ void close()
 	gWindow = NULL;
 	gRenderer = NULL;
 
+	//Free the music
+	Mix_FreeMusic(gMusic);
+	gMusic = NULL;
+
 	//Quit SDL subsystems
 	IMG_Quit();
 	SDL_Quit();
@@ -282,6 +292,17 @@ void handle_event(SDL_Event* e, Camera* camera, Cursor* cursor, Intelligence* in
 	{
 		SDL_GetMouseState(&current_mouse_pos_x, &current_mouse_pos_y);
 		mouse_motion = true;
+
+		if (console->check_if_mouse_is_over_console(current_mouse_pos_x, current_mouse_pos_y) == true && cursor->current_action_type != BUTTON_ACTION_INVENTORY_BUTTON)
+		{
+			cursor->over_console = true;
+		}
+		else
+		{
+			cursor->over_console = false;
+		}
+
+		cursor->Set_Coords(current_mouse_pos_x, current_mouse_pos_y, camera);
 	}
 	else mouse_motion = false;
 
@@ -312,9 +333,6 @@ void handle_event(SDL_Event* e, Camera* camera, Cursor* cursor, Intelligence* in
 
 void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* intelligence, Console* console)
 {
-	cursor->Set_Coords(current_mouse_pos_x, current_mouse_pos_y, camera);
-	cursor->Set_Type(console->current_action, &Return_Tile_By_Linked_Inventory_Item(console->current_selected_inventory_item));
-
 	int x_pos = (current_mouse_pos_x + camera->camera_box.x);
 	int y_pos = (current_mouse_pos_y + camera->camera_box.y);
 	int x_tile = (x_pos / TILE_WIDTH);
@@ -322,12 +340,9 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 
 	intelligence->Test_Cursor_Position(x_pos, y_pos, x_tile, y_tile);
 	
-
-	//SITUATION WHERE YOU CLICK ONCE AND DON'T HOLD
 	if (mouse_click_state[0][0] == 1)
 	{
-		
-		if (mouse_click_state[0][1] == 0)
+		if (mouse_click_state[0][1] == 0) // CLICK
 		{
 			mouse_click_state[0][1] = 1;
 			if (console->check_console_for_clicks(current_mouse_pos_x, current_mouse_pos_y) == false)
@@ -337,17 +352,18 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 			else
 			{
 				console->Handle_Console_Clicks();
+				cursor->Set_Type(console->current_action, &Return_Tile_By_Linked_Inventory_Item(console->current_selected_inventory_item));
 			}
 		}
-		else 
+		else  // CLICK AND HOLD
 		{
-			if (console->check_console_for_clicks(current_mouse_pos_x, current_mouse_pos_y) == false)
+			if (console->check_console_for_clicks(current_mouse_pos_x, current_mouse_pos_y) == false && console->current_action != BUTTON_ACTION_INVENTORY_BUTTON)
 			{
 				intelligence->Handle_Non_Console_Click_And_Hold(console->current_action, x_tile, y_tile, x_pos, y_pos, console->current_selected_inventory_item);
 			}
 			else
 			{
-				// ADD CODE FOR CLICK AND HOLD ON CONSOLE HERE
+				console->Handle_Console_Click_And_Hold();
 			}
 		}
 	}
@@ -355,7 +371,17 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 	// SITUATION WHERE YOU UNCLICK
 	if (mouse_click_state[0][0] == 0 && mouse_click_state[0][1] == 1)
 	{
-		intelligence->Handle_Non_Console_Unclick(console->current_action, x_tile, y_tile, x_pos, y_pos, console->current_selected_inventory_item);
+		if (cursor->current_action_type == BUTTON_ACTION_INVENTORY_BUTTON) cursor->Set_Type(BUTTON_ACTION_DO_NOTHING, &null_tile);
+		
+		if (console->check_console_for_clicks(current_mouse_pos_x, current_mouse_pos_y) == false)
+		{
+			intelligence->Handle_Non_Console_Unclick(console->current_action, x_tile, y_tile, x_pos, y_pos, console->current_selected_inventory_item);
+		}
+		else
+		{
+			console->Handle_Console_Unclick();
+			cursor->Set_Type(console->current_action, &Return_Tile_By_Linked_Inventory_Item(console->current_selected_inventory_item));
+		}
 	}
 
 	// SITUATION WHERE YOU RIGHT CLICK 
@@ -366,7 +392,7 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 		{
 			mouse_click_state[1][1] = 1;
 			Dot* dot_focus = intelligence->Return_Clicked_Dot(x_pos, y_pos);
-			if (dot_focus != NULL) console->Change_Current_Focus_Dot(gRenderer, dot_focus);	
+			if (dot_focus != NULL) console->Open_Diagnostic_On_Clicked_Dot(dot_focus);
 		}
 		else
 		{
@@ -390,7 +416,7 @@ int main(int argc, char* args[])
 	{
 		if (debug) cout << "Loading Textures" << endl;
 		
-		load_textures();
+		load_assets();
 		Load_Tile_Templates();
 		Load_Inventory_Item_Templates();
 
@@ -407,7 +433,7 @@ int main(int argc, char* args[])
 		camera.camera_box.y = 130 * TILE_HEIGHT;
 
 		if (debug) cout << "Loading World" << endl;
-		World world(gRenderer, texture_array, tilesheet_clips, new_game);
+		World world(gRenderer, texture_array, new_game);
 
 		if (debug) cout << "Loading Intelligence" << endl;
 		Intelligence intelligence(&world, gRenderer, &camera, gFont_small, texture_array, new_game);
@@ -440,11 +466,14 @@ int main(int argc, char* args[])
 
 		if (debug) cout << "starting main loop" << endl;
 
+		//Mix_PlayMusic(gMusic, -1);
 		//While application is running
 		while (!quit)
 		{
 			//Handle events on queue
 			if (debug) cout << "polling for events" << endl;
+
+
 			
 			while (SDL_PollEvent(&e) != 0)
 			{
@@ -487,8 +516,8 @@ int main(int argc, char* args[])
 			//Render Objects
 			if (debug) cout << "rendering objects" << endl;
 			intelligence.render();
-			if (console.current_action == BUTTON_ACTION_REMOVE_TILE || console.current_action == BUTTON_ACTION_PLACE_SCAFFOLD) cursor.Render(gRenderer, &camera);
-			console.render(gRenderer, &camera);
+			console.render(&camera);
+			cursor.Render(gRenderer, &camera);
 
 			if (debug) cout << "updating screen" << endl;
 			//Update screen
@@ -504,6 +533,9 @@ int main(int argc, char* args[])
 
 			console.Update_Console(gRenderer);
 		}
+
+		// Stop the music
+		//Mix_HaltMusic();
 
 		//if (debug) cout << "Saving World to Save_State" << endl;
 		//current_save_state->Save_Current_State(&world, &intelligence);

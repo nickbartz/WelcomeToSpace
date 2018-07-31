@@ -115,6 +115,8 @@ bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor
 	free();
 
 	//Render text surface
+
+
 	SDL_Surface* textSurface = TTF_RenderText_Solid(gFont, textureText.c_str(), textColor);
 	if (textSurface != NULL)
 	{
@@ -122,6 +124,7 @@ bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor
 		mTexture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
 		if (mTexture == NULL)
 		{
+			cout << "ltexture trying to create: " << textureText << endl;
 			printf("Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError());
 		}
 		else

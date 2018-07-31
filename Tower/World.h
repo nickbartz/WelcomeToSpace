@@ -44,7 +44,7 @@ class World {
 public:
 
 	// Basic Commands
-	World(SDL_Renderer* gRenderer, LTexture textures[], SDL_Rect* tilesheet_clips[][BASIC_TILESHEET_HEIGHT], bool new_game);
+	World(SDL_Renderer* gRenderer, LTexture textures[], bool new_game);
 	void Render(Camera* camera, int render_layer);
 	void Free();
 
@@ -58,7 +58,7 @@ public:
 	void Create_Background();
 	void Populate_Asteroids();
 	void Create_Asteroid_Cluster(int start_x, int start_y, int size);
-
+	void Create_Room_From_Data_File(int x_tile_start, int y_tile_start, string filename, int faction);
 	void Create_Test_Room(int x_start, int y_start, int faction);
 	void Create_Box_Shape(auto_room room);
 	void Connect_Box_Centers(auto_room room_a, auto_room room_b, int hall_breadth);
@@ -126,7 +126,7 @@ private:
 
 };
 
-World::World(SDL_Renderer* gRenderer, LTexture textures[], SDL_Rect* tilesheet_clips[][BASIC_TILESHEET_HEIGHT], bool new_game)
+World::World(SDL_Renderer* gRenderer, LTexture textures[], bool new_game)
 {
 	for (int p = 0; p < NUM_TILESHEETS; ++p) { texture_array[p] = &textures[p]; }
 
@@ -135,7 +135,10 @@ World::World(SDL_Renderer* gRenderer, LTexture textures[], SDL_Rect* tilesheet_c
 
 	Create_Background();
 	
-	Create_Test_Room(150,150, DOT_FACTION_PLAYER);
+	//Create_Test_Room(150,150, DOT_FACTION_PLAYER);
+
+	Create_Room_From_Data_File(150, 150, "Rooms/test_room.csv", DOT_FACTION_PLAYER);
+
 	Populate_Asteroids();
 
 }
@@ -181,6 +184,75 @@ void World::Create_Asteroid_Cluster(int start_x, int start_y, int size)
 
 		}
 	}
+}
+
+void World::Create_Room_From_Data_File(int x_tile_start, int y_tile_start, string filename, int faction)
+{
+	ifstream inputFile;
+	string line;
+
+	int num_rows = 0;
+	int num_columns = 0;
+
+	int y_tile = y_tile_start;
+	int x_tile = x_tile_start;
+
+	inputFile.open(filename.c_str(), ios::in);
+
+	if (inputFile.good())
+	{
+		while (getline(inputFile, line, ','))
+		{
+			stringstream raw_num(line);
+
+
+			int tile_num = 0;
+			raw_num >> tile_num;
+
+			if (line[0] != '/')
+			{
+				if (tile_num > 0)
+				{
+					//cout << "Creating a: " << tile_num << " at: " << x_tile << ", " << y_tile << endl;
+					if (Return_Tile_Template_By_Identifier(tile_num).tile_or_item == 1 && Return_Tile_Template_By_Identifier(tile_num).tile_type != TILE_TYPE_TURRET)
+					{
+						Create_Tile(Return_Tile_Template_By_Identifier(40), x_tile, y_tile, faction);
+						Create_Tile(Return_Tile_Template_By_Identifier(tile_num), x_tile, y_tile, faction);
+					}
+					else
+					{
+						Create_Tile(Return_Tile_Template_By_Identifier(tile_num), x_tile, y_tile, faction);
+					}
+
+				}
+				num_columns++;
+				x_tile++;
+			}
+			else if (line[0] == '/')
+			{
+				num_columns++;
+				y_tile++;
+				x_tile = x_tile_start;
+				x_tile++;
+			}
+
+		}
+
+		for (int p = y_tile_start; p < y_tile_start + num_rows; p++)
+		{
+			for (int i = x_tile_start; i < x_tile_start + num_columns; i++)
+			{
+				Fix_Smooth_Tile(world_tiles[i][p]);
+				Fix_Smooth_Tile(item_tiles[i][p]);
+			}
+		}
+	}
+	else
+	{
+		cout << "could not open data file for parsing" << endl;
+	}
+
+	inputFile.close();
 }
 
 void World::Create_Test_Room(int x_start, int y_start, int faction)
