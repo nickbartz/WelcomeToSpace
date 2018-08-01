@@ -162,7 +162,7 @@ void World::Populate_Asteroids()
 		{
 			int asteroid_cluster_chance = rand() % 1000;
 			int asteroid_cluster_size = rand() % 10;
-			if (asteroid_cluster_chance >= 995) Create_Asteroid_Cluster(i, p, asteroid_cluster_size);
+			if (asteroid_cluster_chance >= 998) Create_Asteroid_Cluster(i, p, asteroid_cluster_size);
 		}
 	}
 }

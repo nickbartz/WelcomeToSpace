@@ -89,6 +89,7 @@ public:
 	Dot* return_nearest_dot_with_faction(Dot* searching_dot, int faction, int search_distance);
 	Dot* return_nearest_dot_by_type(Dot* dot, int dot_type, Tile_Template tile_type = null_tile);
 	Dot* return_nearest_storage_unit_with_item(Dot* dot, int item_name);
+	Dot* return_nearest_storage_unit_with_item_type(Dot* dot, int item_type);
 	Dot* return_nearest_tile_by_type_or_name(Dot* dot, bool type_or_name, int search_number);
 	vector<Dot*> return_chair_and_table_combo(Dot* dot);
 	Dot* return_nearest_oxygenated_tile(Dot* dot);
@@ -244,16 +245,13 @@ void Intelligence::Create_Test_Conditions()
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_COBALT_ORE, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_NICKEL_ORE, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_FRENZEL_1, 5);
+	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_SOYLENT_MEAL_1, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_PROCESSED_IRON, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_PROCESSED_COBALT, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_PROCESSED_NICKEL, 100);
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_WATER_CANISTER_1, 100);
 
-	//CREATE STARTING TURRET
-	//world->Create_Tile(Return_Tile_By_Name(TILE_TESLA_TOWER_1), 154, 145);
-	//world->item_tiles[154][145]->npc_dot_config.dot_stat_faction = DOT_FACTION_PLAYER;
-
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		int random_head = rand() % 2;
 		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (153 + i) * TILE_WIDTH, 154 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
@@ -885,13 +883,13 @@ void Intelligence::Update_NPD_AI()
 		//Manage_Dot_Inventory_Storage(npc_dot_array[p]);
 
 		// Run Goals
-		npc_dot_array[p]->npc_dot_config.current_dot_job = npc_dot_array[p]->dot_current_job.job_type; // set the dummy job variables for the console
+		npc_dot_array[p]->npc_dot_config.console_current_dot_job = npc_dot_array[p]->dot_current_job.job_type; // set the dummy job variables for the console
 		if (!empty(npc_dot_array[p]->npc_dot_config.current_goal_list))
 		{
-			npc_dot_array[p]->npc_dot_config.current_dot_goal = npc_dot_array[p]->npc_dot_config.current_goal_list.back().goal_action; // set the dummy goal variables for the console
+			npc_dot_array[p]->npc_dot_config.console_current_dot_goal = npc_dot_array[p]->npc_dot_config.current_goal_list.back().goal_action; // set the dummy goal variables for the console
 			if (npc_dot_array[p]->npc_dot_config.current_goal_list.back().pointer_to_dot_pointer != NULL)
 			{
-				npc_dot_array[p]->npc_dot_config.current_dot_focus_type = npc_dot_array[p]->npc_dot_config.current_goal_list.back().pointer_to_dot_pointer->dot_config[DOT_TYPE];
+				npc_dot_array[p]->npc_dot_config.console_current_dot_focus_type = npc_dot_array[p]->npc_dot_config.current_goal_list.back().pointer_to_dot_pointer->dot_config[DOT_TYPE];
 			}
 
 			if (job_debug) cout << "dot: " << to_string(int(&npc_dot_array[p])) << " with job type: " << npc_dot_array[p]->dot_current_job.job_type << " starting work on: " << npc_dot_array[p]->npc_dot_config.current_goal_list.back().goal_action << endl;
@@ -900,11 +898,12 @@ void Intelligence::Update_NPD_AI()
 		}	
 		else
 		{
-			npc_dot_array[p]->npc_dot_config.current_dot_goal = ACTION_NONE; // set the dummy goal variables for the console
-			npc_dot_array[p]->npc_dot_config.current_dot_focus_type = DOT_GENERIC; // set the dummy goal variables for the console
+			npc_dot_array[p]->npc_dot_config.console_current_dot_goal = ACTION_NONE; // set the dummy goal variables for the console
+			npc_dot_array[p]->npc_dot_config.console_current_dot_focus_type = DOT_GENERIC; // set the dummy goal variables for the console
 		}
 
 		//HANDLE DOT MOVEMENT
+
 		Set_Dot_Target_to_Next_Node_on_Path(npc_dot_array[p]);
 
 		npc_dot_array[p]->previous_mPosX = npc_dot_array[p]->dot_rect.x;
@@ -1046,7 +1045,10 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		if (nearest_accessible != NULL)
 		{
 			if (nearest_accessible->getTileX() == dot->getTileX() && nearest_accessible->getTileY() == dot->getTileY()) goal_complete = true;
-			else if (Update_Dot_Path(dot, nearest_accessible->getTileX(), nearest_accessible->getTileY())) goal_complete = true;
+			else if (Update_Dot_Path(dot, nearest_accessible->getTileX(), nearest_accessible->getTileY()) == true)
+			{
+				goal_complete = true;
+			}
 		}
 		else 
 		{
@@ -1125,6 +1127,7 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 	case ACTION_GET_INSIDE_ANOTHER_DOT:
 		dot->dot_rect.x = current_dot_goal_pointer->dot_rect.x;
 		dot->dot_rect.y = current_dot_goal_pointer->dot_rect.y;
+		dot->npc_dot_config.is_currently_in_a_dot = true;
 		if (current_dot_goal_pointer->multi_tile_config.tile_type == ITEM_TYPE_BED)
 		{
 			dot->npc_dot_config.dot_angle = 90;
@@ -1136,6 +1139,7 @@ void Intelligence::Process_Most_Recent_Dot_Goal(Dot* dot)
 		nearest_accessible = world->Find_Accessible_Adjacent_Tile(current_dot_goal_pointer);
 		dot->dot_rect.x = nearest_accessible->dot_rect.x;
 		dot->dot_rect.y = nearest_accessible->dot_rect.y;
+		dot->npc_dot_config.is_currently_in_a_dot = false;
 		if (current_dot_goal_pointer->multi_tile_config.tile_type == ITEM_TYPE_BED) dot->npc_dot_config.dot_angle = 0;
 		goal_complete = true;
 		break;
@@ -1293,7 +1297,7 @@ void Intelligence::Manage_Dot_Clipping(Dot* dot)
 	else tile_underfoot = world->world_tiles[x_tile][y_tile];
 
 	// NEED TO MAKE THIS BETTER, THIS IS JUST A BLUNT FORCE SOLUTION
-	if (tile_underfoot->multi_tile_config.is_collidable == 1)
+	if (tile_underfoot->multi_tile_config.is_collidable == 1 && dot->npc_dot_config.is_currently_in_a_dot == false)
 	{
 		Tile* new_tile = world->Find_Accessible_Adjacent_Tile(tile_underfoot);
 
@@ -1440,7 +1444,7 @@ void Intelligence::Respond_To_Dot_Priority_Alarm_Level(NPC_Dot* dot, int dot_pri
 		}
 		break;
 	case DOT_PRIORITY_HUNGER_NEED:
-		if (dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_EAT_FOOD && dot->Check_Inventory_For_Item_Type(ITEM_TYPE_FOOD).item_code != INVENTORY_EMPTY_SLOT)
+		if (dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_EAT_FOOD && dot->Check_Inventory_For_Item_Type(INVENTORY_TYPE_FOOD).item_code != INVENTORY_NULL_ITEM)
 		{
 			dot->dot_wipe_goals();
 			vector<Dot*> chair_and_table_combo = return_chair_and_table_combo(dot);
@@ -1449,14 +1453,18 @@ void Intelligence::Respond_To_Dot_Priority_Alarm_Level(NPC_Dot* dot, int dot_pri
 				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_EAT_FOOD, 1.0 , chair_and_table_combo[0], chair_and_table_combo[1], Return_Tile_By_Linked_Inventory_Item(dot->Check_Inventory_For_Item_Type(INVENTORY_TYPE_FOOD).item_code), -1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
 				dot->dot_current_job.Run_Job(dot);
 			}
+			else
+			{
+				if (JOB_DEBUG == 1) cout << "could not find chair and table combo" << endl;
+			}
 		}
 		else if (dot->dot_current_job.job_type > DOT_HEALTH_JOB_GO_FIND_FOOD)
 		{
 			dot->dot_wipe_goals();
-			Dot* nearest_soylent_meal = return_nearest_storage_unit_with_item(dot, INVENTORY_TYPE_FOOD);
+			Dot* nearest_soylent_meal = return_nearest_storage_unit_with_item_type(dot, INVENTORY_TYPE_FOOD);
 			if (nearest_soylent_meal != NULL)
 			{
-				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_FIND_FOOD, 1.0 , nearest_soylent_meal, NULL, Return_Tile_By_Linked_Inventory_Item(nearest_soylent_meal->Check_Inventory_For_Item_Type(ITEM_TYPE_FOOD).item_code), 1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
+				dot->dot_current_job = Dot_Job{ DOT_HEALTH_JOB_GO_FIND_FOOD, 1.0 , nearest_soylent_meal, NULL, Return_Tile_By_Linked_Inventory_Item(nearest_soylent_meal->Check_Inventory_For_Item_Type(INVENTORY_TYPE_FOOD).item_code), 1, 0, &dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_HUNGER_NEED].current_level };
 				dot->dot_current_job.Run_Job(dot);
 			}
 		}
@@ -1492,21 +1500,39 @@ bool Intelligence::Check_Dot_Path_is_Oxygenated(Dot* dot)
 
 bool Intelligence::Update_Dot_Path(Dot* dot, int target_tile_x, int target_tile_y, bool adjacent)
 {
-	if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level == 0)
+	
+	// If the path is set to the tile the dot is already on return true
+	if (dot->getTileX() - target_tile_x == 0 && dot->getTileY() - target_tile_y)
 	{
-		if (target_tile_x >= 0 && target_tile_y >= 0)
+		cout << "dot standing on target, no need to find path - this shouldn't happen" << endl;
+		return true;
+	}
+	// else run the path algorithm
+	else
+	{
+		// the pathing algorithm is set to run on a delay so check to see if the delay is at 0 before running again
+		if (dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level == 0)
 		{
-			dot->npc_dot_config.current_goal_path = iField->pathFind(dot->getTileX(), dot->getTileY(), target_tile_x, target_tile_y,TILE_NUM_X*TILE_NUM_Y/100);
-			dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].max_level;
-			if (dot->npc_dot_config.current_goal_path.size() == 0) return false;
-			else return true;
-		}
-		else
-		{
-			cout << "couldn't chart path to: " + to_string(target_tile_x) + ", " + to_string(target_tile_y) << endl;
-			return false;
+			if (target_tile_x >= 0 && target_tile_y >= 0)
+			{
+				dot->npc_dot_config.current_goal_path = iField->pathFind(dot->getTileX(), dot->getTileY(), target_tile_x, target_tile_y, TILE_NUM_X*TILE_NUM_Y / 100);
+				dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].current_level = dot->npc_dot_config.dot_priority_map[DOT_PRIORITY_PATH_CHECK_COOLDOWN].max_level;
+
+				if (dot->npc_dot_config.current_goal_path.size() == 0)
+				{
+					cout << "iField returned a path of 0 elements - this shouldn't happen" << endl;
+					return false;
+				}
+				else return true;
+			}
+			else
+			{
+				cout << "couldn't chart path to: " + to_string(target_tile_x) + ", " + to_string(target_tile_y) << endl;
+				return false;
+			}
 		}
 	}
+
 }
 
 void Intelligence::Set_Dot_Target_to_Next_Node_on_Path(Dot* dot)
@@ -1885,6 +1911,38 @@ Dot* Intelligence::return_nearest_storage_unit_with_item(Dot* dot, int item_name
 		for (int p = 0; p < current_storage[i].storage_inventory.size(); p++)
 		{
 			if (current_storage[i].storage_inventory[p].inventory_item_code == item_name)
+			{				
+				int distance_x = abs(dot->getTileX() - current_storage[i].storage_location->getTileX());
+				int distance_y = abs(dot->getTileY() - current_storage[i].storage_location->getTileY());
+
+				if (distance_x + distance_y < dot_distance)
+				{
+					dot_distance = distance_x + distance_y;
+					dot_number = i;
+				}
+				break;
+			}
+
+		}
+	}
+
+	if (dot_number >= 0)  return current_storage[dot_number].storage_location;
+	else
+	{
+		return NULL;
+	}
+}
+
+Dot* Intelligence::return_nearest_storage_unit_with_item_type(Dot* dot, int item_type)
+{
+	double dot_distance = 9999;
+	int dot_number = -1;
+
+	for (int i = 0; i < current_storage.size(); i++)
+	{
+		for (int p = 0; p < current_storage[i].storage_inventory.size(); p++)
+		{
+			if (inventory_item_template_map[current_storage[i].storage_inventory[p].inventory_item_code].item_type == item_type)
 			{
 				int distance_x = abs(dot->getTileX() - current_storage[i].storage_location->getTileX());
 				int distance_y = abs(dot->getTileY() - current_storage[i].storage_location->getTileY());
@@ -2533,27 +2591,6 @@ bool Intelligence::check_global_collisions(Dot* dot)
 		}
 	}
 
-	for (int p = 0; p < enemy_ship_array.size(); ++p)
-	{
-		// CHECK TO SEE IF THE OBJECT IS EVEN NEAR THE ENEMY SHIP
-		if (abs(object->x - enemy_ship_array[p]->dot_rect.x) < COLLISION_CHECK_RADIUS && abs(object->y - enemy_ship_array[p]->dot_rect.y) < COLLISION_CHECK_RADIUS)
-		{
-			if (check_dot_collision(object, &enemy_ship_array[p]->dot_rect) == true)
-			{
-				if (dot->npc_dot_config.dot_stat_faction != enemy_ship_array[p]->npc_dot_config.dot_stat_faction) collision = true;
-			}
-		}
-	}
-
-	// LOOK FOR COLLISIONS WITH PLAYER
-	//if (check_dot_collision(object, &player_dot->dot_rect))
-	//{
-	//	if (dot->dot_config[DOT_TYPE] != DOT_NPC || dot->npc_dot_config.dot_stat_faction != player_dot->npc_dot_config.dot_stat_faction)
-	//	{
-	//		collision = true;
-	//	}
-	//}
-
 	return collision;
 }
 
@@ -2678,6 +2715,15 @@ void Intelligence::render()
 			if (world->world_tiles[i][p] != NULL)
 			{
 				world->world_tiles[i][p]->render(gRenderer, camera, RENDER_TILES);
+			}
+		}
+	}
+	for (int p = camera->camera_box.y / TILE_HEIGHT; p < (camera->camera_box.y + camera->camera_box.h) / TILE_HEIGHT; ++p)
+	{
+		for (int i = camera->camera_box.x / TILE_WIDTH; i < (camera->camera_box.x + camera->camera_box.w) / TILE_WIDTH; ++i)
+		{
+			if (world->world_tiles[i][p] != NULL)
+			{
 				if (world->item_tiles[i][p] != NULL) world->item_tiles[i][p]->render(gRenderer, camera, RENDER_UNDER_PLAYER_ITEMS);
 				if (world->item_tiles[i][p] != NULL) world->item_tiles[i][p]->render(gRenderer, camera, RENDER_ITEMS);
 			}

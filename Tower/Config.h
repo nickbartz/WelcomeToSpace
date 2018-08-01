@@ -657,7 +657,7 @@ void Load_Tile_Templates()
 	tile_template_vector.push_back({ TILE_BED_1, TILESHEET,{ 0,11,2,1,2,1 }, ITEM_TYPE_BED,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_BED_1,0,0, no_requirements,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
 	tile_template_vector.push_back({ TILE_TREE_1, TILESHEET,{ 0,9,1,-2,1,1 },TREE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_TREE_1,0,0, cannot_build,100,0,RENDER_ITEMS });
-	tile_template_vector.push_back({ TILE_CONSOLE_1, ITEM_SPRITES,{ 0,3,2,-2,2,1 },CONSOLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CONSOLE_1,4,0, cannot_build,100,0,RENDER_ITEMS });
+	tile_template_vector.push_back({ TILE_CONSOLE_1, ITEM_SPRITES,{ 0,3,2,-2,2,1 },CONSOLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CONSOLE_1,4,0, no_requirements,100,0,RENDER_ITEMS });
 
 	tile_template_vector.push_back({ TILE_LOCKER_1, TILESHEET,{ 3,18,1,1,1,1 },TILE_TYPE_STORAGE_TILE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_LOCKER_1,0,0, cannot_build,100,0,RENDER_ITEMS });
 	tile_template_vector.push_back({ TILE_SPACESUIT_1, TILESHEET,{ 1,1,1,1,1,1 },INVENTORY_TYPE_SUIT,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_SPACESUIT_1,0,0, cannot_build,100,0,RENDER_ITEMS });

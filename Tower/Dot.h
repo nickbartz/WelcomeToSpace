@@ -208,6 +208,7 @@ public:
 		int search_radius = 20;
 		int marked_for_mining = 0;
 		int hit_by_bolt = 0;
+		bool is_currently_in_a_dot;
 
 		// Job focused configs
 		Dot* current_dot_focus;
@@ -218,9 +219,9 @@ public:
 		Item_Production_Status production_status_array[6];
 
 		// dummy's for the console, have no function other than reporting
-		int current_dot_job = DOT_JOB_NO_ASSIGNED_JOB;
-		int current_dot_goal = ACTION_NONE;
-		int current_dot_focus_type = DOT_GENERIC;
+		int console_current_dot_job = DOT_JOB_NO_ASSIGNED_JOB;
+		int console_current_dot_goal = ACTION_NONE;
+		int console_current_dot_focus_type = DOT_GENERIC;
 	};
 
 	//Set Dot Configuration
@@ -567,8 +568,8 @@ void Dot::Create_Default_Dot_Priorities()
 {
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_WEAPON_COOLDOWN, { DOT_PRIORITY_WEAPON_COOLDOWN,0,0,0,1,0,20 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_OXYGEN_NEED, { DOT_PRIORITY_OXYGEN_NEED, 0,0,1,100,0,1 }));
-	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SLEEP_NEED, { DOT_PRIORITY_SLEEP_NEED, 0,0,50,100,0,300 }));
-	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HUNGER_NEED, { DOT_PRIORITY_HUNGER_NEED, 0,0,50,100,0,200 }));
+	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SLEEP_NEED, { DOT_PRIORITY_SLEEP_NEED, 0,0,50,100,0,500 }));
+	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HUNGER_NEED, { DOT_PRIORITY_HUNGER_NEED, 0,0,50,100,0,10 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SPACESUIT_OXYGEN, { DOT_PRIORITY_SPACESUIT_OXYGEN, 100,0,50,100,0,100 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_ENNUI, { DOT_PRIORITY_ENNUI, 0,0,50,100,0,200 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HAPPINESS, { DOT_PRIORITY_HAPPINESS, 100,0,50,100,0,100 }));
@@ -629,8 +630,8 @@ int Dot::Check_Inventory_For_Item(int inventory_item_code)
 Inventory_Item_Template Dot::Check_Inventory_For_Item_Type(int item_type)
 {
 	for (int i = 0; i < MAX_DOT_INVENTORY; i++)
-	{
-		if (npc_dot_config.inventory_slots[i].inventory_item_code == item_type)
+	{		
+		if (Fetch_Inventory_Item_Template(npc_dot_config.inventory_slots[i].inventory_item_code).item_type == item_type)
 		{
 			return Fetch_Inventory_Item_Template(npc_dot_config.inventory_slots[i].inventory_item_code);
 		}
@@ -875,8 +876,6 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 
 	dot_rect_camera = { render_rect.x - camera->camera_box.x, render_rect.y - camera->camera_box.y + bounce, render_rect.w, render_rect.h };
 	SDL_Rect render_clip = { current_clip.x + door_offset_x, current_clip.y + door_offset_y*SPRITESHEET_H, current_clip.w, current_clip.h };
-
-	if (multi_tile_config.tile_type == ITEM_TYPE_EMITTER) render_circle(gRenderer, camera, getTileX(), getTileY(), 5, 255, 0, 0, 50);
 
 	// Change colors or alpha of tile before render
 	Tint_Tile_Before_Render();

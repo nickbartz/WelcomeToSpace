@@ -853,11 +853,11 @@ void Console_Window::Create_Dot_Job_Status_Panel(Dot* focus_dot)
 
 	if (focus_dot->dot_config[DOT_TYPE] == DOT_NPC)
 	{
-		dot_job_status_panel.Add_Number_Diagnostic_To_Panel("Job Type", &focus_dot->npc_dot_config.current_dot_job, offset_rect, PANEL_JOB_DIAGNOSTIC, false, NULL);
+		dot_job_status_panel.Add_Number_Diagnostic_To_Panel("Job Type", &focus_dot->npc_dot_config.console_current_dot_job, offset_rect, PANEL_JOB_DIAGNOSTIC, false, NULL);
 		offset_rect.y += diagnostic_spacer;
-		dot_job_status_panel.Add_Number_Diagnostic_To_Panel("Goal Action", &focus_dot->npc_dot_config.current_dot_goal, offset_rect, PANEL_JOB_DIAGNOSTIC, false, NULL);
+		dot_job_status_panel.Add_Number_Diagnostic_To_Panel("Goal Action", &focus_dot->npc_dot_config.console_current_dot_goal, offset_rect, PANEL_JOB_DIAGNOSTIC, false, NULL);
 		offset_rect.y += diagnostic_spacer;
-		dot_job_status_panel.Add_Number_Diagnostic_To_Panel("Dot Focus Type", &focus_dot->npc_dot_config.current_dot_focus_type, offset_rect, PANEL_JOB_DIAGNOSTIC, false, NULL);
+		dot_job_status_panel.Add_Number_Diagnostic_To_Panel("Dot Focus Type", &focus_dot->npc_dot_config.console_current_dot_focus_type, offset_rect, PANEL_JOB_DIAGNOSTIC, false, NULL);
 		offset_rect.y += diagnostic_spacer;
 		dot_job_status_panel.Add_Simple_Button_With_Action(BUTTON_ACTION_CLEAR_DOT_GOALS, false, "Clear dot goals", { 0,0,0,0 }, NULL, offset_rect, PANEL_JOB_DIAGNOSTIC);
 	}
@@ -1114,7 +1114,7 @@ void Console::render_advanced_diagnostics(SDL_Renderer* gRenderer, Camera* camer
 
 void Console::Create_Dot_Diagnostic_Window(Dot* new_focus_dot)
 {
-	dot_focus_window_rect = { num_open_windows*dot_diagnostic_window_width,0,dot_diagnostic_window_width,dot_diagnostic_window_height };
+	dot_focus_window_rect = { (num_open_windows-2)*dot_diagnostic_window_width,0,dot_diagnostic_window_width,dot_diagnostic_window_height };
 	Console_Window dot_focus_window = Console_Window{ WINDOW_DOT_DIAGNOSTIC, num_open_windows, new_focus_dot, inventory_spritesheet, dot_focus_window_rect };
 
 	if (CONSOLE_DEBUG) cout << "creating dot status panel" << endl;
