@@ -378,10 +378,10 @@ void Button::Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offs
 
 void Button::Add_Button_Label(string button_label_text, TTF_Font* gFont, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y )
 {
-	if (CONSOLE_DEBUG) cout << "creating console label" << endl;
+	if (DEBUG_CONSOLE) cout << "creating console label" << endl;
 	button_label = Console_Label(button_label_color, is_pointer_to_string, pointer, button_label_text, offset_x, offset_y);
 	button_has_label = true;
-	if (CONSOLE_DEBUG) cout << "finished creating console label" << endl;
+	if (DEBUG_CONSOLE) cout << "finished creating console label" << endl;
 }
 
 void Button::Add_Button_String_Diagnostic(TTF_Font* gFont, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y)
@@ -467,7 +467,7 @@ Button* Console_Panel::Check_For_Click(int mouse_x_pos, int mouse_y_pos)
 
 void Console_Panel::render()
 {
-	if (CONSOLE_DEBUG) cout << "starting to render panel : " << panel_num << endl;
+	if (DEBUG_CONSOLE) cout << "starting to render panel : " << panel_num << endl;
 	
 	for (int p = 0; p < console_panel_buttons.size(); p++)
 	{
@@ -700,9 +700,9 @@ void Console_Window::Create_Dot_Inventory_Panel(Dot* focus_dot, LTexture* sprite
 			slot_num++;
 		}
 	}
-	if (CONSOLE_DEBUG) cout << "adding dot inventory panel to window" << endl;
+	if (DEBUG_CONSOLE) cout << "adding dot inventory panel to window" << endl;
 	console_window_panels.insert(pair <int, Console_Panel> (PANEL_DOT_INVENTORY,dot_inventory_panel));
-	if (CONSOLE_DEBUG) cout << "adding header for dot inventory panel" << endl;
+	if (DEBUG_CONSOLE) cout << "adding header for dot inventory panel" << endl;
 	Create_Panel_Header(PANEL_DOT_INVENTORY, "Inventory");
 }
 
@@ -916,7 +916,7 @@ Button* Console_Window::Check_For_Click(int mouse_x_pos, int mouse_y_pos)
 
 void Console_Window::render()
 {
-	if (CONSOLE_DEBUG) cout << "rendering window: " << console_window_type << endl;
+	if (DEBUG_CONSOLE) cout << "rendering window: " << console_window_type << endl;
 	
 	SDL_SetRenderDrawBlendMode(gRenderer, SDL_BLENDMODE_BLEND);
 	SDL_SetRenderDrawColor(gRenderer, base_window_tint.r, base_window_tint.g, base_window_tint.b, base_window_tint.a);
@@ -1036,13 +1036,13 @@ Console::Console(SDL_Renderer* gRenderer, TTF_Font* gFont, Intelligence* intelli
 	dot_to_transfer_to = NULL;
 
 
-	if (CONSOLE_DEBUG) cout << "creating fps diagnostic" << endl;
+	if (DEBUG_CONSOLE) cout << "creating fps diagnostic" << endl;
 	fps_diagnostic = Console_Diagnostic(0, 0, console_font, &intelligence->player_dot->dot_config[FPS], false);
 
-	if (CONSOLE_DEBUG) cout << "creating player diagnostic window" << endl;
+	if (DEBUG_CONSOLE) cout << "creating player diagnostic window" << endl;
 	Create_Player_Diagnostic_Window(intelligence->player_dot);
 
-	if (CONSOLE_DEBUG) cout << "creating action button" << endl;
+	if (DEBUG_CONSOLE) cout << "creating action button" << endl;
 	Create_Action_Button_Window();
 }
 
@@ -1059,17 +1059,17 @@ void Console::free()
 void Console::render(Camera* camera)
 {
 	
-	if (CONSOLE_DEBUG) cout << "rendering fps" << endl;
+	if (DEBUG_CONSOLE) cout << "rendering fps" << endl;
 	fps_diagnostic.render(gRenderer, new SDL_Rect{ SCREEN_WIDTH - TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT });
 	
-	if (CONSOLE_DEBUG) cout << "starting to render windows" << endl;
+	if (DEBUG_CONSOLE) cout << "starting to render windows" << endl;
 	for (std::map<int, Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
 	{
-		if (CONSOLE_DEBUG) cout << "rendering a window" << endl;
+		if (DEBUG_CONSOLE) cout << "rendering a window" << endl;
 		it->second.render();
 	}
 
-	//render_advanced_diagnostics(gRenderer, camera);
+	if (DEBUG_ADVANCED_DOT_DIAGNOSTICS == 1) render_advanced_diagnostics(gRenderer, camera);
 }
 
 void Console::render_advanced_diagnostics(SDL_Renderer* gRenderer, Camera* camera)
@@ -1117,11 +1117,11 @@ void Console::Create_Dot_Diagnostic_Window(Dot* new_focus_dot)
 	dot_focus_window_rect = { (num_open_windows-2)*dot_diagnostic_window_width,0,dot_diagnostic_window_width,dot_diagnostic_window_height };
 	Console_Window dot_focus_window = Console_Window{ WINDOW_DOT_DIAGNOSTIC, num_open_windows, new_focus_dot, inventory_spritesheet, dot_focus_window_rect };
 
-	if (CONSOLE_DEBUG) cout << "creating dot status panel" << endl;
+	if (DEBUG_CONSOLE) cout << "creating dot status panel" << endl;
 	dot_focus_window.Create_Dot_Status_Panel(new_focus_dot);
-	if (CONSOLE_DEBUG) cout << "creating dot inventory panel" << endl;
+	if (DEBUG_CONSOLE) cout << "creating dot inventory panel" << endl;
 	dot_focus_window.Create_Dot_Inventory_Panel(new_focus_dot, inventory_spritesheet, 8, 3);
-	if (CONSOLE_DEBUG) cout << "creating misc panels" << endl;
+	if (DEBUG_CONSOLE) cout << "creating misc panels" << endl;
 	if (new_focus_dot->dot_config[DOT_TYPE] == DOT_NPC) dot_focus_window.Create_Dot_Equipment_Panel(inventory_spritesheet, new_focus_dot);
 	if (new_focus_dot->dot_config[DOT_TYPE] == DOT_NPC) dot_focus_window.Create_Dot_Job_Status_Panel(new_focus_dot);
 	if (new_focus_dot->dot_config[DOT_TYPE] == DOT_TILE) dot_focus_window.Create_Dot_Production_Panel(inventory_spritesheet, new_focus_dot);
@@ -1138,10 +1138,10 @@ void Console::Create_Player_Diagnostic_Window(Dot* player_dot)
 	player_focus_window_rect = { 0,SCREEN_HEIGHT - 6 * TILE_HEIGHT - 3 * TILE_HEIGHT / 4,8 * TILE_WIDTH,6 * TILE_HEIGHT + 3 * TILE_HEIGHT / 4 };
 	Console_Window player_focus_window = Console_Window{ WINDOW_PLAYER_DIAGNOSTIC, num_open_windows, player_dot, inventory_spritesheet, player_focus_window_rect };
 	
-	if (CONSOLE_DEBUG) cout << "creating player inventory panel" << endl;
+	if (DEBUG_CONSOLE) cout << "creating player inventory panel" << endl;
 	player_focus_window.Create_Dot_Inventory_Panel(player_dot, inventory_spritesheet, 8, 3);
 
-	if (CONSOLE_DEBUG) cout << "creating player crafting panel" << endl;
+	if (DEBUG_CONSOLE) cout << "creating player crafting panel" << endl;
 	player_focus_window.Create_Dot_Crafting_Panel(inventory_spritesheet, player_dot, 3, 8);
 
 	player_focus_window.console_window_panels[PANEL_DOT_INVENTORY].selected = true;

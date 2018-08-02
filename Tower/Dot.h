@@ -114,6 +114,7 @@ public:
 
 		int goal_dot_type = NULL;
 		Tile_Template tile_type;
+		Inventory_Item_Template inventory_item;
 
 		int action_quantity;
 		bool tile_built = true;
@@ -245,7 +246,7 @@ public:
 	// High Level Dot Functions
 	string Create_Name();
 	string Create_Dot_Name();
-	void Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int carried_item_type);
+	void Set_Carried_item(LTexture* inventory_spritesheet, int inventory_item_code);
 	int Check_Inventory_For_Item(int inventory_item_code);
 	Inventory_Item_Template Check_Inventory_For_Item_Type(int item_type);
 	void Create_Default_Dot_Priorities();
@@ -559,9 +560,9 @@ string Dot::Create_Dot_Name()
 	return last_name;
 }
 
-void Dot::Set_Carried_item(SDL_Renderer* gRenderer, LTexture* inventory_spritesheet, int carried_item_type)
+void Dot::Set_Carried_item(LTexture* inventory_spritesheet, int inventory_item_code)
 {
-	npc_dot_config.dot_carried_item = new Carried_Multi_Tile(gRenderer, inventory_spritesheet, &dot_rect.x, &dot_rect.y, carried_item_type);
+	npc_dot_config.dot_carried_item = new Carried_Multi_Tile(gRenderer, inventory_spritesheet, &dot_rect.x, &dot_rect.y, inventory_item_code);
 }
 
 void Dot::Create_Default_Dot_Priorities()
@@ -569,7 +570,7 @@ void Dot::Create_Default_Dot_Priorities()
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_WEAPON_COOLDOWN, { DOT_PRIORITY_WEAPON_COOLDOWN,0,0,0,1,0,20 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_OXYGEN_NEED, { DOT_PRIORITY_OXYGEN_NEED, 0,0,1,100,0,1 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SLEEP_NEED, { DOT_PRIORITY_SLEEP_NEED, 0,0,50,100,0,500 }));
-	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HUNGER_NEED, { DOT_PRIORITY_HUNGER_NEED, 0,0,50,100,0,10 }));
+	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HUNGER_NEED, { DOT_PRIORITY_HUNGER_NEED, 0,0,50,100,0,500 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_SPACESUIT_OXYGEN, { DOT_PRIORITY_SPACESUIT_OXYGEN, 100,0,50,100,0,100 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_ENNUI, { DOT_PRIORITY_ENNUI, 0,0,50,100,0,200 }));
 	npc_dot_config.dot_priority_map.insert(pair <int, Dot_Priority>(DOT_PRIORITY_HAPPINESS, { DOT_PRIORITY_HAPPINESS, 100,0,50,100,0,100 }));
@@ -759,6 +760,10 @@ public:
 			angle = rand() % 360;
 			multi_tile_config.sprite_specs.sprite_column = rand() % 8;
 			populate_tile_inventory();
+		}
+		if (multi_tile_config.tile_type == TILE_TYPE_TURRET)
+		{
+			angle = rand() % 360;
 		}
 
 		render_rect =  { (x_coordinate + render_offset_x)*TILE_WIDTH,(y_coordinate + render_offset_y)*TILE_HEIGHT, (TILE_WIDTH*abs(multi_tile_config.sprite_specs.sprite_columns)), (TILE_HEIGHT*abs(multi_tile_config.sprite_specs.sprite_rows)) };

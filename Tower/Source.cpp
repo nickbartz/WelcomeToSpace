@@ -75,7 +75,7 @@ int current_mouse_pos_x;
 int current_mouse_pos_y;
 
 bool new_game;
-bool debug = MAIN_DEBUG;
+bool debug = DEBUG_MAIN_FUNCTION;
 bool pause = false;
 
 void print(string print_string)

@@ -3,13 +3,14 @@
 
 void print(string print_string);
 
-const int CONSOLE_DEBUG = 0;
-const int MAIN_DEBUG = 0;
-const int INTELLIGENCE_DEBUG = 0;
-const int AI_DEBUG = 0;
-const int JOB_DEBUG = 0;
-const int PLAYER_DOT_DEBUG = 0;
-const int RENDER_DEBUG = 0;
+const int DEBUG_CONSOLE = 0;
+const int DEBUG_MAIN_FUNCTION = 0;
+const int DEBUG_INTELLIGENCE = 0;
+const int DEBUG_AI = 0;
+const int DEBUG_DOT_JOB = 0;
+const int DEBUG_PLAYER_DOT = 0;
+const int DEBUG_RENDER = 0;
+const int DEBUG_ADVANCED_DOT_DIAGNOSTICS = 0;
 
 //Screen dimension constants
 const int TILE_HEIGHT = 32;
@@ -620,6 +621,7 @@ struct Tile_Template
 unordered_map <int, Inventory_Item_Template> inventory_item_template_map;
 vector<Tile_Template> tile_template_vector;
 Tile_Template null_tile; 
+Inventory_Item_Template null_item;
 
 // GLOBAL SCOPE FUNCTIONS
 
