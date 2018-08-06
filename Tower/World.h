@@ -213,24 +213,20 @@ void World::Create_Room_From_Data_File(int x_tile_start, int y_tile_start, strin
 			{
 				if (tile_num > 0)
 				{
-					//cout << "Creating a: " << tile_num << " at: " << x_tile << ", " << y_tile << endl;
 					if (Return_Tile_Template_By_Identifier(tile_num).tile_or_item == 1 && Return_Tile_Template_By_Identifier(tile_num).tile_type != TILE_TYPE_TURRET)
 					{
 						Create_Tile(Return_Tile_Template_By_Identifier(40), x_tile, y_tile, faction);
 						Create_Tile(Return_Tile_Template_By_Identifier(tile_num), x_tile, y_tile, faction);
 					}
-					else
-					{
-						Create_Tile(Return_Tile_Template_By_Identifier(tile_num), x_tile, y_tile, faction);
-					}
-
+					else Create_Tile(Return_Tile_Template_By_Identifier(tile_num), x_tile, y_tile, faction);
 				}
-				num_columns++;
 				x_tile++;
+				num_columns++;
 			}
 			else if (line[0] == '/')
 			{
-				num_columns++;
+				num_columns = 0;
+				num_rows++;
 				y_tile++;
 				x_tile = x_tile_start;
 				x_tile++;
@@ -242,8 +238,8 @@ void World::Create_Room_From_Data_File(int x_tile_start, int y_tile_start, strin
 		{
 			for (int i = x_tile_start; i < x_tile_start + num_columns; i++)
 			{
-				Fix_Smooth_Tile(world_tiles[i][p]);
-				Fix_Smooth_Tile(item_tiles[i][p]);
+				if (world_tiles[i][p] != NULL) Fix_Smooth_Tile(world_tiles[i][p]);
+				if (item_tiles[i][p] != NULL) Fix_Smooth_Tile(item_tiles[i][p]);
 			}
 		}
 	}

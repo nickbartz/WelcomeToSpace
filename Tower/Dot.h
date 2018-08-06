@@ -78,6 +78,7 @@ public:
 	// DOT BASIC PLACEMENT AND MOVEMENT
 	SDL_Rect dot_rect;
 	double angle = 0;
+	SDL_RendererFlip flip = SDL_FLIP_NONE;
 	int bounce = 0;
 	int bounce_direction = 1;
 	int delay = 0;
@@ -790,6 +791,7 @@ public:
 	bool is_onscreen(Camera* camera);
 	void update_texture_clip(int clip_row_x, int clip_row_y);
 	virtual void render(SDL_Renderer* gRenderer, Camera* camera, int render_layer);
+	void Tile::create_multitexture_from_multiclip();
 	void Tile::handle_door_animation();
 	void Tile::handle_animation();
 	void Tile::handle_floor_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge);
@@ -889,8 +891,8 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 
 	if (multi_tile_config.render_layer == render_layer)
 	{
-		if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >= 1)) mTexture->render(gRenderer, &dot_rect_camera, &render_clip, angle);
-		else if (multi_texture != NULL) SDL_RenderCopyEx(gRenderer, multi_texture, new SDL_Rect{ 0,0,TILE_WIDTH,TILE_HEIGHT }, &dot_rect_camera, 0, NULL, SDL_FLIP_NONE);
+		if ((multi_tile_config.is_smooth == 0 || multi_tile_config.door_state >= 1)) mTexture->render(gRenderer, &dot_rect_camera, &render_clip, angle, NULL, flip);
+		else if (multi_texture != NULL) SDL_RenderCopyEx(gRenderer, multi_texture, new SDL_Rect{ 0,0,TILE_WIDTH,TILE_HEIGHT }, &dot_rect_camera, 0, NULL, flip);
 	}
 	
 	if (scaffold_on_tile != NULL) scaffold_on_tile->render(gRenderer, camera, render_layer);
@@ -940,6 +942,22 @@ void Tile::Tint_Tile_Before_Render()
 		SDL_SetTextureAlphaMod(multi_texture,npc_dot_config.dot_color.a);
 		SDL_SetTextureColorMod(multi_texture,npc_dot_config.dot_color.r, npc_dot_config.dot_color.g, npc_dot_config.dot_color.b);
 	}
+}
+
+void Tile::create_multitexture_from_multiclip()
+{
+	multi_texture = SDL_CreateTexture(tile_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, TILE_WIDTH, TILE_HEIGHT);;
+
+	SDL_SetRenderTarget(tile_renderer, multi_texture);
+	SDL_RenderClear(tile_renderer);
+
+	for (vector<clip_and_rotation>::iterator it = multi_clip.begin(); it != multi_clip.end(); ++it)
+	{
+		SDL_Rect draw_rect = { 0,0,TILE_WIDTH,TILE_HEIGHT };
+		mTexture->render(tile_renderer, &draw_rect, &it->clip, it->angle, 0, it->flip);
+	}
+
+	SDL_SetRenderTarget(tile_renderer, NULL);
 }
 
 void Tile::handle_animation()
@@ -993,30 +1011,20 @@ void Tile::handle_smooth_tiles(int left_edge, int right_edge, int top_edge, int 
 	{
 		case TILE_TYPE_CONSTRUCTION_TUBING_WALL:
 			handle_wall_tiling(left_edge, right_edge, top_edge, bottom_edge, top_left_edge, top_right_edge, bottom_right_edge, bottom_left_edge);
+			create_multitexture_from_multiclip();
 			break;
 		case TILE_TYPE_CONSTRUCTION_TUBING_DOOR:
 			handle_door_orientation(left_edge, right_edge, top_edge, bottom_edge, top_left_edge, top_right_edge, bottom_right_edge, bottom_left_edge);
 			break;
 		case TILE_TYPE_CONSTRUCTION_TUBING_FLOOR:
 			handle_floor_tiling(left_edge, right_edge, top_edge, bottom_edge, top_left_edge, top_right_edge, bottom_right_edge, bottom_left_edge);
+			create_multitexture_from_multiclip();
 			break;
 		case TILE_TYPE_FRENZEL:
 			handle_frenzel_tiling(left_edge, right_edge, top_edge, bottom_edge, top_left_edge, top_right_edge, bottom_right_edge, bottom_left_edge);
+			create_multitexture_from_multiclip();
 			break;
 	}
-
-	multi_texture = SDL_CreateTexture(tile_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, TILE_WIDTH, TILE_HEIGHT);;
-
-	SDL_SetRenderTarget(tile_renderer, multi_texture);
-	SDL_RenderClear(tile_renderer);
-	
-	for (vector<clip_and_rotation>::iterator it = multi_clip.begin(); it != multi_clip.end(); ++it)
-	{
-		SDL_Rect draw_rect = { 0,0,TILE_WIDTH,TILE_HEIGHT };
-		mTexture->render(tile_renderer, &draw_rect, &it->clip, it->angle, 0, it->flip);
-	}
-
-	SDL_SetRenderTarget(tile_renderer, NULL);
 }
 
 void Tile::handle_wall_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge)
@@ -1269,7 +1277,7 @@ void Tile::handle_door_orientation(int left_edge, int right_edge, int top_edge, 
 		if (right_edge == VACUUM || left_edge == VACUUM)
 		{
 			door_offset_y = 1;
-			if (right_edge == VACUUM) door_offset_x = 16;
+			if (right_edge == VACUUM) flip = SDL_FLIP_HORIZONTAL;
 		}
 	}
 	else if (top_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR || bottom_edge == TILE_TYPE_CONSTRUCTION_TUBING_FLOOR)
@@ -1281,6 +1289,8 @@ void Tile::handle_door_orientation(int left_edge, int right_edge, int top_edge, 
 
 void Tile::handle_frenzel_tiling(int left_edge, int right_edge, int top_edge, int bottom_edge, int top_left_edge, int top_right_edge, int bottom_right_edge, int bottom_left_edge)
 {
+	multi_clip.clear();
+	
 	int x = multi_tile_config.sprite_specs.sprite_column;
 	int y = multi_tile_config.sprite_specs.sprite_row;
 

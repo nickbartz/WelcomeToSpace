@@ -27,6 +27,7 @@ using namespace std;
 SDL_Renderer* gRenderer = NULL;
 
 //Globally used font and font scene texture
+TTF_Font* gFont_big = NULL;
 TTF_Font* gFont = NULL;
 TTF_Font* gFont_small = NULL;
 
@@ -241,9 +242,11 @@ void load_assets()
 	int column = 0;
 
 	//Open the font
-	gFont = TTF_OpenFont("Roboto-Bold.ttf", 12);
+	gFont_big = TTF_OpenFont("Fonts/OpenSans-Bold.ttf", 14);
+	if (gFont_big == NULL) printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
+	gFont = TTF_OpenFont("Fonts/OpenSans-Bold.ttf", 12);
 	if (gFont == NULL) printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
-	gFont_small = TTF_OpenFont("Roboto-Bold.ttf", 10);
+	gFont_small = TTF_OpenFont("Fonts/OpenSans-Regular.ttf", 10);
 	if (gFont_small == NULL) printf("Failed to load small lazy font! SDL_ttf Error: %s\n", TTF_GetError());
 
 	gMusic = Mix_LoadMUS("Music/tell me that i dont fly off.wav");

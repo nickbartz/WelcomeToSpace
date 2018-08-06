@@ -133,7 +133,7 @@ void Console_Stat_Bar::render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect)
 class Console_Label
 {
 public:
-	Console_Label::Console_Label(SDL_Color text_color = { 255,255,255,255 }, bool string_is_pointer = false, string* pointer_to_string = NULL, string actual_string = "Test", int offset_x = 0, int offset_y = 0);
+	Console_Label::Console_Label(TTF_Font* label_font = gFont, SDL_Color text_color = { 255,255,255,255 }, bool string_is_pointer = false, string* pointer_to_string = NULL, string actual_string = "Test", int offset_x = 0, int offset_y = 0);
 	void render(SDL_Rect* pos_rect);
 	void free();
 	void Update_Texture(string new_string);
@@ -150,10 +150,10 @@ private:
 	SDL_Rect text_box_size;
 };
 
-Console_Label::Console_Label(SDL_Color text_color, bool string_is_pointer, string* pointer_to_string, string actual_string, int offset_x, int offset_y)
+Console_Label::Console_Label(TTF_Font* label_font, SDL_Color text_color, bool string_is_pointer, string* pointer_to_string, string actual_string, int offset_x, int offset_y)
 {
 	Console_Label_Color = text_color;
-	Console_Label_Font = gFont;
+	Console_Label_Font = label_font;
 	pointer = string_is_pointer;
 	string_pointer = pointer_to_string;
 	diagnostic_label_string = actual_string;
@@ -168,7 +168,7 @@ void Console_Label::Update_Texture(string new_string)
 	if (new_string != "" && new_string != "Test")
 	{
 		//Render text surface
-		SDL_Surface* textSurface = TTF_RenderText_Solid(gFont, new_string.c_str(), Console_Label_Color);
+		SDL_Surface* textSurface = TTF_RenderText_Solid(Console_Label_Font, new_string.c_str(), Console_Label_Color);
 		if (textSurface != NULL)
 		{
 			//Create texture from surface pixels
@@ -253,13 +253,13 @@ void Console_Sprite::free()
 
 class Button {
 public:
-	Button::Button(int action = BUTTON_ACTION_DO_NOTHING, SDL_Rect button_rect = { 0,0,0,0 }, bool button_background = false, int panel_name = PANEL_NO_PANEL, int button_config = 0, int window_num = 0);
+	Button::Button(int action = BUTTON_ACTION_DO_NOTHING, SDL_Rect button_rect = { 0,0,0,0 }, bool button_background = false, int panel_name = PANEL_NO_PANEL, int button_config = 0, int window_num = 0, SDL_Color slot_color = { 0,0,255,25 });
 	
 	void free();
 	void render();
 	void toggle_button_clicked();
 	void Add_Button_Sprite(LTexture* spritesheet, SDL_Rect spritesheet_clip,  int offset_x, int offset_y);
-	void Add_Button_Label(string button_label_text, TTF_Font* gFont, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
+	void Add_Button_Label(string button_label_text, TTF_Font* label_font, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
 	void Add_Button_Diagnostic(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, bool dont_render_if_zero = false, bool shaded_background = false);
 	void Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, int* diagnostic_value_max = NULL);
 	void Add_Button_String_Diagnostic(TTF_Font* gFont, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
@@ -298,7 +298,7 @@ public:
 private:
 };
 
-Button::Button(int action, SDL_Rect pos_rect, bool button_background, int panel_name, int button_config, int window_num)
+Button::Button(int action, SDL_Rect pos_rect, bool button_background, int panel_name, int button_config, int window_num, SDL_Color slot_color)
 {
 	button_action = action;
 	button_rect = pos_rect;
@@ -315,9 +315,9 @@ Button::Button(int action, SDL_Rect pos_rect, bool button_background, int panel_
 	button_has_stat_bar = false;
 
 	slot_highlight = { 200,200,255,255 };
-	slot_tint = { 0,0,255,50 };
-	original_slot_highlight = { 200,200,255,255 };
-	original_slot_tint = { 0,0,255,50 };
+	slot_tint = slot_color;
+	original_slot_highlight = slot_highlight;
+	original_slot_tint = slot_tint;
 
 	button_filled = button_background;
 }
@@ -376,17 +376,17 @@ void Button::Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offs
 	button_has_stat_bar = true;
 }
 
-void Button::Add_Button_Label(string button_label_text, TTF_Font* gFont, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y )
+void Button::Add_Button_Label(string button_label_text, TTF_Font* label_font, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y )
 {
 	if (DEBUG_CONSOLE) cout << "creating console label" << endl;
-	button_label = Console_Label(button_label_color, is_pointer_to_string, pointer, button_label_text, offset_x, offset_y);
+	button_label = Console_Label(label_font, button_label_color, is_pointer_to_string, pointer, button_label_text, offset_x, offset_y);
 	button_has_label = true;
 	if (DEBUG_CONSOLE) cout << "finished creating console label" << endl;
 }
 
-void Button::Add_Button_String_Diagnostic(TTF_Font* gFont, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y)
+void Button::Add_Button_String_Diagnostic(TTF_Font* string_font, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y)
 {
-	button_string_diagnostic = Console_Label(button_label_color, true, pointer, "", offset_x, offset_y);
+	button_string_diagnostic = Console_Label(string_font, button_label_color, true, pointer, "", offset_x, offset_y);
 	button_has_string_diagnostic = true;
 }
 
@@ -579,6 +579,7 @@ public:
 	Console_Window::Console_Window(int window_type = NULL_WINDOW, int window_number = 0, Dot* focus_dot = NULL, LTexture* inventory_spritesheet = NULL, SDL_Rect window_size = { 0,0,0,0 }, bool active = true);
 	map <int, Console_Panel> console_window_panels;
 	vector<Button> console_panel_headers;
+	Button window_header;
 
 	void Create_Dot_Inventory_Panel(Dot* focus_dot, LTexture* spritesheet, int columns, int rows);
 	void Create_Dot_Status_Panel(Dot* focus_dot);
@@ -603,6 +604,7 @@ public:
 	int console_window_number;
 	bool console_window_active;
 
+	int title_bar_height;
 	int menu_bar_height;
 	Dot* window_focus_dot;
 
@@ -628,17 +630,29 @@ Console_Window::Console_Window(int window_type, int window_number, Dot* focus_do
 	window_focus_dot = focus_dot;
 
 	base_window_rect = window_size;
+	title_bar_height = TILE_HEIGHT * 4 / 5;
 	menu_bar_height = TILE_HEIGHT * 4 / 5;
-	base_panel_rect = { base_window_rect.x, base_window_rect.y + menu_bar_height, base_window_rect.w, base_window_rect.h - menu_bar_height };
+	base_panel_rect = { base_window_rect.x, base_window_rect.y + menu_bar_height + title_bar_height, base_window_rect.w, base_window_rect.h - menu_bar_height - title_bar_height };
 	base_window_tint = { 100,100,100,100 };
 	base_window_highlight = { 255,255,255,255 };
+
+	if (console_window_number > 1)
+	{
+		window_header = Button{ BUTTON_ACTION_MOVE_CONSOLE_WINDOW,{ base_window_rect.x,base_window_rect.y,base_window_rect.w, title_bar_height },true, 0,0,console_window_number, {0,0,255,100} };
+		if (focus_dot != NULL && focus_dot->dot_config[DOT_TYPE] == DOT_NPC) window_header.Add_Button_Label(focus_dot->npc_dot_config.dot_full_name, gFont_big, false, NULL, SDL_Color{ 255,255,255,255 }, 5, 2);
+	}
+	else if (console_window_number == 0)
+	{
+		window_header = Button{ BUTTON_ACTION_MOVE_CONSOLE_WINDOW,{ base_window_rect.x,base_window_rect.y,base_window_rect.w, title_bar_height },true, 0,0,console_window_number,{ 0,0,255,100 } };
+		if (focus_dot != NULL && focus_dot->dot_config[DOT_TYPE] == DOT_NPC) window_header.Add_Button_Label("Console", gFont_big, false, NULL, SDL_Color{ 255,255,255,255 }, 5, 2);
+	}
 
 }
 
 void Console_Window::Create_Panel_Header(int panel_type, string label_text)
 {
 	SDL_Rect header_offset = { 5,5,5,0 }; // first two are x,y offsets from top-left, last two are x-y, offsets from bottom right
-	SDL_Rect panel_button_rect = { base_window_rect.x, base_window_rect.y, 15, menu_bar_height };
+	SDL_Rect panel_button_rect = { base_window_rect.x, base_window_rect.y+title_bar_height, 15, menu_bar_height };
 	
 	Button console_panel_header = Button(BUTTON_ACTION_SWITCH_PANEL, panel_button_rect, true, panel_type, 0, 0);
 
@@ -894,6 +908,11 @@ void Console_Window::Create_Close_Window_Panel()
 
 Button* Console_Window::Check_For_Click(int mouse_x_pos, int mouse_y_pos)
 {
+	if (check_if_point_in_rect(window_header.button_rect, mouse_x_pos, mouse_y_pos) == true)
+	{
+		return &window_header;
+	}
+	
 	for (int i = 0; i < console_panel_headers.size(); i++)
 	{
 		if (check_if_point_in_rect(console_panel_headers[i].button_rect, mouse_x_pos, mouse_y_pos))
@@ -924,6 +943,8 @@ void Console_Window::render()
 	SDL_SetRenderDrawColor(gRenderer, base_window_highlight.r, base_window_highlight.g, base_window_highlight.b, base_window_highlight.a);
 	SDL_RenderDrawRect(gRenderer, &base_window_rect);
 	
+	window_header.render();
+
 	for (int i = 0; i < console_panel_headers.size(); i++)
 	{
 		console_panel_headers[i].render();
