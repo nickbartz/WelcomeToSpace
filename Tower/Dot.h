@@ -93,7 +93,6 @@ public:
 	double targetPosX, targetPosY;
 	bool dot_pause_movement = false;
 	
-
 	//Clipped Dimensions
 	int sWidth;
 	int sHeight;
@@ -209,6 +208,7 @@ public:
 		int bounce = 0;
 		int search_radius = 20;
 		int marked_for_mining = 0;
+		bool dot_is_highlighted = false;
 		int hit_by_bolt = 0;
 		bool is_currently_in_a_dot;
 
@@ -371,16 +371,8 @@ bool Dot::is_onscreen(Camera* camera, int buffer)
 
 void Dot::toggle_highlight(bool on_or_off)
 {
-	if (on_or_off == true)
-	{
-		npc_dot_config.dot_color.g = 155;
-		npc_dot_config.dot_color.r = 155;
-	}
-	else
-	{
-		npc_dot_config.dot_color.g = 255;
-		npc_dot_config.dot_color.r = 255;
-	}
+	if (on_or_off == true) npc_dot_config.dot_is_highlighted = true;
+	else npc_dot_config.dot_is_highlighted = false;
 }
 
 void Dot::light_dot_with_light_specs(SDL_Color lighting_specs)
@@ -910,6 +902,7 @@ void Tile::render(SDL_Renderer* gRenderer, Camera* camera, int render_layer)
 	multi_tile_config.is_oxygenated = 0;
 	npc_dot_config.dot_light = { 0,0,0,0 };
 	npc_dot_config.dot_color = { 255,255,255,255 };
+	npc_dot_config.dot_is_highlighted = false;
 
 }
 
@@ -932,6 +925,14 @@ void Tile::Tint_Tile_Before_Render()
 		npc_dot_config.dot_color.a -= 155;
 		npc_dot_config.dot_color.r -= 55;
 		npc_dot_config.dot_color.g -= 55;
+	}
+
+	// Tint tiles when they're highlighted
+	if (npc_dot_config.dot_is_highlighted == true)
+	{
+		npc_dot_config.dot_color.r = 150;
+		npc_dot_config.dot_color.g = 150;
+		npc_dot_config.dot_color.b = 255;
 	}
 
 	mTexture->setAlpha(npc_dot_config.dot_color.a);
@@ -1348,7 +1349,7 @@ void Tile::populate_tile_production_config()
 class NPC_Dot : public Dot
 {
 public:
-	NPC_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet_array[], TTF_Font* gFont_small, int x_pos, int y_pos, dot_composite_config dot_makeup) :Dot(gRenderer, dot_spritesheet_array[0], x_pos, y_pos)
+	NPC_Dot(SDL_Renderer* gRenderer, LTexture* dot_spritesheet_array[], int x_pos, int y_pos, dot_composite_config dot_makeup) :Dot(gRenderer, dot_spritesheet_array[0], x_pos, y_pos)
 	{		
 		dot_spritesheet[0] = dot_spritesheet_array[0];
 		dot_spritesheet[1] = dot_spritesheet_array[1];
@@ -1365,6 +1366,7 @@ public:
 		npc_dot_config.dot_last_name = Create_Name();
 		npc_dot_config.dot_first_name = Create_Name();
 		npc_dot_config.dot_full_name = npc_dot_config.dot_last_name + ", " + npc_dot_config.dot_first_name;
+		dot_name_width = FC_GetWidth(gFont_small, npc_dot_config.dot_full_name.c_str());
 
 		dot_rect.w = TILE_WIDTH * 3 / 4;
 		dot_rect.h = TILE_HEIGHT * 2 / 4;
@@ -1377,9 +1379,9 @@ public:
 	}
 
 	void set_dot_render_color(SDL_Color color);
-	void render(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship);
+	void render(SDL_Renderer* gRenderer, Camera* camera, int faction_relationship);
 	void render_component(SDL_Renderer* gRenderer, Camera* camera, int component);
-	void render_name(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship);
+	void render_name(SDL_Renderer* gRenderer, Camera* camera, int faction_relationship);
 	void increment_animation();
 	void create_sprite(int leg_type, int arm_type, int torso_type, int head_type, int spacesuit_type);
 	void change_sprite_direction(int direction);
@@ -1423,7 +1425,7 @@ public:
 
 private:
 	LTexture* dot_spritesheet[6];
-	LTexture dot_name;
+	int dot_name_width = 0;
 
 };
 
@@ -1465,9 +1467,16 @@ void NPC_Dot::set_dot_render_color(SDL_Color color)
 	}
 }
 
-void NPC_Dot::render(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship)
+void NPC_Dot::render(SDL_Renderer* gRenderer, Camera* camera, int faction_relationship)
 {
-	set_dot_render_color(npc_dot_config.dot_color);
+	if (npc_dot_config.dot_is_highlighted == true)
+	{
+		set_dot_render_color({ 150,150,255,255 });
+	}
+	else
+	{
+		set_dot_render_color(npc_dot_config.dot_color);
+	}
 	
 	// RENDER SHADOW
 	dot_spritesheet[DOT_COMPOSITE_SHADOW]->render(gRenderer, new SDL_Rect{ dot_rect.x + rect_offset_x - camera->camera_box.x, dot_rect.y + rect_offset_y - camera->camera_box.y + bounce + shadow_offset, TILE_WIDTH, TILE_HEIGHT }, new SDL_Rect{ 0,0,32,32 });
@@ -1483,8 +1492,9 @@ void NPC_Dot::render(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_sm
 	}
 
 	set_dot_render_color({ 255,255,255,255 });
+	npc_dot_config.dot_is_highlighted = false;
 
-	NPC_Dot::render_name(gRenderer, camera, gFont_small, faction_relationship);
+	NPC_Dot::render_name(gRenderer, camera, faction_relationship);
 
 	Dot::render(gRenderer, camera);
 
@@ -1503,18 +1513,17 @@ void NPC_Dot::render_component(SDL_Renderer* gRenderer, Camera* camera, int comp
 	dot_spritesheet[component]->render(gRenderer, &render_rect, &clip_rect,npc_dot_config.dot_angle);
 }
 
-void NPC_Dot::render_name(SDL_Renderer* gRenderer, Camera* camera, TTF_Font* gFont_small, int faction_relationship)
+void NPC_Dot::render_name(SDL_Renderer* gRenderer, Camera* camera, int faction_relationship)
 {
 	SDL_Color faction_color = { 0,0,0,255 };
 	if (npc_dot_config.dot_stat_faction == DOT_FACTION_PLAYER) faction_color = { 255,255,255,255 };
 	else if (faction_relationship < 0) faction_color.r = 255;
 	else if (faction_relationship > 0) faction_color.g = 255;
 	else if (faction_relationship == 0) faction_color.b = 255;
-	dot_name.loadFromRenderedText(npc_dot_config.dot_first_name, faction_color, gFont_small, gRenderer);
+	
 
-	SDL_Rect dot_name_rect = { dot_rect.x - camera->camera_box.x + dot_rect.w / 2 - dot_name.getWidth() / 2,dot_rect.y - camera->camera_box.y + dot_rect.h,dot_name.getWidth(),dot_name.getHeight() };
-	SDL_Rect dot_name_clip = { 0,0,dot_name.getWidth(),dot_name.getHeight() };
-	dot_name.render(gRenderer, &dot_name_rect, &dot_name_clip);
+	SDL_Rect dot_name_rect = { dot_rect.x - camera->camera_box.x + dot_rect.w / 2 - dot_name_width / 2,dot_rect.y - camera->camera_box.y + dot_rect.h,dot_name_width,12 };
+	FC_Draw(gFont_small, gRenderer, dot_name_rect.x, dot_name_rect.y, npc_dot_config.dot_full_name.c_str());
 }
 
 void NPC_Dot::increment_animation()

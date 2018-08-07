@@ -21,7 +21,7 @@ bool check_if_point_in_rect(SDL_Rect target_rect, int x_point, int y_point)
 
 class Console_Diagnostic {
 public:
-	Console_Diagnostic::Console_Diagnostic(int x_offset = 0, int y_offset = 0, TTF_Font* gFont = NULL, int* diagnostic_value = NULL, bool do_not_render_if_zero = false, bool shaded_background = false);
+	Console_Diagnostic::Console_Diagnostic(int x_offset = 0, int y_offset = 0, FC_Font* gFont = NULL, int* diagnostic_value = NULL, bool do_not_render_if_zero = false, bool shaded_background = false);
 	void free();
 	void render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect);
 
@@ -37,13 +37,11 @@ private:
 	SDL_Color textColor = { 255, 255, 255, 255 };
 	SDL_Color background_color = { 0,0,255,50 };
 	SDL_Color border_highlight = { 200,200,255,255 };
-	TTF_Font* diagnostic_font;
-
-	LTexture diagnostic_value_texture;
+	FC_Font* diagnostic_font;
 
 };
 
-Console_Diagnostic::Console_Diagnostic(int x_offset, int y_offset, TTF_Font* gFont, int* diagnostic_value, bool do_not_render_if_zero, bool shaded_background)
+Console_Diagnostic::Console_Diagnostic(int x_offset, int y_offset, FC_Font* gFont, int* diagnostic_value, bool do_not_render_if_zero, bool shaded_background)
 {
 	diagnostic_font = gFont;
 	linked_value = diagnostic_value;
@@ -60,12 +58,10 @@ void Console_Diagnostic::render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect)
 {
 	if (linked_value != NULL && *linked_value != 0 || dont_render_if_zero == false)
 	{
-		if (current_delay == 0)
-		{
-			diagnostic_value_texture.loadFromRenderedText(std::to_string(*linked_value), textColor, diagnostic_font, gRenderer);
-		}
+		string diagnostic_text = std::to_string(*linked_value);
+		const char* text = diagnostic_text.c_str();
 
-		SDL_Rect diagnostic_value_rect = { pos_rect->x + offset_rect.x, pos_rect->y + offset_rect.y, diagnostic_value_texture.getWidth(), diagnostic_value_texture.getHeight() };
+		SDL_Rect diagnostic_value_rect = { pos_rect->x + offset_rect.x, pos_rect->y + offset_rect.y,FC_GetWidth(diagnostic_font, text),FC_GetHeight(diagnostic_font, text) };
 		SDL_Rect diagnostic_value_clip = { 0,0, diagnostic_value_rect.w, diagnostic_value_rect.h };
 		
 		if (background_shaded)
@@ -76,23 +72,19 @@ void Console_Diagnostic::render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect)
 			SDL_RenderDrawRect(gRenderer, &diagnostic_value_rect);
 		}
 
-		diagnostic_value_texture.render(gRenderer, &diagnostic_value_rect, &diagnostic_value_clip);
-
-		current_delay++;
-		if (current_delay >= max_delay) current_delay = 0;
+		FC_Draw(diagnostic_font, gRenderer, diagnostic_value_rect.x, diagnostic_value_rect.y, text);
 	}
 }
 
 void Console_Diagnostic::free()
 {
-	diagnostic_value_texture.free();
 	linked_value = NULL;
 }
 
 class Console_Stat_Bar
 {
 public:
-	Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer = NULL, int x_offset = 0, int y_offset = 0, TTF_Font* gFont = NULL, int* diagnostic_value = NULL, int* diagnostic_value_max = NULL);
+	Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer = NULL, int x_offset = 0, int y_offset = 0, FC_Font* gFont = NULL, int* diagnostic_value = NULL, int* diagnostic_value_max = NULL);
 	void free();
 	void render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect);
 
@@ -104,7 +96,7 @@ private:
 	SDL_Rect offset_rect;
 };
 
-Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer, int x_offset, int y_offset, TTF_Font* gFont, int* diagnostic_value, int* diagnostic_value_max)
+Console_Stat_Bar::Console_Stat_Bar(SDL_Renderer* gRenderer, int x_offset, int y_offset, FC_Font* gFont, int* diagnostic_value, int* diagnostic_value_max)
 {
 	linked_value = diagnostic_value;
 	linked_value_max = diagnostic_value_max;
@@ -133,16 +125,15 @@ void Console_Stat_Bar::render(SDL_Renderer* gRenderer, SDL_Rect* pos_rect)
 class Console_Label
 {
 public:
-	Console_Label::Console_Label(TTF_Font* label_font = gFont, SDL_Color text_color = { 255,255,255,255 }, bool string_is_pointer = false, string* pointer_to_string = NULL, string actual_string = "Test", int offset_x = 0, int offset_y = 0);
+	Console_Label::Console_Label(FC_Font* label_font = NULL, SDL_Color text_color = { 255,255,255,255 }, bool string_is_pointer = false, string* pointer_to_string = NULL, string actual_string = "Test", int offset_x = 0, int offset_y = 0);
 	void render(SDL_Rect* pos_rect);
 	void free();
-	void Update_Texture(string new_string);
 	int get_width();
 
 private: 
 	SDL_Color Console_Label_Color;
 	SDL_Texture* Console_Label_Texture;
-	TTF_Font* Console_Label_Font;
+	FC_Font* Console_Label_Font;
 	bool pointer;
 	string* string_pointer;
 	string diagnostic_label_string;
@@ -150,7 +141,7 @@ private:
 	SDL_Rect text_box_size;
 };
 
-Console_Label::Console_Label(TTF_Font* label_font, SDL_Color text_color, bool string_is_pointer, string* pointer_to_string, string actual_string, int offset_x, int offset_y)
+Console_Label::Console_Label(FC_Font* label_font, SDL_Color text_color, bool string_is_pointer, string* pointer_to_string, string actual_string, int offset_x, int offset_y)
 {
 	Console_Label_Color = text_color;
 	Console_Label_Font = label_font;
@@ -159,56 +150,34 @@ Console_Label::Console_Label(TTF_Font* label_font, SDL_Color text_color, bool st
 	diagnostic_label_string = actual_string;
 	offset_rect = { offset_x, offset_y, 0,0 };
 
-	if (pointer == true && string_pointer != NULL) Update_Texture(*string_pointer);
-	else Update_Texture(diagnostic_label_string);
-}
-
-void Console_Label::Update_Texture(string new_string)
-{
-	if (new_string != "" && new_string != "Test")
-	{
-		//Render text surface
-		SDL_Surface* textSurface = TTF_RenderText_Solid(Console_Label_Font, new_string.c_str(), Console_Label_Color);
-		if (textSurface != NULL)
-		{
-			//Create texture from surface pixels
-
-			Console_Label_Texture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
-			if (Console_Label_Texture == NULL)
-			{
-				cout << "Alternate function trying to create text: " << new_string << endl;
-				printf("Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError());
-			}
-			else
-			{
-				//Get image dimensions
-				text_box_size.w = textSurface->w;
-				text_box_size.h = textSurface->h;
-			}
-
-			//Get rid of old surface
-			SDL_FreeSurface(textSurface);
-		}
-		else
-		{
-			printf("Unable to render text  surface! SDL_ttf Error: %s\n", TTF_GetError());
-		}
-	}
+	//if (pointer == true && string_pointer != NULL) Update_Texture(*string_pointer);
+	//else Update_Texture(diagnostic_label_string);
 }
 
 void Console_Label::render(SDL_Rect* pos_rect)
 {	
-	if (Console_Label_Texture != NULL)
-	{
-		SDL_Rect text_clip = { 0,0,text_box_size.w, text_box_size.h };
-		SDL_Rect text_rect = { pos_rect->x + offset_rect.x,pos_rect->y + offset_rect.y, text_box_size.w,  text_box_size.h };
-		SDL_RenderCopyEx(gRenderer, Console_Label_Texture, &text_clip, &text_rect, 0, NULL, SDL_FLIP_NONE);
-	}
+	string label_text;
+
+	if (pointer == true && string_pointer != NULL) label_text = *string_pointer;
+	else label_text = diagnostic_label_string;
+
+	const char* text = label_text.c_str();
+
+	SDL_Rect text_rect = { pos_rect->x + offset_rect.x,pos_rect->y + offset_rect.y,FC_GetWidth(Console_Label_Font, text),FC_GetHeight(Console_Label_Font, text) };
+
+	FC_Draw(Console_Label_Font, gRenderer, text_rect.x, text_rect.y, text);	
 }
 
 int Console_Label::get_width()
 {
-	return text_box_size.w;
+	string label_text;
+
+	if (pointer == true && string_pointer != NULL) label_text = *string_pointer;
+	else label_text = diagnostic_label_string;
+
+	const char* text = label_text.c_str();
+
+	return FC_GetWidth(Console_Label_Font, text);
 }
 
 void Console_Label::free()
@@ -259,10 +228,10 @@ public:
 	void render();
 	void toggle_button_clicked();
 	void Add_Button_Sprite(LTexture* spritesheet, SDL_Rect spritesheet_clip,  int offset_x, int offset_y);
-	void Add_Button_Label(string button_label_text, TTF_Font* label_font, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
-	void Add_Button_Diagnostic(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, bool dont_render_if_zero = false, bool shaded_background = false);
-	void Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, int* diagnostic_value_max = NULL);
-	void Add_Button_String_Diagnostic(TTF_Font* gFont, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
+	void Add_Button_Label(string button_label_text, FC_Font* label_font, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
+	void Add_Button_Diagnostic(SDL_Renderer* gRenderer, int offset_x, int offset_y, FC_Font* gFont, int* diagnostic_value, bool dont_render_if_zero = false, bool shaded_background = false);
+	void Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, FC_Font* gFont, int* diagnostic_value, int* diagnostic_value_max = NULL);
+	void Add_Button_String_Diagnostic(FC_Font* gFont, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y);
 	void Change_Slot_Tint(SDL_Color new_tint_color);
 	void Change_Slot_Highlight(SDL_Color new_highlight_color);
 
@@ -364,19 +333,19 @@ void Button::toggle_button_clicked()
 	}
 }
 
-void Button::Add_Button_Diagnostic(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, bool dont_render_if_zero, bool shaded_background)
+void Button::Add_Button_Diagnostic(SDL_Renderer* gRenderer, int offset_x, int offset_y, FC_Font* gFont, int* diagnostic_value, bool dont_render_if_zero, bool shaded_background)
 {
 	button_diagnostic = Console_Diagnostic(offset_x, offset_y, gFont, diagnostic_value, dont_render_if_zero, shaded_background);
 	button_has_diagnostic = true;
 }
 
-void Button::Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, TTF_Font* gFont, int* diagnostic_value, int* diagnostic_value_max)
+void Button::Add_Button_Stat_Bar(SDL_Renderer* gRenderer, int offset_x, int offset_y, FC_Font* gFont, int* diagnostic_value, int* diagnostic_value_max)
 {
 	button_stat_bar = Console_Stat_Bar(gRenderer, offset_x, offset_y, gFont, diagnostic_value, diagnostic_value_max);
 	button_has_stat_bar = true;
 }
 
-void Button::Add_Button_Label(string button_label_text, TTF_Font* label_font, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y )
+void Button::Add_Button_Label(string button_label_text, FC_Font* label_font, bool is_pointer_to_string, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y )
 {
 	if (DEBUG_CONSOLE) cout << "creating console label" << endl;
 	button_label = Console_Label(label_font, button_label_color, is_pointer_to_string, pointer, button_label_text, offset_x, offset_y);
@@ -384,7 +353,7 @@ void Button::Add_Button_Label(string button_label_text, TTF_Font* label_font, bo
 	if (DEBUG_CONSOLE) cout << "finished creating console label" << endl;
 }
 
-void Button::Add_Button_String_Diagnostic(TTF_Font* string_font, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y)
+void Button::Add_Button_String_Diagnostic(FC_Font* string_font, string* pointer, SDL_Color button_label_color, int offset_x, int offset_y)
 {
 	button_string_diagnostic = Console_Label(string_font, button_label_color, true, pointer, "", offset_x, offset_y);
 	button_has_string_diagnostic = true;
@@ -434,8 +403,8 @@ public:
 	Button* Check_For_Click(int mouse_x_pos, int mouse_y_pos);
 
 	// Button Creation Functions
-	void Add_Dot_Inventory_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, TTF_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name);
-	void Add_Dot_Crafting_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, TTF_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name);
+	void Add_Dot_Inventory_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, FC_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name);
+	void Add_Dot_Crafting_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, FC_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name);
 	void Add_Label_To_Panel(string Label, SDL_Rect offset_rect, int panel_name, int button_action, bool filled);
 	void Add_String_Diagnostic_To_Panel(string label, string* string_pointer, SDL_Rect offset_rect, int panel_name);
 	void Add_Number_Diagnostic_To_Panel(string label, int* value_pointer, SDL_Rect offset_rect, int panel_name, bool stat_bar, int* value_pointer_max);
@@ -487,24 +456,24 @@ void Console_Panel::free()
 
 // Create Buttons;
 
-void Console_Panel::Add_Dot_Inventory_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, TTF_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name)
+void Console_Panel::Add_Dot_Inventory_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, FC_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name)
 {
 	SDL_Rect pos_rect = { panel_rect.x + offset_rect.x, panel_rect.y + offset_rect.y, TILE_WIDTH, TILE_HEIGHT };
 	
 	Button new_inventory_button = Button(BUTTON_ACTION_INVENTORY_BUTTON, pos_rect, true, panel_name);
 	new_inventory_button.slot_item_pointer = slot_pointer;
-	new_inventory_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont_small, &slot_pointer->item_number,true, true);
+	new_inventory_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont, &slot_pointer->item_number,true, true);
 	new_inventory_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.x* SPRITESHEET_W, Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
 	console_panel_buttons.push_back(new_inventory_button);
 }
 
-void Console_Panel::Add_Dot_Crafting_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, TTF_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name)
+void Console_Panel::Add_Dot_Crafting_Slot_To_Panel(SDL_Rect offset_rect, LTexture* spritesheet, FC_Font* gFont, Dot_Inventory_Slot* slot_pointer, int panel_name)
 {
 	SDL_Rect pos_rect = { panel_rect.x + offset_rect.x, panel_rect.y + offset_rect.y, TILE_WIDTH, TILE_HEIGHT };
 
 	Button new_crafting_button = Button(BUTTON_ACTION_PLACE_SCAFFOLD, pos_rect, true, panel_name);
 	new_crafting_button.slot_item_pointer = slot_pointer;
-	new_crafting_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont_small, &slot_pointer->item_number, true,true);
+	new_crafting_button.Add_Button_Diagnostic(gRenderer, 0, 0, gFont, &slot_pointer->item_number, true,true);
 	new_crafting_button.Add_Button_Sprite(spritesheet, { Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.x * SPRITESHEET_W, Fetch_Inventory_Item_Template(slot_pointer->inventory_item_code).sprite_config.y*SPRITESHEET_H, SPRITESHEET_W, SPRITESHEET_H }, 0, 0);
 	console_panel_buttons.push_back(new_crafting_button);
 }
@@ -580,6 +549,7 @@ public:
 	map <int, Console_Panel> console_window_panels;
 	vector<Button> console_panel_headers;
 	Button window_header;
+	Button window_close_button;
 
 	void Create_Dot_Inventory_Panel(Dot* focus_dot, LTexture* spritesheet, int columns, int rows);
 	void Create_Dot_Status_Panel(Dot* focus_dot);
@@ -606,6 +576,7 @@ public:
 
 	int title_bar_height;
 	int menu_bar_height;
+	int close_button_width;
 	Dot* window_focus_dot;
 
 	SDL_Rect base_window_rect;
@@ -616,7 +587,7 @@ public:
 private:
 	SDL_Renderer* console_window_renderer;
 	LTexture* spritesheet;
-	TTF_Font* console_font;
+	FC_Font* console_font;
 };
 
 Console_Window::Console_Window(int window_type, int window_number, Dot* focus_dot, LTexture* inventory_spritesheet, SDL_Rect window_size, bool active)
@@ -632,20 +603,25 @@ Console_Window::Console_Window(int window_type, int window_number, Dot* focus_do
 	base_window_rect = window_size;
 	title_bar_height = TILE_HEIGHT * 4 / 5;
 	menu_bar_height = TILE_HEIGHT * 4 / 5;
+	close_button_width = TILE_WIDTH * 3/5;
 	base_panel_rect = { base_window_rect.x, base_window_rect.y + menu_bar_height + title_bar_height, base_window_rect.w, base_window_rect.h - menu_bar_height - title_bar_height };
 	base_window_tint = { 100,100,100,100 };
 	base_window_highlight = { 255,255,255,255 };
 
+	window_header = Button{ BUTTON_ACTION_MOVE_CONSOLE_WINDOW,{ base_window_rect.x,base_window_rect.y,base_window_rect.w - close_button_width, title_bar_height },true, 0,0,console_window_number,{ 0,0,255,100 } };
+
 	if (console_window_number > 1)
 	{
-		window_header = Button{ BUTTON_ACTION_MOVE_CONSOLE_WINDOW,{ base_window_rect.x,base_window_rect.y,base_window_rect.w, title_bar_height },true, 0,0,console_window_number, {0,0,255,100} };
 		if (focus_dot != NULL && focus_dot->dot_config[DOT_TYPE] == DOT_NPC) window_header.Add_Button_Label(focus_dot->npc_dot_config.dot_full_name, gFont_big, false, NULL, SDL_Color{ 255,255,255,255 }, 5, 2);
+		else if (focus_dot != NULL && focus_dot->dot_config[DOT_TYPE] == DOT_TILE) window_header.Add_Button_Label(focus_dot->multi_tile_config.tile_descriptor, gFont_big, false, NULL, SDL_Color{ 255,255,255,255 }, 5, 2);
 	}
 	else if (console_window_number == 0)
 	{
-		window_header = Button{ BUTTON_ACTION_MOVE_CONSOLE_WINDOW,{ base_window_rect.x,base_window_rect.y,base_window_rect.w, title_bar_height },true, 0,0,console_window_number,{ 0,0,255,100 } };
-		if (focus_dot != NULL && focus_dot->dot_config[DOT_TYPE] == DOT_NPC) window_header.Add_Button_Label("Console", gFont_big, false, NULL, SDL_Color{ 255,255,255,255 }, 5, 2);
+		window_header.Add_Button_Label("Console", gFont_big, false, NULL, SDL_Color{ 255,255,255,255 }, 5, 2);
 	}
+
+	window_close_button = Button(BUTTON_ACTION_CLOSE_CONSOLE_WINDOW, { base_window_rect.x + base_window_rect.w - close_button_width,  base_window_rect.y, close_button_width, title_bar_height }, true, 0, 0, console_window_number, { 0,0,255,150 });
+	window_close_button.Add_Button_Label("X", gFont_big, false, NULL, { 255,255,255,255 }, 5, 2);
 
 }
 
@@ -656,10 +632,7 @@ void Console_Window::Create_Panel_Header(int panel_type, string label_text)
 	
 	Button console_panel_header = Button(BUTTON_ACTION_SWITCH_PANEL, panel_button_rect, true, panel_type, 0, 0);
 
-	if (panel_type != PANEL_CLOSE_CONSOLE_WINDOW) console_panel_header.button_action = BUTTON_ACTION_SWITCH_PANEL;
-	else console_panel_header.button_action = BUTTON_ACTION_CLOSE_CONSOLE_WINDOW;
-	
-	console_panel_header.Add_Button_Label(label_text, gFont, false, NULL, { 255,255,255,255 }, header_offset.x, header_offset.y);
+	console_panel_header.Add_Button_Label(label_text, gFont_bold, false, NULL, { 255,255,255,255 }, header_offset.x, header_offset.y);
 	console_panel_header.button_rect.w = console_panel_header.button_label.get_width() + header_offset.w + header_offset.x;
 
 	console_panel_headers.push_back(console_panel_header);
@@ -710,7 +683,7 @@ void Console_Window::Create_Dot_Inventory_Panel(Dot* focus_dot, LTexture* sprite
 			offset_rect.y = i * TILE_HEIGHT;
 			offset_rect.x = p * TILE_WIDTH;
 
-			dot_inventory_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, gFont, &focus_dot->npc_dot_config.inventory_slots[slot_num], PANEL_DOT_INVENTORY);
+			dot_inventory_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, gFont_small, &focus_dot->npc_dot_config.inventory_slots[slot_num], PANEL_DOT_INVENTORY);
 			slot_num++;
 		}
 	}
@@ -771,25 +744,25 @@ void Console_Window::Create_Dot_Equipment_Panel(LTexture* spritesheet, Dot* focu
 
 	SDL_Rect offset_rect = { 0, 0, base_panel_rect.w, TILE_HEIGHT };
 
-	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, console_font, &focus_dot->npc_dot_config.dot_equipment_config.Spacesuit, PANEL_EQUIPMENT_LOADOUT);
+	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, gFont_small, &focus_dot->npc_dot_config.dot_equipment_config.Spacesuit, PANEL_EQUIPMENT_LOADOUT);
 	offset_rect.x += TILE_WIDTH;
 	dot_equipment_panel.Add_Label_To_Panel("Spacesuit", offset_rect, PANEL_EQUIPMENT_LOADOUT, 0, false);
 
 	offset_rect.x -= TILE_WIDTH;
 	offset_rect.y += TILE_HEIGHT;
-	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, console_font, &focus_dot->npc_dot_config.dot_equipment_config.Oxygen_Tank, PANEL_EQUIPMENT_LOADOUT);
+	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, gFont_small, &focus_dot->npc_dot_config.dot_equipment_config.Oxygen_Tank, PANEL_EQUIPMENT_LOADOUT);
 	offset_rect.x += TILE_WIDTH;
 	dot_equipment_panel.Add_Label_To_Panel("Oxygen Tank", offset_rect, PANEL_EQUIPMENT_LOADOUT, 0, false);
 
 	offset_rect.x -= TILE_WIDTH;
 	offset_rect.y += TILE_HEIGHT;
-	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, console_font, &focus_dot->npc_dot_config.dot_equipment_config.Weapon, PANEL_EQUIPMENT_LOADOUT);
+	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, gFont_small, &focus_dot->npc_dot_config.dot_equipment_config.Weapon, PANEL_EQUIPMENT_LOADOUT);
 	offset_rect.x += TILE_WIDTH;
 	dot_equipment_panel.Add_Label_To_Panel("Weapon", offset_rect, PANEL_EQUIPMENT_LOADOUT, 0 ,false);
 
 	offset_rect.x -= TILE_WIDTH;
 	offset_rect.y += TILE_HEIGHT;
-	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, console_font, &focus_dot->npc_dot_config.dot_equipment_config.Mining_Laser, PANEL_EQUIPMENT_LOADOUT);
+	dot_equipment_panel.Add_Dot_Inventory_Slot_To_Panel(offset_rect, spritesheet, gFont_small, &focus_dot->npc_dot_config.dot_equipment_config.Mining_Laser, PANEL_EQUIPMENT_LOADOUT);
 	offset_rect.x += TILE_WIDTH;
 	dot_equipment_panel.Add_Label_To_Panel("Mining Laser", offset_rect, PANEL_EQUIPMENT_LOADOUT, 0, false);
 
@@ -809,7 +782,7 @@ void Console_Window::Create_Dot_Crafting_Panel(LTexture* spritesheet, Dot* focus
 		SDL_Rect offset_rect = { 0,0,TILE_WIDTH,TILE_HEIGHT };
 		offset_rect.y = row * TILE_HEIGHT;
 		offset_rect.x = column * TILE_WIDTH;
-		dot_crafting_panel.Add_Dot_Crafting_Slot_To_Panel(offset_rect, spritesheet, gFont, &focus_dot->npc_dot_config.craftable_items[i], PANEL_CRAFTABLE_ITEMS);
+		dot_crafting_panel.Add_Dot_Crafting_Slot_To_Panel(offset_rect, spritesheet, gFont_small, &focus_dot->npc_dot_config.craftable_items[i], PANEL_CRAFTABLE_ITEMS);
 			
 		column++;
 		if (column >= columns) column = 0, row++;
@@ -832,7 +805,7 @@ void Console_Window::Update_Dot_Crafting_Panel(LTexture* spritesheet, Dot* focus
 		SDL_Rect offset_rect = { 0,0,TILE_WIDTH,TILE_HEIGHT };
 		offset_rect.y = row * TILE_HEIGHT;
 		offset_rect.x = column * TILE_WIDTH;
-		console_window_panels[PANEL_CRAFTABLE_ITEMS].Add_Dot_Crafting_Slot_To_Panel(offset_rect, spritesheet, gFont, &focus_dot->npc_dot_config.craftable_items[i], PANEL_CRAFTABLE_ITEMS);
+		console_window_panels[PANEL_CRAFTABLE_ITEMS].Add_Dot_Crafting_Slot_To_Panel(offset_rect, spritesheet, gFont_small, &focus_dot->npc_dot_config.craftable_items[i], PANEL_CRAFTABLE_ITEMS);
 
 		column++;
 		if (column >= columns) column = 0, row++;
@@ -912,6 +885,10 @@ Button* Console_Window::Check_For_Click(int mouse_x_pos, int mouse_y_pos)
 	{
 		return &window_header;
 	}
+	else if (check_if_point_in_rect(window_close_button.button_rect, mouse_x_pos, mouse_y_pos) == true)
+	{
+		return &window_close_button;
+	}
 	
 	for (int i = 0; i < console_panel_headers.size(); i++)
 	{
@@ -944,6 +921,7 @@ void Console_Window::render()
 	SDL_RenderDrawRect(gRenderer, &base_window_rect);
 	
 	window_header.render();
+	window_close_button.render();
 
 	for (int i = 0; i < console_panel_headers.size(); i++)
 	{
@@ -972,7 +950,7 @@ void Console_Window::free()
 
 class Console {
 public:
-	Console::Console(SDL_Renderer* gRenderer, TTF_Font* gFont, Intelligence* intelligence, LTexture textures[]);
+	Console::Console(SDL_Renderer* gRenderer, Intelligence* intelligence, LTexture textures[]);
 	void render(Camera* camera);
 	void render_advanced_diagnostics(SDL_Renderer* gRenderer, Camera* camera);
 	void free();
@@ -985,11 +963,12 @@ public:
 	void Create_Action_Button_Window();
 
 	// HELPERS
+	int Console::window_vector_index(int console_window_num);
 	bool check_console_for_clicks(int mouse_x_pos, int mouse_y_pos);
 	bool check_if_mouse_is_over_console(int mouse_x_pos, int mouse_y_pos);
 	Button* return_clicked_button(int mouse_x_pos, int mouse_y_pos);
 	void Handle_Console_Clicks();
-	void Handle_Console_Click_And_Hold();
+	void Handle_Console_Click_And_Hold(int mouse_x_pos, int mouse_y_pos);
 	void Handle_Console_Unclick();
 
 	void Pull_Up_Restart_Screen();
@@ -1003,7 +982,7 @@ public:
 	Dot* dot_to_transfer_from; // for interactions between dots
 	Dot* dot_to_transfer_to;
 
-	map <int, Console_Window> console_windows;
+	vector<Console_Window> console_windows;
 	int num_open_windows = 0;
 	int dot_diagnostic_window_width = 9 * TILE_WIDTH;
 	int dot_diagnostic_window_height = 9 * TILE_WIDTH;
@@ -1024,7 +1003,7 @@ public:
 
 
 private:
-	TTF_Font* console_font;
+	FC_Font* console_font;
 	LTexture* texture_array[NUM_TILESHEETS];
 	LTexture* bolt_sprites;
 	LTexture* dot_spritesheet;
@@ -1035,7 +1014,7 @@ private:
 	LTexture* standard_tilesheet;
 };
 
-Console::Console(SDL_Renderer* gRenderer, TTF_Font* gFont, Intelligence* intelligence, LTexture textures[])
+Console::Console(SDL_Renderer* gRenderer, Intelligence* intelligence, LTexture textures[])
 {
 	// MAIN CONSOLE INIT
 	console_font = gFont;
@@ -1071,9 +1050,9 @@ void Console::free()
 {
 	fps_diagnostic.free();
 	
-	for (std::map<int, Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
+	for (vector<Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
 	{
-		it->second.free();
+		it->free();
 	}
 }
 
@@ -1084,10 +1063,10 @@ void Console::render(Camera* camera)
 	fps_diagnostic.render(gRenderer, new SDL_Rect{ SCREEN_WIDTH - TILE_WIDTH,0,TILE_WIDTH,TILE_HEIGHT });
 	
 	if (DEBUG_CONSOLE) cout << "starting to render windows" << endl;
-	for (std::map<int, Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
+	for (std::vector<Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
 	{
 		if (DEBUG_CONSOLE) cout << "rendering a window" << endl;
-		it->second.render();
+		it->render();
 	}
 
 	if (DEBUG_ADVANCED_DOT_DIAGNOSTICS == 1) render_advanced_diagnostics(gRenderer, camera);
@@ -1148,8 +1127,7 @@ void Console::Create_Dot_Diagnostic_Window(Dot* new_focus_dot)
 	if (new_focus_dot->dot_config[DOT_TYPE] == DOT_TILE) dot_focus_window.Create_Dot_Production_Panel(inventory_spritesheet, new_focus_dot);
 
 	dot_focus_window.console_window_panels[PANEL_DOT_DIAGNOSTIC].selected = true;
-	dot_focus_window.Create_Close_Window_Panel();
-	console_windows.insert(pair <int, Console_Window>(num_open_windows, dot_focus_window));
+	console_windows.push_back(dot_focus_window);
 
 	num_open_windows++;
 }
@@ -1166,7 +1144,7 @@ void Console::Create_Player_Diagnostic_Window(Dot* player_dot)
 	player_focus_window.Create_Dot_Crafting_Panel(inventory_spritesheet, player_dot, 3, 8);
 
 	player_focus_window.console_window_panels[PANEL_DOT_INVENTORY].selected = true;
-	console_windows.insert(pair <int, Console_Window>(num_open_windows, player_focus_window));
+	console_windows.push_back(player_focus_window);
 
 	num_open_windows++;
 }
@@ -1201,13 +1179,21 @@ void Console::Create_Action_Button_Window()
 	action_button_window.base_panel_rect.y -= action_button_window.menu_bar_height;
 
 	action_button_window.Create_Action_Buttons();
-	console_windows.insert(pair <int, Console_Window>(num_open_windows, action_button_window));
+	console_windows.push_back(action_button_window);
 
 	num_open_windows++;
 }
 
 
 // HELPER FUNCTIONS
+
+int Console::window_vector_index(int console_window_num)
+{
+	for (int i = 0; i < console_windows.size(); i++)
+	{
+		if (console_windows[i].console_window_number == console_window_num) return i;
+	}
+}
 
 void Console::Pull_Up_Restart_Screen()
 {
@@ -1217,9 +1203,9 @@ void Console::Pull_Up_Restart_Screen()
 
 bool Console::check_console_for_clicks(int mouse_x_pos, int mouse_y_pos)
 {
-	for (std::map<int, Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
+	for (std::vector<Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
 	{
-		Button* clicked_button = it->second.Check_For_Click(mouse_x_pos, mouse_y_pos);
+		Button* clicked_button = it->Check_For_Click(mouse_x_pos, mouse_y_pos);
 		if (clicked_button != NULL)
 		{	
 			if (clicked_button->button_action == BUTTON_ACTION_CLOSE_CONSOLE_WINDOW)
@@ -1233,7 +1219,7 @@ bool Console::check_console_for_clicks(int mouse_x_pos, int mouse_y_pos)
 				clicked_button->button_is_pressed = true;
 				if (last_clicked_button!= NULL && last_clicked_button != clicked_button) last_clicked_button->button_is_pressed = false;
 				last_clicked_button = clicked_button;
-				last_clicked_window = it->second.console_window_number;
+				last_clicked_window = it->console_window_number;
 				return true;
 			}
 		}
@@ -1244,18 +1230,18 @@ bool Console::check_console_for_clicks(int mouse_x_pos, int mouse_y_pos)
 
 bool Console::check_if_mouse_is_over_console(int mouse_x_pos, int mouse_y_pos)
 {
-	for (std::map<int, Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
+	for (std::vector<Console_Window>::iterator it = console_windows.begin(); it != console_windows.end(); ++it)
 	{
-		if (check_if_point_in_rect(it->second.base_window_rect, mouse_x_pos, mouse_y_pos) == true) return true;
+		if (check_if_point_in_rect(it->base_window_rect, mouse_x_pos, mouse_y_pos) == true) return true;
 	}
 	return false;
 }
 
 void Console::Handle_Console_Clicks()
 {
-	if (last_clicked_button->button_action == BUTTON_ACTION_SWITCH_PANEL) console_windows[last_clicked_window].Change_Active_Panel(last_clicked_button->button_panel_type);
+	if (last_clicked_button->button_action == BUTTON_ACTION_SWITCH_PANEL) console_windows[window_vector_index(last_clicked_window)].Change_Active_Panel(last_clicked_button->button_panel_type);
 
-	switch (console_windows[last_clicked_window].console_window_type)
+	switch (console_windows[window_vector_index(last_clicked_window)].console_window_type)
 	{
 	case WINDOW_ACTION_BUTTONS:
 		switch (last_clicked_button->button_panel_type)
@@ -1278,7 +1264,7 @@ void Console::Handle_Console_Clicks()
 		case PANEL_DOT_INVENTORY:
 			if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON && last_clicked_button->slot_item_pointer != NULL)
 			{
-				dot_to_transfer_from = console_windows[last_clicked_window].window_focus_dot;
+				dot_to_transfer_from = console_windows[window_vector_index(last_clicked_window)].window_focus_dot;
 				current_selected_inventory_item = last_clicked_button->slot_item_pointer->inventory_item_code;
 				current_action = BUTTON_ACTION_INVENTORY_BUTTON;
 			}
@@ -1291,7 +1277,7 @@ void Console::Handle_Console_Clicks()
 		case PANEL_DOT_INVENTORY:
 			if (last_clicked_button->button_action == BUTTON_ACTION_INVENTORY_BUTTON && last_clicked_button->slot_item_pointer != NULL)
 			{
-				dot_to_transfer_from = console_windows[last_clicked_window].window_focus_dot;
+				dot_to_transfer_from = console_windows[window_vector_index(last_clicked_window)].window_focus_dot;
 				current_selected_inventory_item = last_clicked_button->slot_item_pointer->inventory_item_code;
 				current_action = BUTTON_ACTION_INVENTORY_BUTTON;
 			}
@@ -1301,16 +1287,16 @@ void Console::Handle_Console_Clicks()
 		case PANEL_PRODUCTION_ORDERS:
 			if (last_clicked_button->button_action == BUTTON_ACTION_CREATE_PRODUCTION_ORDER)
 			{
-				if (console_windows[last_clicked_window].window_focus_dot->npc_dot_config.production_status_array[last_clicked_button->button_config_num].slot_tile_name != TILE_GENERIC_TILE)
+				if (console_windows[window_vector_index(last_clicked_window)].window_focus_dot->npc_dot_config.production_status_array[last_clicked_button->button_config_num].slot_tile_name != TILE_GENERIC_TILE)
 				{
-					console_windows[last_clicked_window].window_focus_dot->npc_dot_config.production_status_array[last_clicked_button->button_config_num].slot_requests++;
+					console_windows[window_vector_index(last_clicked_window)].window_focus_dot->npc_dot_config.production_status_array[last_clicked_button->button_config_num].slot_requests++;
 				}
 			}
 			break;
 		case PANEL_JOB_DIAGNOSTIC:
 			if (last_clicked_button->button_action == BUTTON_ACTION_CLEAR_DOT_GOALS)
 			{
-				console_windows[last_clicked_window].window_focus_dot->dot_wipe_all_job_tasks();
+				console_windows[window_vector_index(last_clicked_window)].window_focus_dot->dot_wipe_all_job_tasks();
 			}
 			break;
 		}
@@ -1318,20 +1304,26 @@ void Console::Handle_Console_Clicks()
 	}
 }
 
-void Console::Handle_Console_Click_And_Hold()
+void Console::Handle_Console_Click_And_Hold(int mouse_x_pos, int mouse_y_pos)
 {
+	//if (last_clicked_button->button_action == BUTTON_ACTION_MOVE_CONSOLE_WINDOW)
+	//{
+	//	console_windows[last_clicked_button->button_window_num].base_panel_rect.x = mouse_x_pos;
+	//	console_windows[last_clicked_button->button_window_num].base_panel_rect.y = mouse_y_pos;
 
+	//	cout << console_windows[last_clicked_button->button_window_num].base_panel_rect.x << endl;
+	//}
 }
 
 void Console::Handle_Console_Unclick()
 {
-	switch (console_windows[last_clicked_window].console_window_type)
+	switch (console_windows[window_vector_index(last_clicked_window)].console_window_type)
 	{
 	case WINDOW_PLAYER_DIAGNOSTIC:
 		switch (last_clicked_button->button_panel_type)
 		{
 		case PANEL_DOT_INVENTORY:
-			dot_to_transfer_to = console_windows[last_clicked_window].window_focus_dot;
+			dot_to_transfer_to = console_windows[window_vector_index(last_clicked_window)].window_focus_dot;
 			if (dot_to_transfer_from != NULL && dot_to_transfer_to != NULL && dot_to_transfer_from != dot_to_transfer_to)
 			{
 				current_intelligence->Create_Job_To_Transfer_Item_From_Dot_to_Dot(dot_to_transfer_from, dot_to_transfer_to, current_selected_inventory_item,1);
@@ -1345,7 +1337,7 @@ void Console::Handle_Console_Unclick()
 		switch (last_clicked_button->button_panel_type)
 		{
 		case PANEL_DOT_INVENTORY:
-			dot_to_transfer_to = console_windows[last_clicked_window].window_focus_dot;
+			dot_to_transfer_to = console_windows[window_vector_index(last_clicked_window)].window_focus_dot;
 			if (dot_to_transfer_from != NULL && dot_to_transfer_to != NULL && dot_to_transfer_from != dot_to_transfer_to)
 			{
 				current_intelligence->Create_Job_To_Transfer_Item_From_Dot_to_Dot(dot_to_transfer_from, dot_to_transfer_to, current_selected_inventory_item,1);

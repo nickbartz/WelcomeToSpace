@@ -3,7 +3,7 @@
 class Intelligence
 {
 public: 
-	Intelligence(World* input_world, SDL_Renderer* world_renderer, Camera* world_camera , TTF_Font* gFont_small, LTexture textures[], bool new_game);
+	Intelligence(World* input_world, SDL_Renderer* world_renderer, Camera* world_camera , LTexture textures[], bool new_game);
 	void Create_Test_Conditions();
 
 	// CONSOLE COMMANDS
@@ -17,7 +17,7 @@ public:
 
 	void Handle_Keyboard_Input(SDL_Event* e);
 	void Test_Cursor_Position(int mouse_pos_x, int mouse_pos_y, int tile_x, int tile_y);
-	Dot* Return_Clicked_Dot(int mouse_pos_x, int mouse_pos_y);
+	Dot* Return_Clicked_Dot(int mouse_pos_x, int mouse_pos_y, int tile_x, int tile_y);
 
 	// HELPER COMMANDS
 	double get_angle_between_two_points(int x_origin, int y_origin, int x_target, int y_target);
@@ -147,7 +147,6 @@ public:
 
 private: 
 
-	TTF_Font* font_small;
 	SDL_Renderer* gRenderer;
 	Camera* camera;
 	World* world;
@@ -188,7 +187,7 @@ private:
 	bool render_debug = DEBUG_RENDER;
 };
 
-Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Camera* world_camera, TTF_Font* gFont_small, LTexture textures[], bool new_game)
+Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Camera* world_camera, LTexture textures[], bool new_game)
 {
 	for (int p = 0; p < NUM_TILESHEETS; ++p) { texture_array[p] = &textures[p];}
 
@@ -205,9 +204,8 @@ Intelligence::Intelligence(World* input_world, SDL_Renderer* world_renderer, Cam
 
 	world = input_world;
 	iField = new Path_Field(world);
-	font_small = gFont_small;
 
-	player_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, 150 * TILE_WIDTH, 150 * TILE_HEIGHT, { 0,0,0,0 });
+	player_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, 150 * TILE_WIDTH, 150 * TILE_HEIGHT, { 0,0,0,0 });
 
 	for (int i = 0; i < 400; i++)
 	{
@@ -231,14 +229,6 @@ void Intelligence::Create_Test_Conditions()
 	faction_relationships.push_back({ DOT_FACTION_FRIEND,DOT_FACTION_PLAYER,1 });
 	faction_relationships.push_back({ DOT_FACTION_PLAYER,DOT_FACTION_FRIEND,1 });
 
-	lifepod = new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, 155 * TILE_WIDTH, 155 * TILE_HEIGHT, { 0,0,0,0,1 });
-	lifepod->npc_dot_config.dot_equipment_config.Spacesuit.item_number = 1;
-	lifepod->npc_dot_config.bounce = 1;
-	lifepod->npc_dot_config.dot_stat_faction = DOT_FACTION_FRIEND;
-	lifepod->shadow_offset = 5;
-
-	//npc_dot_array.push_back(lifepod);
-
 	// CREATE STARTING LOCKER
 	world->Create_Tile(Return_Tile_Template_By_Identifier(TILE_LOCKER_1), 153, 153);
 	Add_Item_To_Dot_Inventory(world->item_tiles[153][153], INVENTORY_IRON_ORE, 100);
@@ -254,21 +244,13 @@ void Intelligence::Create_Test_Conditions()
 	for (int i = 0; i < 1; i++)
 	{
 		int random_head = rand() % 2;
-		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (153 + i) * TILE_WIDTH, 154 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
+		npc_dot_array.push_back(new NPC_Dot(gRenderer, dot_spritesheet_array, (153 + i) * TILE_WIDTH, 154 * TILE_HEIGHT, { 0,0,0,random_head,0 }));
 		Add_Item_To_Dot_Inventory(npc_dot_array.back(), INVENTORY_SPACESUIT_1, 1);
 		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1, 1 };
 		npc_dot_array.back()->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
 		npc_dot_array.back()->npc_dot_config.functional_relationship_map.insert({ DOT_FUNCTIONAL_RELATIONSHIP_CURRENT_STORAGE_TILE, {return_nearest_tile_by_type_or_name(npc_dot_array.back(), false, TILE_TYPE_STORAGE_TILE),0} });
 	}
 
-	for (int i = 0; i < 0; i++)
-	{
-		NPC_Dot* enemy_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (150+i) * TILE_WIDTH, 145 * TILE_HEIGHT, { 0,0,0,0,0 });
-		enemy_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
-		enemy_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
-		enemy_dot->npc_dot_config.dot_stat_faction = DOT_FACTION_ENEMY;
-		npc_dot_array.push_back(enemy_dot);
-	}
 }
 
 // CONSOLE_COMMANDS
@@ -325,7 +307,7 @@ void Intelligence::Handle_Non_Console_Click(int current_action, int x_tile, int 
 	case BUTTON_ACTION_SPAWN_ENEMY:
 		if (world->item_tiles[x_tile][y_tile] == NULL)
 		{
-			NPC_Dot* enemy_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, font_small, (x_tile) * TILE_WIDTH, y_tile * TILE_HEIGHT, { 0,0,0,0,0 });
+			NPC_Dot* enemy_dot = new NPC_Dot(gRenderer, dot_spritesheet_array, (x_tile) * TILE_WIDTH, y_tile * TILE_HEIGHT, { 0,0,0,0,0 });
 			enemy_dot->npc_dot_config.dot_equipment_config.Spacesuit = { INVENTORY_SPACESUIT_1,1 };
 			enemy_dot->npc_dot_config.dot_equipment_config.Weapon = { INVENTORY_LASER_PISTOL_1,1 };
 			enemy_dot->npc_dot_config.dot_stat_faction = DOT_FACTION_ENEMY;
@@ -383,6 +365,17 @@ void Intelligence::Handle_Non_Console_Unclick(int current_action, int x_tile, in
 			{
 				world->Add_Scaffold_To_Tile(Return_Tile_By_Linked_Inventory_Item(inventory_item_code), x_tile, y_tile, DOT_FACTION_PLAYER);
 			}
+		}
+		break;
+	case BUTTON_ACTION_REMOVE_TILE:
+		for (int i = 0; i < mouse_hold_coordinate_vector.size(); i++)
+		{
+			int x_tile = mouse_hold_coordinate_vector[i].x;
+			int y_tile = mouse_hold_coordinate_vector[i].y;
+
+			if (world->item_tiles[x_tile][y_tile] != NULL) world->Remove_Tile(x_tile, y_tile, true);
+			else if (world->world_tiles[x_tile][y_tile] != NULL) world->Remove_Tile(x_tile, y_tile, false);
+
 		}
 		break;
 	}
@@ -451,37 +444,23 @@ void Intelligence::Test_Cursor_Position(int mouse_pos_x, int mouse_pos_y, int ti
 	}
 }
 
-Dot* Intelligence::Return_Clicked_Dot(int mouse_pos_x, int mouse_pos_y)
+Dot* Intelligence::Return_Clicked_Dot(int mouse_pos_x, int mouse_pos_y, int tile_x, int tile_y)
 {
-	vector<vector <Dot*>> search_vector = Return_Array_of_Pointers_To_All_Dot_Vectors();
-	int current_x_tile = mouse_pos_x;
-	int current_y_tile = mouse_pos_y;
-
-	int closest_x = TILE_NUM_X + 1;
-	int closest_y = TILE_NUM_Y + 1;
-
-	Dot* final_dot = NULL;
-
-	for (int x = 0; x < search_vector.size(); x++)
+	bool found_dot = false;
+	for (int i = 0; i < npc_dot_array.size(); i++)
 	{
-		for (int i = 0; i < search_vector[x].size(); i++)
+		if (Check_if_Point_Inside_Rect(mouse_pos_x, mouse_pos_y, npc_dot_array[i]->dot_rect))
 		{
-			Dot* cur_dot = search_vector[x][i];
-			unsigned int dist_x = abs(cur_dot->getCenterPosX() - current_x_tile);
-			unsigned int dist_y = abs(cur_dot->getCenterPosY() - current_y_tile);
-
-			if ((dist_x + dist_y) < (closest_x + closest_y))
-			{
-				final_dot = search_vector[x][i];
-				closest_x = dist_x;
-				closest_y = dist_y;
-			}
+			return npc_dot_array[i];
+			found_dot = true;
 		}
 	}
 
-	for (int i = 0; i < search_vector.size(); i++) search_vector[i].clear();
-
-	return final_dot;
+	if (found_dot == false)
+	{
+		if (world->item_tiles[tile_x][tile_y] != NULL) return world->item_tiles[tile_x][tile_y];
+		else if (world->world_tiles[tile_x][tile_y] != NULL && world->world_tiles[tile_x][tile_y]->multi_tile_config.tile_type != VACUUM) return world->world_tiles[tile_x][tile_y];
+	}
 }
 
 
@@ -1731,7 +1710,6 @@ vector<vector<Dot*>> Intelligence::Return_Array_of_Pointers_To_All_Dot_Vectors()
 	my_vector[DOT_BOLT] = { bolt_array.begin(),bolt_array.end() };
 	my_vector[DOT_ENEMY_SHIP] = { enemy_ship_array.begin(),enemy_ship_array.end() };
 	my_vector[DOT_TILE] = {};
-	//my_vector[DOT_PLAYER].push_back(player_dot);
 
 	for (int p = 0; p < TILE_NUM_Y; p++)
 	{
@@ -2731,7 +2709,7 @@ void Intelligence::render()
 
 	if (render_debug) cout << "rendering dots" << endl;
 	// Render npc_dots
-	for (int p = 0; p < npc_dot_array.size(); p++) if (npc_dot_array[p]->is_onscreen(camera)) npc_dot_array[p]->render(gRenderer, camera, font_small, Check_Faction_Score_Between_Dots(player_dot,npc_dot_array[p]));
+	for (int p = 0; p < npc_dot_array.size(); p++) if (npc_dot_array[p]->is_onscreen(camera)) npc_dot_array[p]->render(gRenderer, camera, Check_Faction_Score_Between_Dots(player_dot,npc_dot_array[p]));
  
 	if (render_debug) cout << "rendering containers" << endl;
 	// Render containers

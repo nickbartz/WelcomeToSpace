@@ -5,6 +5,7 @@ using namespace std;
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <SDL_mixer.h>
+#include <SDL_FontCache.h>
 #include <stdio.h>
 #include <string>
 #include <sstream>
@@ -27,9 +28,10 @@ using namespace std;
 SDL_Renderer* gRenderer = NULL;
 
 //Globally used font and font scene texture
-TTF_Font* gFont_big = NULL;
-TTF_Font* gFont = NULL;
-TTF_Font* gFont_small = NULL;
+FC_Font* gFont_big = NULL;
+FC_Font* gFont = NULL;
+FC_Font* gFont_bold = NULL;
+FC_Font* gFont_small = NULL;
 
 // Texture Array for all Textures
 LTexture texture_array[NUM_TILESHEETS];
@@ -241,19 +243,21 @@ void load_assets()
 	int row = 0;
 	int column = 0;
 
-	//Open the font
-	gFont_big = TTF_OpenFont("Fonts/OpenSans-Bold.ttf", 14);
-	if (gFont_big == NULL) printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
-	gFont = TTF_OpenFont("Fonts/OpenSans-Bold.ttf", 12);
-	if (gFont == NULL) printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
-	gFont_small = TTF_OpenFont("Fonts/OpenSans-Regular.ttf", 10);
-	if (gFont_small == NULL) printf("Failed to load small lazy font! SDL_ttf Error: %s\n", TTF_GetError());
+	// Load all fonts
+	gFont = FC_CreateFont();
+	FC_LoadFont(gFont, gRenderer, "Fonts/OpenSans-Regular.ttf", 12, SDL_Color{ 255, 255, 255, 255 }, TTF_STYLE_NORMAL);
+	gFont_big = FC_CreateFont();
+	FC_LoadFont(gFont_big, gRenderer, "Fonts/OpenSans-Bold.ttf", 14, SDL_Color{ 255, 255, 255, 255 }, TTF_STYLE_NORMAL);
+	gFont_small = FC_CreateFont();
+	FC_LoadFont(gFont_small , gRenderer, "Fonts/OpenSans-Bold.ttf", 10, SDL_Color{ 255, 255, 255, 255 }, TTF_STYLE_NORMAL);
+	gFont_bold = FC_CreateFont();
+	FC_LoadFont(gFont_bold, gRenderer, "Fonts/OpenSans-Bold.ttf", 12, SDL_Color{ 255, 255, 255, 255 }, TTF_STYLE_NORMAL);
 
-	gMusic = Mix_LoadMUS("Music/tell me that i dont fly off.wav");
-	if (gMusic == NULL)
-	{
-		printf("Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
-	}
+	//gMusic = Mix_LoadMUS("Music/tell me that i dont fly off.wav");
+	//if (gMusic == NULL)
+	//{
+	//	printf("Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+	//}
 }
 
 void unload_textures()
@@ -270,9 +274,13 @@ void close()
 	unload_textures();
 	
 	//Free global font
-	TTF_CloseFont(gFont);
+	FC_FreeFont(gFont_big);
+	FC_FreeFont(gFont_small);
+	FC_FreeFont(gFont);
 	gFont = NULL;
-
+	gFont_big = NULL;
+	gFont_small = NULL;
+	
 	//Destroy window	
 	SDL_DestroyRenderer(gRenderer);
 	SDL_DestroyWindow(gWindow);
@@ -280,8 +288,8 @@ void close()
 	gRenderer = NULL;
 
 	//Free the music
-	Mix_FreeMusic(gMusic);
-	gMusic = NULL;
+	//Mix_FreeMusic(gMusic);
+	//gMusic = NULL;
 
 	//Quit SDL subsystems
 	IMG_Quit();
@@ -366,7 +374,7 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 			}
 			else
 			{
-				console->Handle_Console_Click_And_Hold();
+				console->Handle_Console_Click_And_Hold(current_mouse_pos_x, current_mouse_pos_y);
 			}
 		}
 	}
@@ -394,7 +402,7 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 		if (mouse_click_state[1][1] == 0)
 		{
 			mouse_click_state[1][1] = 1;
-			Dot* dot_focus = intelligence->Return_Clicked_Dot(x_pos, y_pos);
+			Dot* dot_focus = intelligence->Return_Clicked_Dot(x_pos, y_pos, x_tile, y_tile);
 			if (dot_focus != NULL) console->Open_Diagnostic_On_Clicked_Dot(dot_focus);
 		}
 		else
@@ -439,7 +447,7 @@ int main(int argc, char* args[])
 		World world(gRenderer, texture_array, new_game);
 
 		if (debug) cout << "Loading Intelligence" << endl;
-		Intelligence intelligence(&world, gRenderer, &camera, gFont_small, texture_array, new_game);
+		Intelligence intelligence(&world, gRenderer, &camera, texture_array, new_game);
 
 		if (debug) cout << "Loading Cursor" << endl;
 		Cursor cursor(gRenderer,&texture_array[TILESHEET]);
@@ -450,7 +458,7 @@ int main(int argc, char* args[])
 		// Create the Console
 		if (debug) cout << "Loading Console" << endl;
 
-		Console console(gRenderer, gFont, &intelligence, texture_array);
+		Console console(gRenderer, &intelligence, texture_array);
 
 		if (debug) cout << "Loading Timer" << endl;
 
@@ -521,6 +529,7 @@ int main(int argc, char* args[])
 			intelligence.render();
 			console.render(&camera);
 			cursor.Render(gRenderer, &camera);
+
 
 			if (debug) cout << "updating screen" << endl;
 			//Update screen

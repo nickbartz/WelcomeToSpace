@@ -118,6 +118,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="SDL_FontCache.c" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -132,6 +133,7 @@
     <ClInclude Include="Item.h" />
     <ClInclude Include="LTexture.h" />
     <ClInclude Include="Save_Load.h" />
+    <ClInclude Include="SDL_FontCache.h" />
     <ClInclude Include="Shared_Draw_Functions.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="To-DO.h" />
