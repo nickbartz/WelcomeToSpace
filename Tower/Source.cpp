@@ -27,6 +27,9 @@ using namespace std;
 //The window renderer
 SDL_Renderer* gRenderer = NULL;
 
+// This is the transparent blank texture we'll use when creating the multi_texture;
+SDL_Texture* transparent_texture = NULL;
+
 //Globally used font and font scene texture
 FC_Font* gFont_big = NULL;
 FC_Font* gFont = NULL;
@@ -69,6 +72,7 @@ void process_current_input_state(Camera* camera, Cursor* cursor, Intelligence* i
 
 //The window we'll be rendering to
 SDL_Window* gWindow = NULL;
+
 
 
 int mouse_click_state[2][2];
@@ -238,6 +242,7 @@ void load_assets()
 	texture_array[CONTAINER_SPRITESHEET].loadFromFile(gRenderer, "Sprites/Inventory_Items/Container_Spritesheet.png");
 	texture_array[SPRITESHEET_LIGHTS].loadFromFile(gRenderer, "Sprites/Tilesheets/Lighting_1.png");
 	texture_array[SPRITESHEET_BACKGROUND].loadFromFile(gRenderer, "Sprites/Background/Background_Texture.png");
+	transparent_texture = IMG_Load("Sprites/transparent_tile.png");
 
 
 	int row = 0;

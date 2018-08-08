@@ -947,7 +947,7 @@ void Tile::Tint_Tile_Before_Render()
 
 void Tile::create_multitexture_from_multiclip()
 {
-	multi_texture = SDL_CreateTexture(tile_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, TILE_WIDTH, TILE_HEIGHT);;
+	multi_texture = IMG_Load()
 
 	SDL_SetRenderTarget(tile_renderer, multi_texture);
 	SDL_RenderClear(tile_renderer);
@@ -1295,31 +1295,39 @@ void Tile::handle_frenzel_tiling(int left_edge, int right_edge, int top_edge, in
 	int x = multi_tile_config.sprite_specs.sprite_column;
 	int y = multi_tile_config.sprite_specs.sprite_row;
 
-	if (left_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_NONE));
-	if (left_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 2, 0, SDL_FLIP_NONE));
+	if (bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_NONE));
+	if (left_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 90, SDL_FLIP_NONE));
+	if (top_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 180, SDL_FLIP_NONE));
+	if (right_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 270, SDL_FLIP_NONE));
 
-	// SINGLE FRONDS
-	else if (left_edge == TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 2, 0, SDL_FLIP_NONE));
-	else if (right_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 3, 0, SDL_FLIP_NONE));
-	else if (top_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_NONE));
-	else if (bottom_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_NONE));
+	multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_NONE));
 
-	// CORNERS
-	else if (left_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_NONE));
-	else if (right_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && left_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_NONE));
-	else if (bottom_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && left_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 3, 0, SDL_FLIP_NONE));
-	else if (bottom_edge != TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 3, 0, SDL_FLIP_NONE));
 
-	// STRAIGHT EDGES
-	else if (left_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_NONE));
-	else if (top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL && left_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 0, 0, SDL_FLIP_NONE));
-	
-	// T-BARS
-	else if (right_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 2, 0, SDL_FLIP_NONE));
-	else if (left_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
+	//if (left_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 1, 0, SDL_FLIP_NONE));
+	//if (left_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 2, 0, SDL_FLIP_NONE));
 
-	else if (left_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_NONE));
-	else if (left_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 3, 0, SDL_FLIP_NONE));
+	//// SINGLE FRONDS
+	//else if (left_edge == TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 2, 0, SDL_FLIP_NONE));
+	//else if (right_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 3, 0, SDL_FLIP_NONE));
+	//else if (top_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 1, 0, SDL_FLIP_NONE));
+	//else if (bottom_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 1, 0, SDL_FLIP_NONE));
+
+	//// CORNERS
+	//else if (left_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 0, 0, SDL_FLIP_NONE));
+	//else if (right_edge != TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL && left_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 0, 0, SDL_FLIP_NONE));
+	//else if (bottom_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && left_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 3, 0, SDL_FLIP_NONE));
+	//else if (bottom_edge != TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 3, 0, SDL_FLIP_NONE));
+
+	//// STRAIGHT EDGES
+	//else if (left_edge != TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 1, 0, SDL_FLIP_NONE));
+	//else if (top_edge != TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL && left_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 1, 0, 0, SDL_FLIP_NONE));
+	//
+	//// T-BARS
+	//else if (right_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL && left_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 0, 2, 0, SDL_FLIP_NONE));
+	//else if (left_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL && right_edge != TILE_TYPE_FRENZEL) multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 3, 2, 0, SDL_FLIP_NONE));
+
+	//else if (left_edge == TILE_TYPE_FRENZEL && bottom_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && top_edge != TILE_TYPE_FRENZEL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 0, 0, SDL_FLIP_NONE));
+	//else if (left_edge == TILE_TYPE_FRENZEL && top_edge == TILE_TYPE_FRENZEL && right_edge == TILE_TYPE_FRENZEL && bottom_edge != TILE_TYPE_FRENZEL)  multi_clip.push_back(Create_Clip_And_Rotation(x, y, 0, 0, 2, 3, 0, SDL_FLIP_NONE));
 }
 
 clip_and_rotation Tile::Create_Clip_And_Rotation(int base_sprite_x, int base_sprite_y, int offset_tile_x, int offset_tile_y, int component_x, int component_y, double rotation, SDL_RendererFlip flip, int render_layer)

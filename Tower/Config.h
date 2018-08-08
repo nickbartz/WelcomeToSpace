@@ -652,7 +652,7 @@ void Load_Tile_Templates()
 
 	tile_template_vector.push_back({ "",TILE_STORAGE_TILE_1, TILESHEET,{ 7,0,1,1,1,1 },TILE_TYPE_STORAGE_TILE,1,0,0,0,0,0,0,0,34,34,0,INVENTORY_STORAGE_1,0,0, Wall_and_Floor_Specs,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
-	tile_template_vector.push_back({ "Frenzel",TILE_FRENZEL_1, TILESHEET,{ 4,5,1,1,1,1 },TILE_TYPE_FRENZEL,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_FRENZEL_1,0,1, Specs_Frenzel_Farm,100,ITEM_JOB_GROW_FRENZEL,RENDER_TILES,frenzel_1 });
+	tile_template_vector.push_back({ "Frenzel",TILE_FRENZEL_1, TILESHEET,{ 0,5,1,1,1,1 },TILE_TYPE_FRENZEL,1,0,0,0,0,0,0,0,34,34,0,INVENTORY_FRENZEL_1,0,1, Specs_Frenzel_Farm,100,ITEM_JOB_GROW_FRENZEL,RENDER_ITEMS,frenzel_1 });
 	tile_template_vector.push_back({ "Frenzel Meat",TILE_FRENZEL_MEAT_1, ITEM_SPRITES,{ 0,10,1,1,1,1 },ITEM_TYPE_FRENZEL,1,1,1,0,0,0,0,0,34,34,0,INVENTORY_FRENZEL_MEAT_1,8,0, Specs_Frenzel_Meat,1000,0,RENDER_TILES, no_produced_items,0 });
 
 	tile_template_vector.push_back({ "Vacuum",TILE_VACUUM, TILESHEET,{ 5,0,1,1,1,1 },VACUUM,0,0,1,0,0,0,0,0,34,34,0,INVENTORY_EMPTY_SLOT,0,0, cannot_build,100,0,RENDER_TILES });
@@ -661,7 +661,7 @@ void Load_Tile_Templates()
 	tile_template_vector.push_back({ "Standard Bed",TILE_BED_1, TILESHEET,{ 0,11,2,1,2,1 }, ITEM_TYPE_BED,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_BED_1,0,0, no_requirements,100,0,RENDER_UNDER_PLAYER_ITEMS });
 
 	tile_template_vector.push_back({ "Standard Tree",TILE_TREE_1, TILESHEET,{ 0,9,1,-2,1,1 },TREE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_TREE_1,0,0, cannot_build,100,0,RENDER_ITEMS });
-	tile_template_vector.push_back({ "Console",TILE_CONSOLE_1, ITEM_SPRITES,{ 0,3,2,-2,2,1 },CONSOLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CONSOLE_1,4,0, no_requirements,100,0,RENDER_ITEMS });
+	tile_template_vector.push_back({ "Console",TILE_CONSOLE_1, ITEM_SPRITES,{ 0,1,2,-2,2,1 },CONSOLE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_CONSOLE_1,4,0, no_requirements,100,0,RENDER_ITEMS });
 
 	tile_template_vector.push_back({ "Locker",TILE_LOCKER_1, TILESHEET,{ 3,18,1,1,1,1 },TILE_TYPE_STORAGE_TILE,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_LOCKER_1,0,0, cannot_build,100,0,RENDER_ITEMS });
 	tile_template_vector.push_back({ "Spacesuit",TILE_SPACESUIT_1, TILESHEET,{ 1,1,1,1,1,1 },INVENTORY_TYPE_SUIT,1,1,0,0,0,0,0,0,34,34,0,INVENTORY_SPACESUIT_1,0,0, cannot_build,100,0,RENDER_ITEMS });

@@ -351,6 +351,12 @@ void World::Create_Tile(Tile_Template tile, int x_tile, int y_tile, int faction)
 		item_tiles[x_tile][y_tile] = new Tile(world_renderer, texture_array[tile.spritesheet_num], x_tile, y_tile, tile, tile.build_time);
 		item_tiles[x_tile][y_tile]->npc_dot_config.dot_stat_faction = faction;
 
+		if (tile.is_smooth == 1)
+		{
+			Update_Surrounding_Tiles(item_tiles[x_tile][y_tile]);
+			Fix_Smooth_Tile(item_tiles[x_tile][y_tile]);
+		}
+
 		if (tile.light_specs.is_light_source == 1 && light_tiles[{x_tile, y_tile}] == NULL)
 		{
 			light_tiles[{x_tile, y_tile}] = new Light{ world_renderer, texture_array[SPRITESHEET_LIGHTS],x_tile*TILE_WIDTH,y_tile*TILE_HEIGHT,tile.light_specs.light_color,tile.light_specs.radius,tile.light_specs.brightness,tile.light_specs.attenuation };
@@ -699,6 +705,7 @@ void World::Update_Surrounding_Tiles(Tile* tile)
 	// SMOOTH ALL THE TILES AROUND THE FLOOR TILE
 	for (int i = 0; i < 9; i++)
 	{
+		// Fix Neighbor TILES where they are smooth
 		Tile* neighbor_tile = Return_Tile_Neighbor(x_tile, y_tile, i, false);
 		if (neighbor_tile != NULL && neighbor_tile->multi_tile_config.is_smooth == 1)
 		{
@@ -709,6 +716,21 @@ void World::Update_Surrounding_Tiles(Tile* tile)
 				if (neighbor_tile_2 != NULL && neighbor_tile_2->multi_tile_config.is_smooth == 1)
 				{
 					Fix_Smooth_Tile(neighbor_tile_2);
+				}
+			}
+		}
+
+		// Fix Neighbor Items where they are smooth
+		Tile* neighbor_item = Return_Tile_Neighbor(x_tile, y_tile, i, true);
+		if (neighbor_item != NULL && neighbor_item->multi_tile_config.is_smooth == 1)
+		{
+			Fix_Smooth_Tile(neighbor_item);
+			for (int p = 0; p < 9; p++)
+			{
+				Tile* neighbor_item_2 = Return_Tile_Neighbor(neighbor_item->getTileX(), neighbor_item->getTileY(), p, true);
+				if (neighbor_item_2 != NULL && neighbor_item_2->multi_tile_config.is_smooth == 1)
+				{
+					Fix_Smooth_Tile(neighbor_item_2);
 				}
 			}
 		}
